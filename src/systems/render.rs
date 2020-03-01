@@ -1,5 +1,8 @@
-use crate::components::{position::Position, renderable::Renderable};
-use bracket_lib::prelude::{BTerm, Console};
+use crate::{
+    components::{position::Position, renderable::Renderable},
+    resources::map::{Map, TileType},
+};
+use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
@@ -7,6 +10,8 @@ use specs::prelude::*;
 pub struct RenderSystemData<'a> {
     position: ReadStorage<'a, Position>,
     renderable: ReadStorage<'a, Renderable>,
+
+    map: Read<'a, Map>,
 }
 
 pub struct RenderSystem {}
@@ -30,8 +35,13 @@ impl<'a> RenderSystem {
     }
 
     pub fn run_now_with_term(&mut self, world: &mut World, term: &mut BTerm) {
-        let data = RenderSystemData::fetch(world);
+        let data = &mut RenderSystemData::fetch(world);
         term.cls();
+        self.render_map(data, term);
+        self.render_entities(data, term);
+    }
+
+    fn render_entities(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
         for (position, renderable) in (&data.position, &data.renderable).join() {
             term.set(
                 position.x,
@@ -40,6 +50,18 @@ impl<'a> RenderSystem {
                 renderable.bg,
                 renderable.glyph,
             );
+        }
+    }
+
+    fn render_map(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+        let map = &data.map;
+        for (position, tile) in map.into_iter() {
+            // Render a tile depending upon the tile type
+            let (fg, bg, c) = match tile {
+                TileType::Floor => (RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), '.'),
+                TileType::Wall => (RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), '#'),
+            };
+            term.set(position.x, position.y, fg, bg, to_cp437(c));
         }
     }
 }

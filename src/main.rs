@@ -18,7 +18,6 @@ impl GameState for State {
         self.dispatcher.dispatch(&mut self.world);
         // RenderSystem needs special treatment (see RenderSystem::run)
         self.render.run_now_with_term(&mut self.world, term);
-
         self.world.maintain();
     }
 }
