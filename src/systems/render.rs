@@ -44,8 +44,8 @@ impl<'a> RenderSystem {
     fn render_entities(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
         for (position, renderable) in (&data.position, &data.renderable).join() {
             term.set(
-                position.x(),
-                position.y(),
+                position.x.into(),
+                position.y.into(),
                 renderable.fg,
                 renderable.bg,
                 renderable.glyph,
@@ -61,7 +61,7 @@ impl<'a> RenderSystem {
                 TileType::Floor => (RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), '.'),
                 TileType::Wall => (RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), '#'),
             };
-            term.set(position.x(), position.y(), fg, bg, to_cp437(c));
+            term.set(position.x.into(), position.y.into(), fg, bg, to_cp437(c));
         }
     }
 }

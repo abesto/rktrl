@@ -10,34 +10,30 @@ pub enum TileType {
 }
 
 pub struct Map {
-    width: usize,
-    height: usize,
+    pub width: u16,
+    pub height: u16,
     tiles: Vec<TileType>,
 }
 
 impl Map {
-    pub fn new(width: usize, height: usize) -> Map {
+    pub fn new(width: u16, height: u16) -> Map {
         Map {
             width,
             height,
-            tiles: vec![TileType::Floor; (width * height).into()],
+            tiles: vec![TileType::Wall; (width * height).try_into().unwrap()],
         }
     }
 
-    fn static_xy_idx(width: usize, x: usize, y: usize) -> usize {
-        (y * width) + x
+    fn static_xy_idx(width: u16, x: u16, y: u16) -> usize {
+        ((y * width) + x).try_into().unwrap()
     }
 
-    pub fn xy_idx(&self, x: usize, y: usize) -> usize {
+    pub fn xy_idx(&self, x: u16, y: u16) -> usize {
         Map::static_xy_idx(self.width, x, y)
     }
 
-    fn static_pos_idx(width: usize, pos: &Position) -> usize {
-        Map::static_xy_idx(
-            width,
-            pos.x().try_into().unwrap(),
-            pos.y().try_into().unwrap(),
-        )
+    fn static_pos_idx(width: u16, pos: &Position) -> usize {
+        Map::static_xy_idx(width, pos.x.try_into().unwrap(), pos.y.try_into().unwrap())
     }
 
     pub fn pos_idx(&self, pos: &Position) -> usize {
@@ -45,9 +41,10 @@ impl Map {
     }
 
     pub fn idx_pos(&self, idx: usize) -> Position {
-        let y = idx / self.width;
+        let idx_u16: u16 = idx.try_into().unwrap();
+        let y = idx_u16 / self.width;
         Position::new(
-            (idx - y * self.width).try_into().unwrap(),
+            (idx_u16 - y * self.width).try_into().unwrap(),
             y.try_into().unwrap(),
         )
     }
@@ -56,17 +53,17 @@ impl Map {
         self.tiles.len()
     }
 
+    pub fn contains(&self, position: &Position) -> bool {
+        position.x > 0 && position.y > 0 && position.x < self.width && position.y < self.height
+    }
+
     pub fn clamp(&self, position: &Position) -> Position {
-        if position.x() > 0
-            && position.y() > 0
-            && position.x() < self.width.try_into().unwrap()
-            && position.y() < self.height.try_into().unwrap()
-        {
+        if self.contains(position) {
             return position.clone();
         }
         Position::new(
-            max(0, min((self.width - 1).try_into().unwrap(), position.x())),
-            max(0, min((self.height - 1).try_into().unwrap(), position.y())),
+            max(0, min(self.width - 1, position.x)),
+            max(0, min(self.height - 1, position.y)),
         )
     }
 }
@@ -94,13 +91,14 @@ impl Default for Map {
 pub struct MapIterator<'a> {
     map: &'a Map,
     next_idx: usize,
+    max_idx: usize,
 }
 
 impl<'a> Iterator for MapIterator<'a> {
     type Item = (Position, TileType);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.next_idx == self.map.width * self.map.height {
+        if self.next_idx >= self.max_idx {
             return Option::None;
         }
 
@@ -127,6 +125,7 @@ impl<'a> IntoIterator for &'a Map {
         MapIterator {
             map: self,
             next_idx: 0,
+            max_idx: self.tile_count(),
         }
     }
 }

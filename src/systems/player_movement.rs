@@ -37,9 +37,21 @@ impl PlayerMovementSystem {
             None => None,
             Some(key) => match key {
                 VirtualKeyCode::Up => Some(Heading::North),
+                VirtualKeyCode::K => Some(Heading::North),
+                VirtualKeyCode::Numpad8 => Some(Heading::North),
+
                 VirtualKeyCode::Right => Some(Heading::East),
+                VirtualKeyCode::L => Some(Heading::East),
+                VirtualKeyCode::Numpad6 => Some(Heading::East),
+
                 VirtualKeyCode::Down => Some(Heading::South),
+                VirtualKeyCode::J => Some(Heading::South),
+                VirtualKeyCode::Numpad2 => Some(Heading::South),
+
                 VirtualKeyCode::Left => Some(Heading::West),
+                VirtualKeyCode::H => Some(Heading::West),
+                VirtualKeyCode::Numpad4 => Some(Heading::West),
+
                 _ => None,
             },
         }
