@@ -2,10 +2,14 @@ use bracket_lib::prelude::*;
 use specs::prelude::*;
 
 mod components;
+mod lib;
 mod resources;
 mod systems;
 
-use crate::systems::{mapgen::MapgenSystem, render::RenderSystem};
+use crate::resources::input::Input;
+use crate::systems::{
+    mapgen::MapgenSystem, player_movement::PlayerMovementSystem, render::RenderSystem,
+};
 
 struct State {
     world: World,
@@ -15,7 +19,8 @@ struct State {
 
 impl GameState for State {
     fn tick(&mut self, term: &mut BTerm) {
-        self.dispatcher.dispatch(&mut self.world);
+        self.world.insert(Input::key(term.key));
+        self.dispatcher.dispatch(&self.world);
         // RenderSystem needs special treatment (see RenderSystem::run)
         self.render.run_now_with_term(&mut self.world, term);
         self.world.maintain();
@@ -31,7 +36,9 @@ fn main() {
     // Initialize specs
     let mut gs = State {
         world: World::new(),
-        dispatcher: DispatcherBuilder::new().build(),
+        dispatcher: DispatcherBuilder::new()
+            .with(PlayerMovementSystem, "player_movement", &[])
+            .build(),
         render: RenderSystem::new(),
     };
     gs.dispatcher.setup(&mut gs.world);

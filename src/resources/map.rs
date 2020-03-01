@@ -1,4 +1,6 @@
 use crate::components::position::Position;
+use std::cmp::{max, min};
+use std::convert::TryInto;
 use std::ops::{Index, IndexMut};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
@@ -18,36 +20,54 @@ impl Map {
         Map {
             width,
             height,
-            tiles: vec![TileType::Floor; width * height],
+            tiles: vec![TileType::Floor; (width * height).into()],
         }
     }
 
-    fn static_xy_idx(width: usize, x: i32, y: i32) -> usize {
-        (y as usize * width) + x as usize
+    fn static_xy_idx(width: usize, x: usize, y: usize) -> usize {
+        (y * width) + x
     }
 
-    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
+    pub fn xy_idx(&self, x: usize, y: usize) -> usize {
         Map::static_xy_idx(self.width, x, y)
     }
 
     fn static_pos_idx(width: usize, pos: &Position) -> usize {
-        Map::static_xy_idx(width, pos.x, pos.y)
+        Map::static_xy_idx(
+            width,
+            pos.x().try_into().unwrap(),
+            pos.y().try_into().unwrap(),
+        )
     }
 
     pub fn pos_idx(&self, pos: &Position) -> usize {
         Map::static_pos_idx(self.width, pos)
     }
 
-    pub fn idx_pos(&self, idx: i32) -> Position {
-        let y = idx / self.width as i32;
-        Position {
-            x: idx - y * self.width as i32,
-            y,
-        }
+    pub fn idx_pos(&self, idx: usize) -> Position {
+        let y = idx / self.width;
+        Position::new(
+            (idx - y * self.width).try_into().unwrap(),
+            y.try_into().unwrap(),
+        )
     }
 
     pub fn tile_count(&self) -> usize {
         self.tiles.len()
+    }
+
+    pub fn clamp(&self, position: &Position) -> Position {
+        if position.x() > 0
+            && position.y() > 0
+            && position.x() < self.width.try_into().unwrap()
+            && position.y() < self.height.try_into().unwrap()
+        {
+            return position.clone();
+        }
+        Position::new(
+            max(0, min((self.width - 1).try_into().unwrap(), position.x())),
+            max(0, min((self.height - 1).try_into().unwrap(), position.y())),
+        )
     }
 }
 
@@ -84,7 +104,7 @@ impl<'a> Iterator for MapIterator<'a> {
             return Option::None;
         }
 
-        let current_pos = self.map.idx_pos(self.next_idx as i32);
+        let current_pos = self.map.idx_pos(self.next_idx);
         let current_tile = self.map[&current_pos];
         self.next_idx += 1;
         Option::Some((current_pos, current_tile))
@@ -120,7 +140,7 @@ mod tests {
     fn pos_idx_symmetry() {
         let pos = Position::new(10, 15);
         let map = Map::new(30, 49);
-        assert_eq!(pos, map.idx_pos(map.pos_idx(&pos) as i32));
+        assert_eq!(pos, map.idx_pos(map.pos_idx(&pos)));
     }
 
     #[test]

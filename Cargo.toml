@@ -13,3 +13,4 @@ specs-derive = "0.4.1"
 serde = { version = "1.0.104", features = ["derive"] }
 shred-derive = "0.6.2"
 serde_json = "1.0.48"
+auto_ops = "0.1.0"

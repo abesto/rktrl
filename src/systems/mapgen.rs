@@ -1,5 +1,5 @@
 use crate::{
-    components::{position::Position, renderable::Renderable},
+    components::{player::Player, position::Position, renderable::Renderable},
     resources::map::{Map, TileType},
 };
 use bracket_lib::prelude::*;
@@ -10,6 +10,7 @@ use specs::prelude::*;
 pub struct MapgenSystemData<'a> {
     position: WriteStorage<'a, Position>,
     renderable: WriteStorage<'a, Renderable>,
+    player: WriteStorage<'a, Player>,
 
     map: Write<'a, Map>,
     entity: Entities<'a>,
@@ -34,7 +35,7 @@ impl MapgenSystem {
     fn gen_mobs(&mut self, data: &mut MapgenSystemData) {
         data.entity
             .build_entity()
-            .with(Position { x: 40, y: 25 }, &mut data.position)
+            .with(Position::new(40, 25), &mut data.position)
             .with(
                 Renderable {
                     glyph: to_cp437('@'),
@@ -43,12 +44,13 @@ impl MapgenSystem {
                 },
                 &mut data.renderable,
             )
+            .with(Player::new(), &mut data.player)
             .build();
 
         for i in 0..10 {
             data.entity
                 .build_entity()
-                .with(Position { x: i * 7, y: 20 }, &mut data.position)
+                .with(Position::new(i * 7, 20), &mut data.position)
                 .with(
                     Renderable {
                         glyph: to_cp437('☺'),
