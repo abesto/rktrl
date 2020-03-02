@@ -1,4 +1,5 @@
 use crate::components::position::Position;
+use bracket_lib::prelude::*;
 use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::ops::{Index, IndexMut};
@@ -53,11 +54,11 @@ impl Map {
         self.tiles.len()
     }
 
-    pub fn contains(&self, position: &Position) -> bool {
-        position.x > 0 && position.y > 0 && position.x < self.width && position.y < self.height
+    pub fn contains(&self, position: Position) -> bool {
+        position.x < self.width && position.y < self.height
     }
 
-    pub fn clamp(&self, position: &Position) -> Position {
+    pub fn clamp(&self, position: Position) -> Position {
         if self.contains(position) {
             return position.clone();
         }
@@ -127,6 +128,18 @@ impl<'a> IntoIterator for &'a Map {
             next_idx: 0,
             max_idx: self.tile_count(),
         }
+    }
+}
+
+impl Algorithm2D for Map {
+    fn dimensions(&self) -> Point {
+        Point::new(self.width, self.height)
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: usize) -> bool {
+        self.tiles[idx as usize] == TileType::Wall
     }
 }
 

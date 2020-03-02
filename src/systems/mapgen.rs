@@ -1,5 +1,5 @@
 use crate::{
-    components::{player::Player, position::Position, renderable::Renderable},
+    components::{player::Player, position::Position, renderable::Renderable, viewshed::Viewshed},
     lib::rect::Rect,
     resources::map::{Map, TileType},
 };
@@ -13,6 +13,7 @@ pub struct MapgenSystemData<'a> {
     position: WriteStorage<'a, Position>,
     renderable: WriteStorage<'a, Renderable>,
     player: WriteStorage<'a, Player>,
+    viewshed: WriteStorage<'a, Viewshed>,
 
     map: Write<'a, Map>,
     entity: Entities<'a>,
@@ -51,22 +52,8 @@ impl MapgenSystem {
                 &mut data.renderable,
             )
             .with(Player::new(), &mut data.player)
+            .with(Viewshed::new(8), &mut data.viewshed)
             .build();
-
-        for i in 0..10 {
-            data.entity
-                .build_entity()
-                .with(Position::new(i * 7, 20), &mut data.position)
-                .with(
-                    Renderable {
-                        glyph: to_cp437('☺'),
-                        fg: RGB::named(RED),
-                        bg: RGB::named(BLACK),
-                    },
-                    &mut data.renderable,
-                )
-                .build();
-        }
     }
 
     fn gen_map(&mut self, data: &mut MapgenSystemData) -> Position {
@@ -80,8 +67,8 @@ impl MapgenSystem {
         for _ in 0..MAX_ROOMS {
             let w = self.rng.range(MIN_SIZE, MAX_SIZE + 1);
             let h = self.rng.range(MIN_SIZE, MAX_SIZE + 1);
-            let x = self.rng.range(0, map.width - w);
-            let y = self.rng.range(0, map.height - h);
+            let x = self.rng.range(1, map.width - w - 1);
+            let y = self.rng.range(1, map.height - h - 1);
             let new_room = Rect::new(x, y, w, h);
             let mut ok = true;
             for other_room in rooms.iter() {
@@ -125,7 +112,7 @@ impl MapgenSystem {
     fn apply_horizontal_tunnel(map: &mut Map, x1: u16, x2: u16, y: u16) {
         for x in min(x1, x2)..=max(x1, x2) {
             let position = &Position::new(x, y);
-            if map.contains(position) {
+            if map.contains(*position) {
                 map[position] = TileType::Floor;
             }
         }
@@ -134,7 +121,7 @@ impl MapgenSystem {
     fn apply_vertical_tunnel(map: &mut Map, y1: u16, y2: u16, x: u16) {
         for y in min(y1, y2)..=max(y1, y2) {
             let position = &Position::new(x, y);
-            if map.contains(position) {
+            if map.contains(*position) {
                 map[position] = TileType::Floor;
             }
         }

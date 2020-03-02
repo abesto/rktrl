@@ -1,5 +1,6 @@
 use crate::lib::vector::Vector;
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
+use bracket_lib::prelude::Point;
 use specs::{Component, VecStorage};
 use specs_derive::Component;
 use std::convert::TryInto;
@@ -41,6 +42,17 @@ impl From<&Position> for Vector {
             x: position.x.into(),
             y: position.y.into(),
         }
+    }
+}
+
+impl std::convert::TryFrom<&Point> for Position {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: &Point) -> Result<Self, Self::Error> {
+        value
+            .x
+            .try_into()
+            .and_then(|x| value.y.try_into().map(|y| Position { x, y }))
     }
 }
 

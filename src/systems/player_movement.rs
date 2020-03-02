@@ -1,5 +1,5 @@
 use crate::{
-    components::{player::Player, position::Position},
+    components::{player::Player, position::Position, viewshed::Viewshed},
     lib::vector::{Heading, Vector},
     resources::{
         input::Input,
@@ -14,6 +14,7 @@ use specs::prelude::*;
 pub struct PlayerMovementSystemData<'a> {
     player: ReadStorage<'a, Player>,
     position: WriteStorage<'a, Position>,
+    viewshed: WriteStorage<'a, Viewshed>,
 
     map: Read<'a, Map>,
     input: Read<'a, Input>,
@@ -58,10 +59,12 @@ impl PlayerMovementSystem {
     }
 
     fn try_move_player(data: &mut PlayerMovementSystemData, heading: Heading) {
-        for (position, _) in (&mut data.position, &data.player).join() {
-            let new_position = *position + Vector::unit(heading);
+        for (position, viewshed, _) in (&mut data.position, &mut data.viewshed, &data.player).join()
+        {
+            let new_position = data.map.clamp(*position + Vector::unit(heading));
             if data.map[&new_position] == TileType::Floor {
                 *position = new_position;
+                viewshed.dirty = true;
             }
         }
     }
