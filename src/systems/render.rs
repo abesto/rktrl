@@ -44,8 +44,26 @@ impl<'a> RenderSystem {
         self.render_entities(data, term);
     }
 
+    fn player_visible_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
+        (&data.player, &data.viewshed)
+            .join()
+            .flat_map(|t| t.1.visible_tiles.clone())
+            .collect()
+    }
+
+    fn player_revealed_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
+        (&data.player, &data.viewshed)
+            .join()
+            .flat_map(|t| t.1.revealed_tiles.clone())
+            .collect()
+    }
+
     fn render_entities(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+        let visible = self.player_visible_tiles(data);
         for (position, renderable) in (&data.position, &data.renderable).join() {
+            if !visible.contains(position) {
+                continue;
+            }
             term.set(
                 position.x.into(),
                 position.y.into(),
@@ -57,15 +75,8 @@ impl<'a> RenderSystem {
     }
 
     fn render_map(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
-        let (visible, revealed) = {
-            let mut visible: HashSet<Position> = HashSet::new();
-            let mut revealed: HashSet<Position> = HashSet::new();
-            for (_player, viewshed) in (&data.player, &data.viewshed).join() {
-                visible.extend(&viewshed.visible_tiles);
-                revealed.extend(&viewshed.revealed_tiles);
-            }
-            (visible, revealed)
-        };
+        let visible = self.player_visible_tiles(data);
+        let revealed = self.player_revealed_tiles(data);
 
         for position in revealed {
             let tile = data.map[&position];

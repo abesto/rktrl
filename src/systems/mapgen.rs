@@ -1,5 +1,8 @@
 use crate::{
-    components::{player::Player, position::Position, renderable::Renderable, viewshed::Viewshed},
+    components::{
+        monster::Monster, name::Name, player::Player, position::Position, renderable::Renderable,
+        viewshed::Viewshed,
+    },
     lib::rect::Rect,
     resources::map::{Map, TileType},
 };
@@ -14,6 +17,8 @@ pub struct MapgenSystemData<'a> {
     renderable: WriteStorage<'a, Renderable>,
     player: WriteStorage<'a, Player>,
     viewshed: WriteStorage<'a, Viewshed>,
+    monster: WriteStorage<'a, Monster>,
+    name: WriteStorage<'a, Name>,
 
     map: Write<'a, Map>,
     entity: Entities<'a>,
@@ -27,8 +32,9 @@ impl<'a> System<'a> for MapgenSystem {
     type SystemData = MapgenSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        let start_position = self.gen_map(&mut data);
-        self.gen_mobs(start_position, &mut data);
+        let rooms = self.gen_map(&mut data);
+        self.gen_player(rooms[0].center().into(), &mut data);
+        self.gen_monsters(rooms, &mut data);
     }
 }
 
@@ -39,7 +45,7 @@ impl MapgenSystem {
         }
     }
 
-    fn gen_mobs(&mut self, start_position: Position, data: &mut MapgenSystemData) {
+    fn gen_player(&mut self, start_position: Position, data: &mut MapgenSystemData) {
         data.entity
             .build_entity()
             .with(start_position, &mut data.position)
@@ -56,7 +62,32 @@ impl MapgenSystem {
             .build();
     }
 
-    fn gen_map(&mut self, data: &mut MapgenSystemData) -> Position {
+    fn gen_monsters(&mut self, rooms: Vec<Rect>, data: &mut MapgenSystemData) {
+        for (i, room) in rooms.iter().skip(1).enumerate() {
+            let (x, y) = room.center();
+            let (letter, name) = match self.rng.roll_dice(1, 2) {
+                1 => ('g', "Goblin"),
+                _ => ('o', "Org"),
+            };
+            data.entity
+                .build_entity()
+                .with(Position::new(x, y), &mut data.position)
+                .with(
+                    Renderable {
+                        glyph: to_cp437(letter),
+                        fg: RGB::named(RED),
+                        bg: RGB::named(BLACK),
+                    },
+                    &mut data.renderable,
+                )
+                .with(Viewshed::new(8), &mut data.viewshed)
+                .with(Monster::new(), &mut data.monster)
+                .with(Name::new(format!("{} #{}", name, i)), &mut data.name)
+                .build();
+        }
+    }
+
+    fn gen_map(&mut self, data: &mut MapgenSystemData) -> Vec<Rect> {
         let map = &mut data.map;
 
         let mut rooms: Vec<Rect> = Vec::new();
@@ -86,7 +117,7 @@ impl MapgenSystem {
             self.connect_rooms(a, b, map);
         }
 
-        rooms[0].center().into()
+        rooms
     }
 
     fn apply_room_to_map(room: &Rect, map: &mut Map) {

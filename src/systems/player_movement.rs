@@ -4,6 +4,7 @@ use crate::{
     resources::{
         input::Input,
         map::{Map, TileType},
+        runstate::RunState,
     },
 };
 use bracket_lib::prelude::VirtualKeyCode;
@@ -18,6 +19,7 @@ pub struct PlayerMovementSystemData<'a> {
 
     map: Read<'a, Map>,
     input: Read<'a, Input>,
+    runstate: Write<'a, RunState>,
 }
 
 pub struct PlayerMovementSystem;
@@ -28,6 +30,9 @@ impl<'a> System<'a> for PlayerMovementSystem {
     fn run(&mut self, mut data: Self::SystemData) {
         if let Some(heading) = Self::key_to_heading(data.input.key) {
             Self::try_move_player(&mut data, heading);
+            *data.runstate = RunState::Running;
+        } else {
+            *data.runstate = RunState::Paused;
         }
     }
 }

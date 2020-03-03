@@ -8,8 +8,8 @@ mod systems;
 
 use crate::resources::input::Input;
 use crate::systems::{
-    mapgen::MapgenSystem, player_movement::PlayerMovementSystem, render::RenderSystem,
-    visibility::VisibilitySystem,
+    ai::AISystem, mapgen::MapgenSystem, player_movement::PlayerMovementSystem,
+    render::RenderSystem, visibility::VisibilitySystem,
 };
 
 struct State {
@@ -39,7 +39,8 @@ fn main() {
         world: World::new(),
         dispatcher: DispatcherBuilder::new()
             .with(PlayerMovementSystem, "player_movement", &[])
-            .with(VisibilitySystem, "visibility", &["player_movement"])
+            .with(AISystem, "ai", &["player_movement"])
+            .with(VisibilitySystem, "visibility", &["player_movement", "ai"])
             .build(),
         render: RenderSystem::new(),
     };
