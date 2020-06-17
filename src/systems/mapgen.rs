@@ -1,3 +1,9 @@
+use std::cmp::{max, min};
+
+use bracket_lib::prelude::*;
+use shred_derive::SystemData;
+use specs::prelude::*;
+
 use crate::{
     components::{
         monster::Monster, name::Name, player::Player, position::Position, renderable::Renderable,
@@ -6,10 +12,6 @@ use crate::{
     lib::rect::Rect,
     resources::map::{Map, TileType},
 };
-use bracket_lib::prelude::*;
-use shred_derive::SystemData;
-use specs::prelude::*;
-use std::cmp::{max, min};
 
 #[derive(SystemData)]
 pub struct MapgenSystemData<'a> {
@@ -91,9 +93,9 @@ impl MapgenSystem {
         let map = &mut data.map;
 
         let mut rooms: Vec<Rect> = Vec::new();
-        const MAX_ROOMS: u16 = 30;
-        const MIN_SIZE: u16 = 6;
-        const MAX_SIZE: u16 = 10;
+        const MAX_ROOMS: i32 = 30;
+        const MIN_SIZE: i32 = 6;
+        const MAX_SIZE: i32 = 10;
 
         for _ in 0..MAX_ROOMS {
             let w = self.rng.range(MIN_SIZE, MAX_SIZE + 1);
@@ -140,20 +142,20 @@ impl MapgenSystem {
         }
     }
 
-    fn apply_horizontal_tunnel(map: &mut Map, x1: u16, x2: u16, y: u16) {
+    fn apply_horizontal_tunnel(map: &mut Map, x1: i32, x2: i32, y: i32) {
         for x in min(x1, x2)..=max(x1, x2) {
-            let position = &Position::new(x, y);
-            if map.contains(*position) {
-                map[position] = TileType::Floor;
+            let position = Position::new(x, y);
+            if map.contains(position) {
+                map[&position] = TileType::Floor;
             }
         }
     }
 
-    fn apply_vertical_tunnel(map: &mut Map, y1: u16, y2: u16, x: u16) {
+    fn apply_vertical_tunnel(map: &mut Map, y1: i32, y2: i32, x: i32) {
         for y in min(y1, y2)..=max(y1, y2) {
-            let position = &Position::new(x, y);
-            if map.contains(*position) {
-                map[position] = TileType::Floor;
+            let position = Position::new(x, y);
+            if map.contains(position) {
+                map[&position] = TileType::Floor;
             }
         }
     }

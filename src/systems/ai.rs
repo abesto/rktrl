@@ -1,13 +1,15 @@
+use std::collections::HashSet;
+
+use bracket_lib::prelude::console;
+use shred_derive::SystemData;
+use specs::prelude::*;
+
 use crate::{
     components::{
         monster::Monster, name::Name, player::Player, position::Position, viewshed::Viewshed,
     },
     resources::runstate::RunState,
 };
-use bracket_lib::prelude::console;
-use shred_derive::SystemData;
-use specs::prelude::*;
-use std::collections::HashSet;
 
 #[derive(SystemData)]
 pub struct AISystemData<'a> {

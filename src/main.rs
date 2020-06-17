@@ -1,16 +1,16 @@
 use bracket_lib::prelude::*;
 use specs::prelude::*;
 
-mod components;
-mod lib;
-mod resources;
-mod systems;
-
 use crate::resources::input::Input;
 use crate::systems::{
     ai::AISystem, mapgen::MapgenSystem, player_movement::PlayerMovementSystem,
     render::RenderSystem, visibility::VisibilitySystem,
 };
+
+mod components;
+mod lib;
+mod resources;
+mod systems;
 
 struct State {
     world: World,
@@ -32,7 +32,8 @@ fn main() {
     // Initialize bracket-lib
     let term = BTermBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
-        .build();
+        .build()
+        .unwrap();
 
     // Initialize specs
     let mut gs = State {
@@ -51,9 +52,9 @@ fn main() {
         .with(MapgenSystem::new(), "mapgen", &[])
         .build();
     init_dispatcher.setup(&mut gs.world);
-    init_dispatcher.dispatch(&mut gs.world);
+    init_dispatcher.dispatch(&gs.world);
     gs.world.maintain();
 
     // And go!
-    main_loop(term, gs);
+    main_loop(term, gs).unwrap();
 }

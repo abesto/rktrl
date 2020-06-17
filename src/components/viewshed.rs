@@ -1,7 +1,9 @@
-use crate::components::position::Position;
+use std::collections::HashSet;
+
 use specs::{Component, HashMapStorage};
 use specs_derive::Component;
-use std::collections::HashSet;
+
+use crate::components::position::Position;
 
 #[derive(PartialEq, Component, Debug, Clone)]
 #[storage(HashMapStorage)]

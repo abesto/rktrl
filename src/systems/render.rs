@@ -1,11 +1,13 @@
+use std::collections::HashSet;
+
+use bracket_lib::prelude::*;
+use shred_derive::SystemData;
+use specs::prelude::*;
+
 use crate::{
     components::{player::Player, position::Position, renderable::Renderable, viewshed::Viewshed},
     resources::map::{Map, TileType},
 };
-use bracket_lib::prelude::*;
-use shred_derive::SystemData;
-use specs::prelude::*;
-use std::collections::HashSet;
 
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {
@@ -34,7 +36,7 @@ impl<'a> System<'a> for RenderSystem {
 
 impl<'a> RenderSystem {
     pub fn new() -> RenderSystem {
-        return RenderSystem {};
+        RenderSystem {}
     }
 
     pub fn run_now_with_term(&mut self, world: &mut World, term: &mut BTerm) {
@@ -65,8 +67,8 @@ impl<'a> RenderSystem {
                 continue;
             }
             term.set(
-                position.x.into(),
-                position.y.into(),
+                position.x,
+                position.y,
                 renderable.fg,
                 renderable.bg,
                 renderable.glyph,
@@ -87,7 +89,7 @@ impl<'a> RenderSystem {
             if !visible.contains(&position) {
                 fg = fg.to_greyscale();
             }
-            term.set(position.x.into(), position.y.into(), fg, bg, to_cp437(c));
+            term.set(position.x, position.y, fg, bg, to_cp437(c));
         }
     }
 }

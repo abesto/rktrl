@@ -1,8 +1,10 @@
-use crate::components::position::Position;
-use bracket_lib::prelude::*;
 use std::cmp::{max, min};
 use std::convert::TryInto;
 use std::ops::{Index, IndexMut};
+
+use bracket_lib::prelude::*;
+
+use crate::components::position::Position;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TileType {
@@ -11,13 +13,13 @@ pub enum TileType {
 }
 
 pub struct Map {
-    pub width: u16,
-    pub height: u16,
+    pub width: i32,
+    pub height: i32,
     tiles: Vec<TileType>,
 }
 
 impl Map {
-    pub fn new(width: u16, height: u16) -> Map {
+    pub fn new(width: i32, height: i32) -> Map {
         Map {
             width,
             height,
@@ -25,29 +27,26 @@ impl Map {
         }
     }
 
-    fn static_xy_idx(width: u16, x: u16, y: u16) -> usize {
+    fn static_xy_idx(width: i32, x: i32, y: i32) -> usize {
         ((y * width) + x).try_into().unwrap()
     }
 
-    pub fn xy_idx(&self, x: u16, y: u16) -> usize {
+    pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         Map::static_xy_idx(self.width, x, y)
     }
 
-    fn static_pos_idx(width: u16, pos: &Position) -> usize {
+    fn static_pos_idx(width: i32, pos: Position) -> usize {
         Map::static_xy_idx(width, pos.x.try_into().unwrap(), pos.y.try_into().unwrap())
     }
 
-    pub fn pos_idx(&self, pos: &Position) -> usize {
+    pub fn pos_idx(&self, pos: Position) -> usize {
         Map::static_pos_idx(self.width, pos)
     }
 
     pub fn idx_pos(&self, idx: usize) -> Position {
-        let idx_u16: u16 = idx.try_into().unwrap();
-        let y = idx_u16 / self.width;
-        Position::new(
-            (idx_u16 - y * self.width).try_into().unwrap(),
-            y.try_into().unwrap(),
-        )
+        let idx_i32: i32 = idx.try_into().unwrap();
+        let y: i32 = idx_i32 / self.width;
+        Position::new(idx_i32 - y * self.width, y)
     }
 
     pub fn tile_count(&self) -> usize {
@@ -60,7 +59,7 @@ impl Map {
 
     pub fn clamp(&self, position: Position) -> Position {
         if self.contains(position) {
-            return position.clone();
+            return position;
         }
         Position::new(
             max(0, min(self.width - 1, position.x)),
@@ -73,13 +72,13 @@ impl Index<&Position> for Map {
     type Output = TileType;
 
     fn index(&self, pos: &Position) -> &TileType {
-        &self.tiles[self.pos_idx(pos)]
+        &self.tiles[self.pos_idx(*pos)]
     }
 }
 
 impl IndexMut<&Position> for Map {
     fn index_mut(&mut self, pos: &Position) -> &mut TileType {
-        &mut self.tiles[Map::static_pos_idx(self.width, pos)]
+        &mut self.tiles[Map::static_pos_idx(self.width, *pos)]
     }
 }
 
@@ -152,7 +151,7 @@ mod tests {
     fn pos_idx_symmetry() {
         let pos = Position::new(10, 15);
         let map = Map::new(30, 49);
-        assert_eq!(pos, map.idx_pos(map.pos_idx(&pos)));
+        assert_eq!(pos, map.idx_pos(map.pos_idx(pos)));
     }
 
     #[test]

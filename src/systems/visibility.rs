@@ -1,11 +1,11 @@
+use bracket_lib::prelude::*;
+use shred_derive::SystemData;
+use specs::prelude::*;
+
 use crate::{
     components::{position::Position, viewshed::Viewshed},
     resources::map::Map,
 };
-use bracket_lib::prelude::*;
-use shred_derive::SystemData;
-use specs::prelude::*;
-use std::convert::TryInto;
 
 #[derive(SystemData)]
 pub struct VisibilitySystemData<'a> {
@@ -30,7 +30,7 @@ impl<'a> System<'a> for VisibilitySystem {
             viewshed.visible_tiles =
                 field_of_view(Point::new(pos.x, pos.y), viewshed.range.into(), map)
                     .iter()
-                    .filter_map(|p| p.try_into().ok())
+                    .map(|p| Position::from(*p))
                     .filter(|p| map.contains(*p))
                     .collect();
             viewshed.revealed_tiles.extend(&viewshed.visible_tiles);

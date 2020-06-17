@@ -1,4 +1,8 @@
-use auto_ops::impl_op_ex;
+use std::convert::TryInto;
+
+use bracket_lib::prelude::Point;
+use macro_attr::*;
+use newtype_derive::*;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Heading {
@@ -8,15 +12,20 @@ pub enum Heading {
     West,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Vector {
-    pub x: i32,
-    pub y: i32,
+macro_attr! {
+    #[derive(Clone, PartialEq, Eq, Hash,
+             NewtypeDebug!, NewtypeAdd!(Point), NewtypeDeref!, NewtypeFrom!)]
+    pub struct Vector(Point);
 }
 
 impl Vector {
-    pub fn new(x: i32, y: i32) -> Vector {
-        Vector { x, y }
+    #[inline]
+    #[must_use]
+    pub fn new<T>(x: T, y: T) -> Vector
+        where
+            T: TryInto<i32>,
+    {
+        Point::new(x, y).into()
     }
 
     pub fn len(&self) -> f64 {
@@ -34,12 +43,3 @@ impl Vector {
         }
     }
 }
-
-impl_op_ex!(+ |lhs: &Vector, rhs: &Vector| -> Vector 
-    { Vector { x: lhs.x + rhs.x, y: lhs.y + rhs.y } }
-);
-
-impl_op_ex!(+= |lhs: &mut Vector, rhs: &Vector| { 
-    lhs.x += rhs.x; 
-    lhs.y += rhs.y;
-});
