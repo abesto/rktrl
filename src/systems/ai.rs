@@ -1,6 +1,4 @@
-use std::collections::HashSet;
-
-use bracket_lib::prelude::console;
+use bracket_lib::prelude::{a_star_search, console};
 use shred_derive::SystemData;
 use specs::prelude::*;
 
@@ -8,18 +6,19 @@ use crate::{
     components::{
         monster::Monster, name::Name, player::Player, position::Position, viewshed::Viewshed,
     },
-    resources::runstate::RunState,
+    resources::{map::Map, runstate::RunState},
 };
 
 #[derive(SystemData)]
 pub struct AISystemData<'a> {
-    viewshed: ReadStorage<'a, Viewshed>,
-    position: ReadStorage<'a, Position>,
+    viewshed: WriteStorage<'a, Viewshed>,
+    position: WriteStorage<'a, Position>,
     monster: ReadStorage<'a, Monster>,
     player: ReadStorage<'a, Player>,
     name: ReadStorage<'a, Name>,
 
     runstate: Read<'a, RunState>,
+    map: Read<'a, Map>,
 }
 
 pub struct AISystem;
@@ -27,18 +26,34 @@ pub struct AISystem;
 impl<'a> System<'a> for AISystem {
     type SystemData = AISystemData<'a>;
 
-    fn run(&mut self, data: Self::SystemData) {
+    fn run(&mut self, mut data: Self::SystemData) {
         if *data.runstate == RunState::Paused {
             return;
         }
-        let player_pos: HashSet<&Position> =
-            (&data.position, &data.player).join().map(|p| p.0).collect();
-        for (viewshed, name, _monster) in (&data.viewshed, &data.name, &data.monster).join() {
-            if player_pos
-                .iter()
-                .any(|p| viewshed.visible_tiles.contains(p))
-            {
+        let player_pos: Position = *(&data.position, &data.player)
+            .join()
+            .map(|p| p.0)
+            .next()
+            .unwrap();
+        for (mut viewshed, name, pos, _monster) in (
+            &mut data.viewshed,
+            &data.name,
+            &mut data.position,
+            &data.monster,
+        )
+            .join()
+        {
+            if viewshed.visible_tiles.contains(&player_pos) {
                 console::log(format!("{} shouts insults!", name.name));
+                let path = a_star_search(
+                    data.map.pos_idx(*pos) as i32,
+                    data.map.pos_idx(player_pos) as i32,
+                    &*data.map,
+                );
+                if path.success && path.steps.len() > 1 {
+                    *pos = data.map.idx_pos(path.steps[1]);
+                    viewshed.dirty = true;
+                }
             }
         }
     }
