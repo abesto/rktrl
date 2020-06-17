@@ -3,8 +3,11 @@ use std::convert::TryInto;
 use std::ops::{Index, IndexMut};
 
 use bracket_lib::prelude::*;
+use smallvec::SmallVec;
+use strum::IntoEnumIterator;
 
 use crate::components::position::Position;
+use crate::lib::vector::{Heading, Vector};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TileType {
@@ -54,7 +57,7 @@ impl Map {
     }
 
     pub fn contains(&self, position: Position) -> bool {
-        position.x < self.width && position.y < self.height
+        position.x >= 0 && position.y >= 0 && position.x < self.width && position.y < self.height
     }
 
     pub fn clamp(&self, position: Position) -> Position {
@@ -65,6 +68,13 @@ impl Map {
             max(0, min(self.width - 1, position.x)),
             max(0, min(self.height - 1, position.y)),
         )
+    }
+
+    fn is_exit_valid(&self, position: Position) -> bool {
+        if !self.contains(position) {
+            return false;
+        }
+        self[&position] != TileType::Wall
     }
 }
 
@@ -139,6 +149,26 @@ impl Algorithm2D for Map {
 impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         self.tiles[idx as usize] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, idx: usize) -> SmallVec<[(usize, f32); 10]> {
+        let mut exits = SmallVec::new();
+        let position = self.idx_pos(idx);
+
+        for heading in Heading::iter() {
+            let candidate = position + *Vector::unit(heading);
+            if self.is_exit_valid(candidate) {
+                exits.push((self.pos_idx(candidate), 1.0))
+            }
+        }
+
+        exits
+    }
+
+    fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
+        let p1 = self.idx_pos(idx1);
+        let p2 = self.idx_pos(idx2);
+        DistanceAlg::Pythagoras.distance2d(*p1, *p2)
     }
 }
 
