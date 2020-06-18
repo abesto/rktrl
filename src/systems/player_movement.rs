@@ -5,11 +5,7 @@ use specs::prelude::*;
 use crate::{
     components::{player::Player, position::Position, viewshed::Viewshed},
     lib::vector::{Heading, Vector},
-    resources::{
-        input::Input,
-        map::{Map, TileType},
-        runstate::RunState,
-    },
+    resources::{input::Input, map::Map, runstate::RunState},
 };
 
 #[derive(SystemData)]
@@ -68,7 +64,7 @@ impl PlayerMovementSystem {
         for (position, viewshed, _) in (&mut data.position, &mut data.viewshed, &data.player).join()
         {
             let new_position = data.map.clamp(*position + *Vector::unit(heading));
-            if data.map[&new_position] == TileType::Floor {
+            if !data.map.is_blocked(new_position) {
                 *position = new_position;
                 viewshed.dirty = true;
             }

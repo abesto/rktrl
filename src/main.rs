@@ -3,8 +3,8 @@ use specs::prelude::*;
 
 use crate::resources::input::Input;
 use crate::systems::{
-    ai::AISystem, mapgen::MapgenSystem, player_movement::PlayerMovementSystem,
-    render::RenderSystem, visibility::VisibilitySystem,
+    ai::AISystem, map_indexing::MapIndexingSystem, mapgen::MapgenSystem,
+    player_movement::PlayerMovementSystem, render::RenderSystem, visibility::VisibilitySystem,
 };
 
 mod components;
@@ -42,6 +42,11 @@ fn main() {
             .with(PlayerMovementSystem, "player_movement", &[])
             .with(AISystem, "ai", &["player_movement"])
             .with(VisibilitySystem, "visibility", &["player_movement", "ai"])
+            .with(
+                MapIndexingSystem,
+                "map_indexing",
+                &["ai", "player_movement"],
+            )
             .build(),
         render: RenderSystem::new(),
     };

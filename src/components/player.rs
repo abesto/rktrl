@@ -1,12 +1,18 @@
-use specs::{Component, HashMapStorage};
+use specs::{Component, NullStorage};
 use specs_derive::Component;
 
 #[derive(PartialEq, Component, Debug, Clone)]
-#[storage(HashMapStorage)]
+#[storage(NullStorage)]
 pub struct Player;
 
 impl Player {
-    pub fn new() -> Player {
+    pub const fn new() -> Player {
         Player
+    }
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Player::new()
     }
 }

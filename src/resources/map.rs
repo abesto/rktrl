@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::ops::{Index, IndexMut};
 
@@ -19,6 +20,7 @@ pub struct Map {
     pub width: i32,
     pub height: i32,
     tiles: Vec<TileType>,
+    blocked: HashSet<Position>,
 }
 
 impl Map {
@@ -27,6 +29,7 @@ impl Map {
             width,
             height,
             tiles: vec![TileType::Wall; (width * height).try_into().unwrap()],
+            blocked: HashSet::new(),
         }
     }
 
@@ -70,11 +73,29 @@ impl Map {
         )
     }
 
-    fn is_exit_valid(&self, position: Position) -> bool {
+    pub fn is_blocked(&self, position: Position) -> bool {
         if !self.contains(position) {
             return false;
         }
-        self[&position] != TileType::Wall
+        self.blocked.contains(&position)
+    }
+
+    pub fn block(&mut self, position: Position) {
+        self.blocked.insert(position);
+    }
+
+    fn is_exit_valid(&self, position: Position) -> bool {
+        !self.is_blocked(position)
+    }
+
+    pub fn populate_blocked(&mut self) {
+        self.blocked = self
+            .tiles
+            .iter()
+            .enumerate()
+            .filter(|(_i, tile)| **tile == TileType::Wall)
+            .map(|(i, _tile)| self.idx_pos(i))
+            .collect();
     }
 }
 

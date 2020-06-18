@@ -6,8 +6,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        monster::Monster, name::Name, player::Player, position::Position, renderable::Renderable,
-        viewshed::Viewshed,
+        blocks_tile::BlocksTile, monster::Monster, name::Name, player::Player, position::Position,
+        renderable::Renderable, viewshed::Viewshed,
     },
     lib::rect::Rect,
     resources::map::{Map, TileType},
@@ -21,6 +21,7 @@ pub struct MapgenSystemData<'a> {
     viewshed: WriteStorage<'a, Viewshed>,
     monster: WriteStorage<'a, Monster>,
     name: WriteStorage<'a, Name>,
+    blocks_tile: WriteStorage<'a, BlocksTile>,
 
     map: Write<'a, Map>,
     entity: Entities<'a>,
@@ -61,6 +62,7 @@ impl MapgenSystem {
             )
             .with(Player::new(), &mut data.player)
             .with(Viewshed::new(8), &mut data.viewshed)
+            .with(BlocksTile::new(), &mut data.blocks_tile)
             .build();
     }
 
@@ -85,6 +87,7 @@ impl MapgenSystem {
                 .with(Viewshed::new(8), &mut data.viewshed)
                 .with(Monster::new(), &mut data.monster)
                 .with(Name::new(format!("{} #{}", name, i)), &mut data.name)
+                .with(BlocksTile::new(), &mut data.blocks_tile)
                 .build();
         }
     }

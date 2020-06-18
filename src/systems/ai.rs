@@ -1,4 +1,4 @@
-use bracket_lib::prelude::{a_star_search, console};
+use bracket_lib::prelude::{a_star_search, console, DistanceAlg};
 use shred_derive::SystemData;
 use specs::prelude::*;
 
@@ -44,7 +44,12 @@ impl<'a> System<'a> for AISystem {
             .join()
         {
             if viewshed.visible_tiles.contains(&player_pos) {
-                console::log(format!("{} shouts insults!", name.name));
+                let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
+                if distance < 1.5 {
+                    // Attack goes here
+                    console::log(&format!("{} shouts insults", name.name));
+                    return;
+                }
                 let path = a_star_search(
                     data.map.pos_idx(*pos) as i32,
                     data.map.pos_idx(player_pos) as i32,
