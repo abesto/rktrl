@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 use bracket_lib::prelude::{DistanceAlg, Point};
 use macro_attr::*;
 use newtype_derive::*;
@@ -15,7 +16,7 @@ pub enum Heading {
 
 macro_attr! {
     #[derive(Copy, Clone, PartialEq, Eq, Hash,
-             NewtypeDebug!, NewtypeAdd!(Point), NewtypeDeref!, NewtypeFrom!)]
+             NewtypeDebug!, NewtypeAdd!, NewtypeDeref!, NewtypeFrom!)]
     pub struct Vector(Point);
 }
 
@@ -52,3 +53,12 @@ impl Vector {
         Vector::new(self.y, -self.x)
     }
 }
+
+impl From<Heading> for Vector {
+    fn from(heading: Heading) -> Self {
+        Vector::unit(heading)
+    }
+}
+
+impl_op_ex_commutative!(+ |a: Vector, b: Heading| -> Vector { a + Vector::from(b) });
+impl_op_ex!(+ |a: Heading, b: Heading| -> Vector { Vector::from(a) + b });

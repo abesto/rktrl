@@ -25,8 +25,8 @@ impl<'a> System<'a> for PlayerMovementSystem {
     type SystemData = PlayerMovementSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        if let Some(heading) = Self::key_to_heading(data.input.key) {
-            Self::try_move_player(&mut data, heading);
+        if let Some(vector) = Self::key_to_heading(data.input.key) {
+            Self::try_move_player(&mut data, vector);
             *data.runstate = RunState::Running;
         } else {
             *data.runstate = RunState::Paused;
@@ -35,35 +35,42 @@ impl<'a> System<'a> for PlayerMovementSystem {
 }
 
 impl PlayerMovementSystem {
-    fn key_to_heading(key: Option<VirtualKeyCode>) -> Option<Heading> {
+    fn key_to_heading(key: Option<VirtualKeyCode>) -> Option<Vector> {
         match key {
             None => None,
             Some(key) => match key {
-                VirtualKeyCode::Up => Some(Heading::North),
-                VirtualKeyCode::K => Some(Heading::North),
-                VirtualKeyCode::Numpad8 => Some(Heading::North),
+                // Cardinal directions
+                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                    Some(Heading::North.into())
+                }
 
-                VirtualKeyCode::Right => Some(Heading::East),
-                VirtualKeyCode::L => Some(Heading::East),
-                VirtualKeyCode::Numpad6 => Some(Heading::East),
+                VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
+                    Some(Heading::East.into())
+                }
 
-                VirtualKeyCode::Down => Some(Heading::South),
-                VirtualKeyCode::J => Some(Heading::South),
-                VirtualKeyCode::Numpad2 => Some(Heading::South),
+                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                    Some(Heading::South.into())
+                }
 
-                VirtualKeyCode::Left => Some(Heading::West),
-                VirtualKeyCode::H => Some(Heading::West),
-                VirtualKeyCode::Numpad4 => Some(Heading::West),
+                VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
+                    Some(Heading::West.into())
+                }
+
+                // Diagonals
+                VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => Some(Heading::North + Heading::East),
+                VirtualKeyCode::Numpad7 | VirtualKeyCode::U => Some(Heading::North + Heading::West),
+                VirtualKeyCode::Numpad3 | VirtualKeyCode::N => Some(Heading::South + Heading::East),
+                VirtualKeyCode::Numpad1 | VirtualKeyCode::B => Some(Heading::South + Heading::West),
 
                 _ => None,
             },
         }
     }
 
-    fn try_move_player(data: &mut PlayerMovementSystemData, heading: Heading) {
+    fn try_move_player(data: &mut PlayerMovementSystemData, vector: Vector) {
         for (position, viewshed, _) in (&mut data.position, &mut data.viewshed, &data.player).join()
         {
-            let new_position = data.map.clamp(*position + Vector::unit(heading));
+            let new_position = data.map.clamp(*position + vector);
             if !data.map.is_blocked(new_position) {
                 *position = new_position;
                 viewshed.dirty = true;

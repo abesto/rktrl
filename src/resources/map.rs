@@ -178,7 +178,7 @@ impl BaseMap for Map {
         Heading::iter()
             .flat_map(|heading| {
                 let cardinal = Vector::unit(heading);
-                let diagonal = cardinal + *cardinal.rotated();
+                let diagonal = cardinal + cardinal.rotated();
                 vec![cardinal, diagonal]
             })
             .map(|vector| position + vector)
