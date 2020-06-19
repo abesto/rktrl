@@ -14,7 +14,7 @@ pub enum Heading {
 }
 
 macro_attr! {
-    #[derive(Clone, PartialEq, Eq, Hash,
+    #[derive(Copy, Clone, PartialEq, Eq, Hash,
              NewtypeDebug!, NewtypeAdd!(Point), NewtypeDeref!, NewtypeFrom!)]
     pub struct Vector(Point);
 }
@@ -45,5 +45,10 @@ impl Vector {
             Heading::South => Vector::new(0, 1),
             Heading::West => Vector::new(-1, 0),
         }
+    }
+
+    pub fn rotated(&self) -> Vector {
+        /* Rotate by 90 degrees clockwise */
+        Vector::new(self.y, -self.x)
     }
 }

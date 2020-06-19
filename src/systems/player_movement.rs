@@ -63,7 +63,7 @@ impl PlayerMovementSystem {
     fn try_move_player(data: &mut PlayerMovementSystemData, heading: Heading) {
         for (position, viewshed, _) in (&mut data.position, &mut data.viewshed, &data.player).join()
         {
-            let new_position = data.map.clamp(*position + *Vector::unit(heading));
+            let new_position = data.map.clamp(*position + Vector::unit(heading));
             if !data.map.is_blocked(new_position) {
                 *position = new_position;
                 viewshed.dirty = true;

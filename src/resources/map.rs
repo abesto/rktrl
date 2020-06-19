@@ -173,17 +173,18 @@ impl BaseMap for Map {
     }
 
     fn get_available_exits(&self, idx: usize) -> SmallVec<[(usize, f32); 10]> {
-        let mut exits = SmallVec::new();
         let position = self.idx_pos(idx);
 
-        for heading in Heading::iter() {
-            let candidate = position + *Vector::unit(heading);
-            if self.is_exit_valid(candidate) {
-                exits.push((self.pos_idx(candidate), 1.0))
-            }
-        }
-
-        exits
+        Heading::iter()
+            .flat_map(|heading| {
+                let cardinal = Vector::unit(heading);
+                let diagonal = cardinal + *cardinal.rotated();
+                vec![cardinal, diagonal]
+            })
+            .map(|vector| position + vector)
+            .filter(|candidate| self.is_exit_valid(*candidate))
+            .map(|exit| (self.pos_idx(exit), position.distance(exit)))
+            .collect()
     }
 
     fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
