@@ -140,12 +140,6 @@ impl IndexMut<&Position> for Map {
     }
 }
 
-impl Default for Map {
-    fn default() -> Self {
-        Map::new(80, 50)
-    }
-}
-
 pub struct MapIterator<'a> {
     map: &'a Map,
     next_idx: usize,

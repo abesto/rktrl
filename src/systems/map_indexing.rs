@@ -13,7 +13,7 @@ pub struct MapIndexingSystemData<'a> {
     blocks_tile: ReadStorage<'a, BlocksTile>,
     player: ReadStorage<'a, Player>,
 
-    map: Write<'a, Map>,
+    map: WriteExpect<'a, Map>,
 }
 
 pub struct MapIndexingSystem;

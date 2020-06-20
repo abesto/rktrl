@@ -24,7 +24,7 @@ pub struct MapgenSystemData<'a> {
     blocks_tile: WriteStorage<'a, BlocksTile>,
     combat_stats: WriteStorage<'a, CombatStats>,
 
-    map: Write<'a, Map>,
+    map: WriteExpect<'a, Map>,
     entity: Entities<'a>,
 }
 
@@ -82,7 +82,7 @@ impl MapgenSystem {
             let (x, y) = room.center();
             let (letter, name) = match self.rng.roll_dice(1, 2) {
                 1 => ('g', "Goblin"),
-                _ => ('o', "Org"),
+                _ => ('o', "Orc"),
             };
             data.entity
                 .build_entity()

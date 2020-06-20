@@ -1,13 +1,22 @@
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
 use crate::{
-    components::{player::Player, position::Position, renderable::Renderable, viewshed::Viewshed},
-    resources::map::{Map, TileType},
+    components::{
+        combat_stats::CombatStats, player::Player, position::Position, renderable::Renderable,
+        viewshed::Viewshed,
+    },
+    resources::{
+        gamelog::GameLog,
+        layout::Layout,
+        map::{Map, TileType},
+    },
 };
+use std::convert::TryInto;
 
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {
@@ -15,8 +24,11 @@ pub struct RenderSystemData<'a> {
     renderable: ReadStorage<'a, Renderable>,
     player: ReadStorage<'a, Player>,
     viewshed: ReadStorage<'a, Viewshed>,
+    combat_stats: ReadStorage<'a, CombatStats>,
 
-    map: Read<'a, Map>,
+    gamelog: Read<'a, GameLog>,
+    layout: ReadExpect<'a, Layout>,
+    map: ReadExpect<'a, Map>,
 }
 
 pub struct RenderSystem {}
@@ -44,6 +56,7 @@ impl<'a> RenderSystem {
         term.cls();
         self.render_map(data, term);
         self.render_entities(data, term);
+        self.render_gui(data, term);
     }
 
     fn player_visible_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
@@ -91,5 +104,63 @@ impl<'a> RenderSystem {
             }
             term.set(position.x, position.y, fg, bg, to_cp437(c));
         }
+    }
+
+    fn render_gui(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+        // This can go away once the fix for
+        // https://github.com/thebracket/bracket-lib/issues/96 released
+        let bracket_96_workaround = 1;
+
+        // Draw a box around the main bottom gui panel
+        let panel_rect = data.layout.panel();
+        term.draw_box(
+            panel_rect.x1,
+            panel_rect.y1,
+            panel_rect.width() - bracket_96_workaround,
+            panel_rect.height() - bracket_96_workaround,
+            RGB::named(WHITE),
+            RGB::named(BLACK),
+        );
+
+        // Show player health
+        let hp_offset: i32 = 12;
+        let max_hp_str_len: i32 = 16;
+        let hp_bar_offset = hp_offset + max_hp_str_len;
+
+        let stats = (&data.combat_stats, &data.player).join().next().unwrap().0;
+        let mut health = format!(" HP: {} / {} ", stats.hp, stats.max_hp);
+        health.truncate(max_hp_str_len.try_into().unwrap());
+
+        term.print_color(
+            panel_rect.x1 + hp_offset,
+            panel_rect.y1,
+            RGB::named(YELLOW),
+            RGB::named(BLACK),
+            &health,
+        );
+        term.draw_bar_horizontal(
+            panel_rect.x1 + hp_bar_offset,
+            panel_rect.y1,
+            panel_rect.width() - hp_bar_offset - bracket_96_workaround,
+            stats.hp,
+            stats.max_hp,
+            RGB::named(RED),
+            RGB::named(BLACK),
+        );
+
+        // Render game log
+        data.gamelog
+            .entries
+            .iter()
+            .rev()
+            .take(usize::try_from(panel_rect.height()).unwrap() - 2)
+            .enumerate()
+            .for_each(|(i, message)| {
+                term.print(
+                    panel_rect.x1 + 2,
+                    panel_rect.y1 + 1 + i32::try_from(i).unwrap(),
+                    message,
+                )
+            });
     }
 }

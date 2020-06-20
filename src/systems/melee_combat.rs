@@ -1,10 +1,12 @@
-use bracket_lib::prelude::console;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
-use crate::components::{
-    combat_stats::CombatStats, name::Name, suffer_damage::SufferDamage,
-    wants_to_melee::WantsToMelee,
+use crate::{
+    components::{
+        combat_stats::CombatStats, name::Name, suffer_damage::SufferDamage,
+        wants_to_melee::WantsToMelee,
+    },
+    resources::gamelog::GameLog,
 };
 
 #[derive(SystemData)]
@@ -13,6 +15,8 @@ pub struct MeleeCombatSystemData<'a> {
     name: ReadStorage<'a, Name>,
     combat_stats: ReadStorage<'a, CombatStats>,
     suffer_damage: WriteStorage<'a, SufferDamage>,
+
+    gamelog: Write<'a, GameLog>,
 }
 
 pub struct MeleeCombatSystem;
@@ -32,12 +36,12 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let damage = i32::max(0, stats.power - target_stats.defense);
 
                     if damage == 0 {
-                        console::log(&format!(
+                        data.gamelog.entries.push(format!(
                             "{} is unable to hurt {}",
                             &name.name, &target_name.name
                         ));
                     } else {
-                        console::log(&format!(
+                        data.gamelog.entries.push(format!(
                             "{} hits {}, for {} hp.",
                             &name.name, &target_name.name, damage
                         ));

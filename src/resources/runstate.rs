@@ -1,11 +1,13 @@
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
-    Paused,
-    Running,
+    AwaitingInput,
+    PreRun,
+    PlayerTurn,
+    MonsterTurn,
 }
 
 impl Default for RunState {
     fn default() -> Self {
-        RunState::Paused
+        RunState::PreRun
     }
 }

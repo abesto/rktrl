@@ -1,4 +1,4 @@
-use bracket_lib::prelude::{console, VirtualKeyCode};
+use bracket_lib::prelude::VirtualKeyCode;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
@@ -19,7 +19,7 @@ pub struct PlayerMovementSystemData<'a> {
     viewshed: WriteStorage<'a, Viewshed>,
     wants_to_melee: WriteStorage<'a, WantsToMelee>,
 
-    map: Write<'a, Map>,
+    map: WriteExpect<'a, Map>,
     input: Read<'a, Input>,
     runstate: Write<'a, RunState>,
     entities: Entities<'a>,
@@ -33,9 +33,9 @@ impl<'a> System<'a> for PlayerMovementSystem {
     fn run(&mut self, mut data: Self::SystemData) {
         if let Some(vector) = Self::key_to_heading(data.input.key) {
             Self::try_move_player(&mut data, vector);
-            *data.runstate = RunState::Running;
+            *data.runstate = RunState::PlayerTurn;
         } else {
-            *data.runstate = RunState::Paused;
+            *data.runstate = RunState::AwaitingInput;
         }
     }
 }

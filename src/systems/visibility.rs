@@ -12,7 +12,7 @@ pub struct VisibilitySystemData<'a> {
     viewshed: WriteStorage<'a, Viewshed>,
     position: ReadStorage<'a, Position>,
 
-    map: Read<'a, Map>,
+    map: ReadExpect<'a, Map>,
 }
 
 pub struct VisibilitySystem;

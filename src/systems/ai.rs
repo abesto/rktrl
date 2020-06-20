@@ -1,10 +1,10 @@
-use bracket_lib::prelude::{a_star_search, console, DistanceAlg};
+use bracket_lib::prelude::{a_star_search, DistanceAlg};
 use shred_derive::SystemData;
 use specs::prelude::*;
 
 use crate::{
     components::{
-        monster::Monster, name::Name, player::Player, position::Position, viewshed::Viewshed,
+        monster::Monster, player::Player, position::Position, viewshed::Viewshed,
         wants_to_melee::WantsToMelee,
     },
     resources::{map::Map, runstate::RunState},
@@ -20,7 +20,7 @@ pub struct AISystemData<'a> {
 
     entities: Entities<'a>,
     runstate: Read<'a, RunState>,
-    map: Read<'a, Map>,
+    map: ReadExpect<'a, Map>,
 }
 
 pub struct AISystem;
@@ -29,7 +29,7 @@ impl<'a> System<'a> for AISystem {
     type SystemData = AISystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        if *data.runstate == RunState::Paused {
+        if *data.runstate != RunState::MonsterTurn {
             return;
         }
         let (&player_pos, player_entity, _player) = (&data.position, &data.entities, &data.player)
