@@ -1,9 +1,12 @@
-use bracket_lib::prelude::VirtualKeyCode;
+use bracket_lib::prelude::{console, VirtualKeyCode};
 use shred_derive::SystemData;
 use specs::prelude::*;
 
 use crate::{
-    components::{player::Player, position::Position, viewshed::Viewshed},
+    components::{
+        combat_stats::CombatStats, player::Player, position::Position, viewshed::Viewshed,
+        wants_to_melee::WantsToMelee,
+    },
     lib::vector::{Heading, Vector},
     resources::{input::Input, map::Map, runstate::RunState},
 };
@@ -11,12 +14,15 @@ use crate::{
 #[derive(SystemData)]
 pub struct PlayerMovementSystemData<'a> {
     player: ReadStorage<'a, Player>,
+    combat_stats: ReadStorage<'a, CombatStats>,
     position: WriteStorage<'a, Position>,
     viewshed: WriteStorage<'a, Viewshed>,
+    wants_to_melee: WriteStorage<'a, WantsToMelee>,
 
-    map: Read<'a, Map>,
+    map: Write<'a, Map>,
     input: Read<'a, Input>,
     runstate: Write<'a, RunState>,
+    entities: Entities<'a>,
 }
 
 pub struct PlayerMovementSystem;
@@ -68,9 +74,30 @@ impl PlayerMovementSystem {
     }
 
     fn try_move_player(data: &mut PlayerMovementSystemData, vector: Vector) {
-        for (position, viewshed, _) in (&mut data.position, &mut data.viewshed, &data.player).join()
+        for (player_entity, position, viewshed, _) in (
+            &data.entities,
+            &mut data.position,
+            &mut data.viewshed,
+            &data.player,
+        )
+            .join()
         {
             let new_position = data.map.clamp(*position + vector);
+
+            for potential_target in data.map.get_tile_contents(new_position).iter() {
+                if data.combat_stats.get(*potential_target).is_some() {
+                    data.wants_to_melee
+                        .insert(
+                            player_entity,
+                            WantsToMelee {
+                                target: *potential_target,
+                            },
+                        )
+                        .expect("Add target failed");
+                    return;
+                }
+            }
+
             if !data.map.is_blocked(new_position) {
                 *position = new_position;
                 viewshed.dirty = true;

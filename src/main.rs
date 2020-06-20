@@ -1,10 +1,14 @@
 use bracket_lib::prelude::*;
 use specs::prelude::*;
 
-use crate::resources::input::Input;
-use crate::systems::{
-    ai::AISystem, map_indexing::MapIndexingSystem, mapgen::MapgenSystem,
-    player_movement::PlayerMovementSystem, render::RenderSystem, visibility::VisibilitySystem,
+use crate::{
+    //components::{suffer_damage::SufferDamage, wants_to_melee::WantsToMelee},
+    resources::input::Input,
+    systems::{
+        ai::AISystem, damage_system::DamageSystem, map_indexing::MapIndexingSystem,
+        mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
+        player_movement::PlayerMovementSystem, render::RenderSystem, visibility::VisibilitySystem,
+    },
 };
 
 mod components;
@@ -24,6 +28,7 @@ impl GameState for State {
         self.dispatcher.dispatch(&self.world);
         // RenderSystem needs special treatment (see RenderSystem::run)
         self.render.run_now_with_term(&mut self.world, term);
+        DamageSystem::delete_the_dead(&mut self.world);
         self.world.maintain();
     }
 }
@@ -42,11 +47,9 @@ fn main() {
             .with(PlayerMovementSystem, "player_movement", &[])
             .with(AISystem, "ai", &["player_movement"])
             .with(VisibilitySystem, "visibility", &["player_movement", "ai"])
-            .with(
-                MapIndexingSystem,
-                "map_indexing",
-                &["ai", "player_movement"],
-            )
+            .with(MeleeCombatSystem, "melee", &["player_movement", "ai"])
+            .with(DamageSystem, "damage", &["melee"])
+            .with(MapIndexingSystem, "map_indexing", &["damage"])
             .build(),
         render: RenderSystem::new(),
     };
@@ -58,6 +61,8 @@ fn main() {
         .build();
     init_dispatcher.setup(&mut gs.world);
     init_dispatcher.dispatch(&gs.world);
+    //gs.world.register::<WantsToMelee>();
+    //gs.world.register::<SufferDamage>();
     gs.world.maintain();
 
     // And go!

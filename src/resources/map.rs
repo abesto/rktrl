@@ -1,14 +1,20 @@
-use std::cmp::{max, min};
-use std::collections::HashSet;
-use std::convert::TryInto;
-use std::ops::{Index, IndexMut};
+use std::{
+    cmp::{max, min},
+    collections::{HashMap, HashSet},
+    convert::TryInto,
+    ops::{Index, IndexMut},
+    option::*,
+};
 
 use bracket_lib::prelude::*;
 use smallvec::SmallVec;
+use specs::prelude::Entity;
 use strum::IntoEnumIterator;
 
-use crate::components::position::Position;
-use crate::lib::vector::{Heading, Vector};
+use crate::{
+    components::position::Position,
+    lib::vector::{Heading, Vector},
+};
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum TileType {
@@ -21,6 +27,7 @@ pub struct Map {
     pub height: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
+    tile_content: HashMap<Position, HashSet<Entity>>,
 }
 
 impl Map {
@@ -30,6 +37,7 @@ impl Map {
             height,
             tiles: vec![TileType::Wall; (width * height).try_into().unwrap()],
             blocked: HashSet::new(),
+            tile_content: HashMap::new(),
         }
     }
 
@@ -96,6 +104,25 @@ impl Map {
             .filter(|(_i, tile)| **tile == TileType::Wall)
             .map(|(i, _tile)| self.idx_pos(i))
             .collect();
+    }
+
+    pub fn clear_content_index(&mut self) {
+        for content in self.tile_content.values_mut() {
+            content.clear();
+        }
+    }
+
+    pub fn add_tile_content(&mut self, position: Position, entity: Entity) {
+        self.tile_content
+            .entry(position)
+            .or_insert_with(HashSet::new)
+            .insert(entity);
+    }
+
+    pub fn get_tile_contents(&mut self, position: Position) -> &HashSet<Entity> {
+        self.tile_content
+            .entry(position)
+            .or_insert_with(HashSet::new)
     }
 }
 
@@ -196,8 +223,10 @@ impl BaseMap for Map {
 
 #[cfg(test)]
 mod tests {
-    use crate::components::position::Position;
-    use crate::resources::map::{Map, MapIterator};
+    use crate::{
+        components::position::Position,
+        resources::map::{Map, MapIterator},
+    };
 
     #[test]
     fn pos_idx_symmetry() {

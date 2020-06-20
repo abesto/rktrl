@@ -1,7 +1,10 @@
 pub mod blocks_tile;
+pub mod combat_stats;
 pub mod monster;
 pub mod name;
 pub mod player;
 pub mod position;
 pub mod renderable;
+pub mod suffer_damage;
 pub mod viewshed;
+pub mod wants_to_melee;

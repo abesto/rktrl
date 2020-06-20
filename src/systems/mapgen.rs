@@ -6,8 +6,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        blocks_tile::BlocksTile, monster::Monster, name::Name, player::Player, position::Position,
-        renderable::Renderable, viewshed::Viewshed,
+        blocks_tile::BlocksTile, combat_stats::CombatStats, monster::Monster, name::Name,
+        player::Player, position::Position, renderable::Renderable, viewshed::Viewshed,
     },
     lib::rect::Rect,
     resources::map::{Map, TileType},
@@ -22,6 +22,7 @@ pub struct MapgenSystemData<'a> {
     monster: WriteStorage<'a, Monster>,
     name: WriteStorage<'a, Name>,
     blocks_tile: WriteStorage<'a, BlocksTile>,
+    combat_stats: WriteStorage<'a, CombatStats>,
 
     map: Write<'a, Map>,
     entity: Entities<'a>,
@@ -61,8 +62,18 @@ impl MapgenSystem {
                 &mut data.renderable,
             )
             .with(Player::new(), &mut data.player)
+            .with(Name::new("Player".to_string()), &mut data.name)
             .with(Viewshed::new(8), &mut data.viewshed)
             .with(BlocksTile::new(), &mut data.blocks_tile)
+            .with(
+                CombatStats {
+                    max_hp: 30,
+                    hp: 30,
+                    defense: 2,
+                    power: 5,
+                },
+                &mut data.combat_stats,
+            )
             .build();
     }
 
@@ -88,6 +99,15 @@ impl MapgenSystem {
                 .with(Monster::new(), &mut data.monster)
                 .with(Name::new(format!("{} #{}", name, i)), &mut data.name)
                 .with(BlocksTile::new(), &mut data.blocks_tile)
+                .with(
+                    CombatStats {
+                        max_hp: 16,
+                        hp: 16,
+                        defense: 1,
+                        power: 4,
+                    },
+                    &mut data.combat_stats,
+                )
                 .build();
         }
     }

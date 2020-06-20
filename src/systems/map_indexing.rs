@@ -8,6 +8,7 @@ use crate::{
 
 #[derive(SystemData)]
 pub struct MapIndexingSystemData<'a> {
+    entities: Entities<'a>,
     position: ReadStorage<'a, Position>,
     blocks_tile: ReadStorage<'a, BlocksTile>,
     player: ReadStorage<'a, Player>,
@@ -22,10 +23,19 @@ impl<'a> System<'a> for MapIndexingSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         data.map.populate_blocked();
-        for (position, player, _blocks) in
-            (&data.position, data.player.maybe(), &data.blocks_tile).join()
+        data.map.clear_content_index();
+
+        for (entity, position, player, blocks) in (
+            &data.entities,
+            &data.position,
+            data.player.maybe(),
+            data.blocks_tile.maybe(),
+        )
+            .join()
         {
-            if player == None {
+            data.map.add_tile_content(*position, entity);
+
+            if player.is_none() && blocks.is_some() {
                 data.map.block(*position)
             }
         }
