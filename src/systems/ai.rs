@@ -5,6 +5,7 @@ use specs::prelude::*;
 use crate::{
     components::{
         monster::Monster, name::Name, player::Player, position::Position, viewshed::Viewshed,
+        wants_to_melee::WantsToMelee,
     },
     resources::{map::Map, runstate::RunState},
 };
@@ -15,8 +16,9 @@ pub struct AISystemData<'a> {
     position: WriteStorage<'a, Position>,
     monster: ReadStorage<'a, Monster>,
     player: ReadStorage<'a, Player>,
-    name: ReadStorage<'a, Name>,
+    wants_to_melee: WriteStorage<'a, WantsToMelee>,
 
+    entities: Entities<'a>,
     runstate: Read<'a, RunState>,
     map: Read<'a, Map>,
 }
@@ -30,26 +32,30 @@ impl<'a> System<'a> for AISystem {
         if *data.runstate == RunState::Paused {
             return;
         }
-        let player_pos: Position = *(&data.position, &data.player)
+        let (&player_pos, player_entity, _player) = (&data.position, &data.entities, &data.player)
             .join()
-            .map(|p| p.0)
             .next()
             .unwrap();
-        for (mut viewshed, name, pos, _monster) in (
+        for (entity, mut viewshed, pos, _monster) in (
+            &data.entities,
             &mut data.viewshed,
-            &data.name,
             &mut data.position,
             &data.monster,
         )
             .join()
         {
-            if viewshed.visible_tiles.contains(&player_pos) {
-                let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
-                if distance < 1.5 {
-                    // Attack goes here
-                    console::log(&format!("{} shouts insults", name.name));
-                    return;
-                }
+            let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
+            if distance < 1.5 {
+                data.wants_to_melee
+                    .insert(
+                        entity,
+                        WantsToMelee {
+                            target: player_entity,
+                        },
+                    )
+                    .expect("Unable to insert attack");
+                return;
+            } else if viewshed.visible_tiles.contains(&player_pos) {
                 let path = a_star_search(
                     data.map.pos_idx(*pos) as i32,
                     data.map.pos_idx(player_pos) as i32,
