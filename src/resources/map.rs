@@ -27,7 +27,7 @@ pub struct Map {
     pub height: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
-    tile_content: HashMap<Position, HashSet<Entity>>,
+    tile_content: HashMap<Position, Vec<Entity>>,
 }
 
 impl Map {
@@ -115,14 +115,16 @@ impl Map {
     pub fn add_tile_content(&mut self, position: Position, entity: Entity) {
         self.tile_content
             .entry(position)
-            .or_insert_with(HashSet::new)
-            .insert(entity);
+            .or_insert_with(Vec::new)
+            .push(entity);
     }
 
-    pub fn get_tile_contents(&mut self, position: Position) -> &HashSet<Entity> {
-        self.tile_content
-            .entry(position)
-            .or_insert_with(HashSet::new)
+    pub fn get_tile_contents(&self, position: Position) -> Option<&Vec<Entity>> {
+        if !self.tile_content.contains_key(&position) {
+            None
+        } else {
+            Some(&self.tile_content[&position])
+        }
     }
 }
 

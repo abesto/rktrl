@@ -84,17 +84,19 @@ impl PlayerMovementSystem {
         {
             let new_position = data.map.clamp(*position + vector);
 
-            for potential_target in data.map.get_tile_contents(new_position).iter() {
-                if data.combat_stats.get(*potential_target).is_some() {
-                    data.wants_to_melee
-                        .insert(
-                            player_entity,
-                            WantsToMelee {
-                                target: *potential_target,
-                            },
-                        )
-                        .expect("Add target failed");
-                    return;
+            if let Some(contents) = data.map.get_tile_contents(new_position) {
+                for potential_target in contents.iter() {
+                    if data.combat_stats.get(*potential_target).is_some() {
+                        data.wants_to_melee
+                            .insert(
+                                player_entity,
+                                WantsToMelee {
+                                    target: *potential_target,
+                                },
+                            )
+                            .expect("Add target failed");
+                        return;
+                    }
                 }
             }
 

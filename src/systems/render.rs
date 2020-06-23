@@ -7,8 +7,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, player::Player, position::Position, renderable::Renderable,
-        viewshed::Viewshed,
+        combat_stats::CombatStats, name::Name, player::Player, position::Position,
+        renderable::Renderable, viewshed::Viewshed,
     },
     resources::{
         gamelog::GameLog,
@@ -25,6 +25,7 @@ pub struct RenderSystemData<'a> {
     player: ReadStorage<'a, Player>,
     viewshed: ReadStorage<'a, Viewshed>,
     combat_stats: ReadStorage<'a, CombatStats>,
+    name: ReadStorage<'a, Name>,
 
     gamelog: Read<'a, GameLog>,
     layout: ReadExpect<'a, Layout>,
@@ -162,5 +163,82 @@ impl<'a> RenderSystem {
                     message,
                 )
             });
+
+        // Draw mouse cursor
+        let mouse_pos = term.mouse_pos();
+        term.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(MAGENTA));
+
+        self.draw_tooltips(data, term);
+    }
+
+    fn draw_tooltips(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+        let mouse_pos = Position::from(term.mouse_pos());
+        if !data.map.contains(mouse_pos) {
+            return;
+        }
+
+        let player_viewshed = (&data.viewshed, &data.player).join().next().unwrap().0;
+        if !player_viewshed.visible_tiles.contains(&mouse_pos) {
+            return;
+        }
+
+        let tile_contents = data.map.get_tile_contents(mouse_pos);
+        if tile_contents.is_none() {
+            return;
+        }
+
+        let names: Vec<String> = tile_contents
+            .unwrap()
+            .iter()
+            .filter_map(|&entity| match data.name.get(entity) {
+                Some(name) => Some(name.name.to_string()),
+                None => None,
+            })
+            .collect();
+
+        if names.is_empty() {
+            return;
+        }
+
+        let point_right = mouse_pos.x > data.layout.width / 2;
+
+        let max_length = names.iter().map(|entry| entry.len()).max().unwrap_or(0);
+        let tooltip: Vec<String> = names
+            .iter()
+            .enumerate()
+            .map(|(i, entry)| {
+                let arrow = if i == 0 {
+                    if point_right {
+                        " ->"
+                    } else {
+                        "<- "
+                    }
+                } else {
+                    "   "
+                };
+                if point_right {
+                    format!("{:2$}{}", entry, arrow, max_length)
+                } else {
+                    format!("{}{:2$}", arrow, entry, max_length)
+                }
+            })
+            .collect();
+        let width = tooltip[0].len();
+
+        let x = if point_right {
+            (mouse_pos.x as usize) - width
+        } else {
+            (mouse_pos.x as usize) + 1
+        };
+
+        for (i, entry) in tooltip.iter().enumerate() {
+            term.print_color(
+                x,
+                (mouse_pos.y as usize) + i,
+                RGB::named(WHITE),
+                RGB::named(GREY),
+                entry,
+            );
+        }
     }
 }
