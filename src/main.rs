@@ -57,10 +57,14 @@ impl GameState for State {
 
 fn main() {
     // Initialize bracket-lib
-    let term = BTermBuilder::simple80x50()
-        .with_title("Roguelike Tutorial")
-        .build()
-        .unwrap();
+    let term = {
+        let mut term = BTermBuilder::simple80x50()
+            .with_title("Roguelike Tutorial")
+            .build()
+            .unwrap();
+        term.with_post_scanlines(true);
+        term
+    };
 
     // Initialize specs
     let mut gs = State {
