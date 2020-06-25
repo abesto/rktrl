@@ -7,29 +7,35 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, name::Name, player::Player, position::Position,
-        renderable::Renderable, viewshed::Viewshed,
+        combat_stats::CombatStats, in_backpack::InBackpack, name::Name, player::Player,
+        position::Position, renderable::Renderable, viewshed::Viewshed,
     },
     resources::{
         gamelog::GameLog,
         layout::Layout,
         map::{Map, TileType},
+        runstate::RunState,
+        shown_inventory::ShownInventory,
     },
 };
 use std::convert::TryInto;
 
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {
+    entity: Entities<'a>,
     position: ReadStorage<'a, Position>,
     renderable: ReadStorage<'a, Renderable>,
     player: ReadStorage<'a, Player>,
     viewshed: ReadStorage<'a, Viewshed>,
     combat_stats: ReadStorage<'a, CombatStats>,
     name: ReadStorage<'a, Name>,
+    backpack: ReadStorage<'a, InBackpack>,
 
     gamelog: Read<'a, GameLog>,
     layout: ReadExpect<'a, Layout>,
     map: ReadExpect<'a, Map>,
+    runstate: Read<'a, RunState>,
+    shown_inventory: Write<'a, ShownInventory>,
 }
 
 pub struct RenderSystem {}
@@ -58,6 +64,8 @@ impl<'a> RenderSystem {
         self.render_map(data, term);
         self.render_entities(data, term);
         self.render_gui(data, term);
+        self.draw_tooltips(data, term);
+        self.show_inventory(data, term);
     }
 
     fn player_visible_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
@@ -167,8 +175,6 @@ impl<'a> RenderSystem {
         // Draw mouse cursor
         let mouse_pos = term.mouse_pos();
         term.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(MAGENTA));
-
-        self.draw_tooltips(data, term);
     }
 
     fn draw_tooltips(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
@@ -240,5 +246,61 @@ impl<'a> RenderSystem {
                 entry,
             );
         }
+    }
+
+    fn show_inventory(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+        if *data.runstate != RunState::ShowInventory {
+            return;
+        }
+
+        let player_entity = (&data.player, &data.entity).join().next().unwrap().1;
+        let inventory: Vec<(&InBackpack, &Name, Entity)> =
+            (&data.backpack, &data.name, &data.entity)
+                .join()
+                .filter(|item| item.0.owner == player_entity)
+                .collect();
+        let count = inventory.len();
+
+        let mut y = (25 - (count / 2)) as i32;
+        term.draw_box(
+            15,
+            y - 2,
+            31,
+            (count + 3) as i32,
+            RGB::named(WHITE),
+            RGB::named(BLACK),
+        );
+        term.print_color(
+            18,
+            y - 2,
+            RGB::named(YELLOW),
+            RGB::named(BLACK),
+            "Inventory",
+        );
+        term.print_color(
+            18,
+            y + count as i32 + 1,
+            RGB::named(YELLOW),
+            RGB::named(BLACK),
+            "ESCAPE to cancel",
+        );
+
+        for (j, (_, name, _)) in inventory.iter().enumerate() {
+            term.set(17, y, RGB::named(WHITE), RGB::named(BLACK), to_cp437('('));
+            term.set(
+                18,
+                y,
+                RGB::named(YELLOW),
+                RGB::named(BLACK),
+                97 + j as FontCharType,
+            );
+            term.set(19, y, RGB::named(WHITE), RGB::named(BLACK), to_cp437(')'));
+
+            term.print(21, y, &name.name.to_string());
+            y += 1;
+        }
+
+        let shown_entities: Vec<Entity> = inventory.iter().map(|x| x.2).collect();
+        *data.shown_inventory = shown_entities.into();
     }
 }

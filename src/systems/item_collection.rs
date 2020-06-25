@@ -11,6 +11,7 @@ use crate::{
 
 #[derive(SystemData)]
 pub struct ItemCollectionSystemData<'a> {
+    entity: Entities<'a>,
     pickup: WriteStorage<'a, WantsToPickUpItem>,
     position: WriteStorage<'a, Position>,
     name: ReadStorage<'a, Name>,
@@ -26,10 +27,10 @@ impl<'a> System<'a> for ItemCollectionSystem {
     type SystemData = ItemCollectionSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        for (pickup, player) in (&data.pickup, data.player.maybe()).join() {
+        for (actor, pickup, player) in (&data.entity, &data.pickup, data.player.maybe()).join() {
             data.position.remove(pickup.item);
             data.backpack
-                .insert(pickup.item, InBackpack::new(pickup.actor))
+                .insert(pickup.item, InBackpack::new(actor))
                 .expect("Unable to insert backpack entry");
 
             if player.is_some() {

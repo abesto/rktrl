@@ -6,9 +6,10 @@ use crate::{
     resources::{gamelog::GameLog, input::Input, layout::Layout, map::Map, runstate::RunState},
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
-        item_collection::ItemCollectionSystem, map_indexing::MapIndexingSystem,
-        mapgen::MapgenSystem, melee_combat::MeleeCombatSystem, player_action::PlayerActionSystem,
-        render::RenderSystem, spawner::SpawnerSystem, visibility::VisibilitySystem,
+        item_collection::ItemCollectionSystem, item_use::ItemUseSystem,
+        map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
+        player_action::PlayerActionSystem, render::RenderSystem, spawner::SpawnerSystem,
+        visibility::VisibilitySystem,
     },
 };
 
@@ -31,7 +32,7 @@ impl GameState for State {
                 self.dispatcher.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
-            RunState::AwaitingInput => {
+            RunState::AwaitingInput | RunState::ShowInventory => {
                 self.world.insert(Input::key(term.key));
                 PlayerActionSystem {}.run_now(&self.world);
                 None
@@ -74,6 +75,7 @@ fn main() {
             .with(AISystem, "ai", &[])
             .with(VisibilitySystem, "visibility", &["ai"])
             .with(ItemCollectionSystem, "item_collection", &["ai"])
+            .with(ItemUseSystem, "item_use", &["ai"])
             .with(MeleeCombatSystem, "melee", &["ai"])
             .with(DamageSystem, "damage", &["melee"])
             .with(DeathSystem, "death", &["damage"])
@@ -86,6 +88,8 @@ fn main() {
         render: RenderSystem::new(),
     };
     gs.dispatcher.setup(&mut gs.world);
+    System::setup(&mut PlayerActionSystem, &mut gs.world);
+    System::setup(&mut gs.render, &mut gs.world);
 
     // Create UI layout
     let layout = {

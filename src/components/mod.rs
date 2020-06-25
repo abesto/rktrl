@@ -12,3 +12,4 @@ pub mod suffer_damage;
 pub mod viewshed;
 pub mod wants_to_melee;
 pub mod wants_to_pick_up_item;
+pub mod wants_to_use;

@@ -1,14 +1,18 @@
-use bracket_lib::prelude::VirtualKeyCode;
+use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
 use shred_derive::SystemData;
 use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, item::Item, player::Player, position::Position,
-        viewshed::Viewshed, wants_to_melee::WantsToMelee, wants_to_pick_up_item::WantsToPickUpItem,
+        combat_stats::CombatStats, in_backpack::InBackpack, item::Item, player::Player,
+        position::Position, viewshed::Viewshed, wants_to_melee::WantsToMelee,
+        wants_to_pick_up_item::WantsToPickUpItem, wants_to_use::WantsToUse,
     },
     lib::vector::{Heading, Vector},
-    resources::{gamelog::GameLog, input::Input, map::Map, runstate::RunState},
+    resources::{
+        gamelog::GameLog, input::Input, map::Map, runstate::RunState,
+        shown_inventory::ShownInventory,
+    },
 };
 
 #[derive(SystemData)]
@@ -19,13 +23,16 @@ pub struct PlayerActionSystemData<'a> {
     viewshed: WriteStorage<'a, Viewshed>,
     wants_to_melee: WriteStorage<'a, WantsToMelee>,
     wants_to_pickup: WriteStorage<'a, WantsToPickUpItem>,
+    wants_to_use: WriteStorage<'a, WantsToUse>,
     item: ReadStorage<'a, Item>,
+    backpack: ReadStorage<'a, InBackpack>,
 
     map: WriteExpect<'a, Map>,
     gamelog: Write<'a, GameLog>,
     input: Read<'a, Input>,
     runstate: Write<'a, RunState>,
     entities: Entities<'a>,
+    shown_inventory: Read<'a, ShownInventory>,
 }
 
 pub struct PlayerActionSystem;
@@ -33,70 +40,89 @@ pub struct PlayerActionSystem;
 enum Action {
     Move(Vector),
     PickUp,
+    ShowInventory,
+    CloseInventory,
+    Use(i32),
 }
 
 impl<'a> System<'a> for PlayerActionSystem {
     type SystemData = PlayerActionSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        match Self::key_to_action(data.input.key) {
+        let old_runstate = *data.runstate;
+        *data.runstate = match Self::key_to_action(old_runstate, data.input.key) {
             Some(Action::Move(vector)) => {
                 Self::try_move_player(&mut data, vector);
-                *data.runstate = RunState::PlayerTurn;
+                RunState::PlayerTurn
             }
             Some(Action::PickUp) => {
                 Self::try_pickup(&mut data);
-                *data.runstate = RunState::PlayerTurn;
+                RunState::PlayerTurn
             }
-            None => {
-                *data.runstate = RunState::AwaitingInput;
+            Some(Action::ShowInventory) => RunState::ShowInventory,
+            Some(Action::Use(choice)) => {
+                if Self::try_use(&mut data, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowInventory
+                }
             }
+            Some(Action::CloseInventory) => {
+                assert_eq!(*data.runstate, RunState::ShowInventory);
+                RunState::AwaitingInput
+            }
+            None => old_runstate,
         }
     }
 }
 
 impl PlayerActionSystem {
-    fn key_to_action(key: Option<VirtualKeyCode>) -> Option<Action> {
-        match key {
-            None => None,
-            Some(key) => match key {
-                // Cardinal directions
-                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
-                    Some(Action::Move(Heading::North.into()))
-                }
+    fn key_to_action(runstate: RunState, key: Option<VirtualKeyCode>) -> Option<Action> {
+        if runstate == RunState::ShowInventory {
+            return match key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Use(letter_to_option(key))),
+            };
+        }
 
-                VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
-                    Some(Action::Move(Heading::East.into()))
-                }
+        match key? {
+            // Cardinal directions
+            VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                Some(Action::Move(Heading::North.into()))
+            }
 
-                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
-                    Some(Action::Move(Heading::South.into()))
-                }
+            VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
+                Some(Action::Move(Heading::East.into()))
+            }
 
-                VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
-                    Some(Action::Move(Heading::West.into()))
-                }
+            VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                Some(Action::Move(Heading::South.into()))
+            }
 
-                // Diagonals
-                VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
-                    Some(Action::Move(Heading::North + Heading::East))
-                }
-                VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
-                    Some(Action::Move(Heading::North + Heading::West))
-                }
-                VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
-                    Some(Action::Move(Heading::South + Heading::East))
-                }
-                VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
-                    Some(Action::Move(Heading::South + Heading::West))
-                }
+            VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
+                Some(Action::Move(Heading::West.into()))
+            }
 
-                // Pick up an item
-                VirtualKeyCode::G => Some(Action::PickUp),
+            // Diagonals
+            VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
+                Some(Action::Move(Heading::North + Heading::East))
+            }
+            VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
+                Some(Action::Move(Heading::North + Heading::West))
+            }
+            VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
+                Some(Action::Move(Heading::South + Heading::East))
+            }
+            VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
+                Some(Action::Move(Heading::South + Heading::West))
+            }
 
-                // We don't know any other keys
-                _ => None,
-            },
+            // Inventory things
+            VirtualKeyCode::G => Some(Action::PickUp),
+            VirtualKeyCode::I => Some(Action::ShowInventory),
+
+            // We don't know any other keys
+            _ => None,
         }
     }
 
@@ -151,15 +177,19 @@ impl PlayerActionSystem {
                 .push("There is nothing here to pick up.".to_string()),
             Some(item) => {
                 data.wants_to_pickup
-                    .insert(
-                        player_entity,
-                        WantsToPickUpItem {
-                            actor: player_entity,
-                            item,
-                        },
-                    )
+                    .insert(player_entity, WantsToPickUpItem { item })
                     .expect("Unable to insert want to pickup");
             }
         }
+    }
+
+    fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+        let &item = data.shown_inventory.get(choice as usize)?;
+        let player_entity = (&data.player, &data.entities).join().next().unwrap().1;
+        assert_eq!(data.backpack.get(item).unwrap().owner, player_entity);
+        data.wants_to_use
+            .insert(player_entity, WantsToUse { item })
+            .expect("Failed to insert WantsToUse");
+        Some(())
     }
 }

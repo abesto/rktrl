@@ -1,9 +1,10 @@
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
     PreRun,
     PlayerTurn,
     MonsterTurn,
+    ShowInventory,
 }
 
 impl Default for RunState {
