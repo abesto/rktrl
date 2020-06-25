@@ -1322,6 +1322,7 @@ dependencies = [
  "bracket-lib",
  "macro-attr",
  "newtype_derive",
+ "rand",
  "serde",
  "serde_json",
  "shred-derive",

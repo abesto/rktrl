@@ -6,9 +6,9 @@ use crate::{
     resources::{gamelog::GameLog, input::Input, layout::Layout, map::Map, runstate::RunState},
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
-        map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
-        player_movement::PlayerMovementSystem, render::RenderSystem, spawner::SpawnerSystem,
-        visibility::VisibilitySystem,
+        item_collection::ItemCollectionSystem, map_indexing::MapIndexingSystem,
+        mapgen::MapgenSystem, melee_combat::MeleeCombatSystem, player_action::PlayerActionSystem,
+        render::RenderSystem, spawner::SpawnerSystem, visibility::VisibilitySystem,
     },
 };
 
@@ -33,7 +33,7 @@ impl GameState for State {
             }
             RunState::AwaitingInput => {
                 self.world.insert(Input::key(term.key));
-                PlayerMovementSystem {}.run_now(&self.world);
+                PlayerActionSystem {}.run_now(&self.world);
                 None
             }
             RunState::PlayerTurn => {
@@ -73,10 +73,15 @@ fn main() {
         dispatcher: DispatcherBuilder::new()
             .with(AISystem, "ai", &[])
             .with(VisibilitySystem, "visibility", &["ai"])
+            .with(ItemCollectionSystem, "item_collection", &["ai"])
             .with(MeleeCombatSystem, "melee", &["ai"])
             .with(DamageSystem, "damage", &["melee"])
             .with(DeathSystem, "death", &["damage"])
-            .with(MapIndexingSystem, "map_indexing", &["damage"])
+            .with(
+                MapIndexingSystem,
+                "map_indexing",
+                &["death", "item_collection"],
+            )
             .build(),
         render: RenderSystem::new(),
     };

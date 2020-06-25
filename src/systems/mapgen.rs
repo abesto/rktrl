@@ -7,9 +7,8 @@ use specs::shrev::EventChannel;
 
 use crate::{
     components::position::Position,
-    lib::rect::Rect,
     resources::map::{Map, TileType},
-    systems::spawner::{SpawnKind, SpawnRequest},
+    systems::spawner::SpawnRequest,
 };
 
 #[derive(SystemData)]
@@ -28,17 +27,12 @@ impl<'a> System<'a> for MapgenSystem {
         let rooms = self.gen_map(&mut data);
 
         // Request player spawn
-        data.spawn_requests.single_write(SpawnRequest {
-            kind: SpawnKind::Player,
-            position: rooms[0].center().into(),
-        });
+        data.spawn_requests
+            .single_write(SpawnRequest::Player(rooms[0].center().into()));
 
         // Request monster spawns
         data.spawn_requests
-            .iter_write(rooms.iter().skip(1).map(|room| SpawnRequest {
-                position: room.center().into(),
-                kind: SpawnKind::RandomMonster,
-            }))
+            .iter_write(rooms.iter().skip(1).map(|&rect| SpawnRequest::Room(rect)));
     }
 }
 
@@ -56,7 +50,7 @@ impl MapgenSystem {
             let h = data.rng.range(MIN_SIZE, MAX_SIZE + 1);
             let x = data.rng.range(1, map.width - w - 1);
             let y = data.rng.range(1, map.height - h - 1);
-            let new_room = Rect::new(x, y, w, h);
+            let new_room = Rect::with_size(x, y, w, h);
             let mut ok = true;
             for other_room in rooms.iter() {
                 if new_room.intersect(other_room) {
@@ -91,14 +85,14 @@ impl MapgenSystem {
         map: &mut Map,
         rng: &mut RandomNumberGenerator,
     ) {
-        let (prev_x, prev_y) = a.center();
-        let (new_x, new_y) = b.center();
+        let prev = a.center();
+        let new = b.center();
         if rng.range(0, 2) == 1 {
-            Self::apply_horizontal_tunnel(map, prev_x, new_x, prev_y);
-            Self::apply_vertical_tunnel(map, prev_y, new_y, new_x);
+            Self::apply_horizontal_tunnel(map, prev.x, new.x, prev.y);
+            Self::apply_vertical_tunnel(map, prev.y, new.y, new.x);
         } else {
-            Self::apply_vertical_tunnel(map, prev_y, new_y, prev_x);
-            Self::apply_horizontal_tunnel(map, prev_x, new_x, new_y);
+            Self::apply_vertical_tunnel(map, prev.y, new.y, prev.x);
+            Self::apply_horizontal_tunnel(map, prev.x, new.x, new.y);
         }
     }
 

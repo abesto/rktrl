@@ -1,23 +1,30 @@
+use std::collections::HashSet;
+
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 use specs::shrev::*;
 
 use crate::components::{
-    blocks_tile::BlocksTile, combat_stats::CombatStats, monster::Monster, name::Name,
-    player::Player, position::Position, renderable::Renderable, viewshed::Viewshed,
+    blocks_tile::BlocksTile,
+    combat_stats::CombatStats,
+    item::Item,
+    monster::Monster,
+    name::Name,
+    player::Player,
+    position::{Position, RectExt},
+    potion::Potion,
+    renderable::Renderable,
+    viewshed::Viewshed,
 };
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum SpawnKind {
-    Player,
-    RandomMonster,
-}
+const MAX_MONSTERS: i32 = 4;
+const MAX_ITEMS: i32 = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SpawnRequest {
-    pub position: Position,
-    pub kind: SpawnKind,
+pub enum SpawnRequest {
+    Player(Position),
+    Room(Rect),
 }
 
 #[derive(SystemData)]
@@ -30,6 +37,8 @@ pub struct SpawnerSystemData<'a> {
     name: WriteStorage<'a, Name>,
     blocks_tile: WriteStorage<'a, BlocksTile>,
     combat_stats: WriteStorage<'a, CombatStats>,
+    item: WriteStorage<'a, Item>,
+    potion: WriteStorage<'a, Potion>,
 
     rng: WriteExpect<'a, RandomNumberGenerator>,
     spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
@@ -53,11 +62,10 @@ impl<'a> System<'a> for SpawnerSystem {
             .collect();
 
         for request in requests.iter() {
-            let fun = match request.kind {
-                SpawnKind::Player => Self::player,
-                SpawnKind::RandomMonster => Self::random_monster,
-            };
-            fun(&self, &mut data, request.position);
+            match request {
+                SpawnRequest::Player(position) => self.player(&mut data, *position),
+                SpawnRequest::Room(rect) => self.room(&mut data, rect),
+            }
         }
     }
 
@@ -152,5 +160,65 @@ impl SpawnerSystem {
             1 => self.orc(data, position),
             _ => self.goblin(data, position),
         }
+    }
+
+    fn random_positions_in_room(
+        &self,
+        data: &mut SpawnerSystemData,
+        room: &Rect,
+        n: i32,
+    ) -> HashSet<Position> {
+        let (p1, p2) = {
+            let interior = room.interior();
+            (interior.p1(), interior.p2())
+        };
+        let mut positions: HashSet<Position> = HashSet::new();
+
+        for _ in 0..n {
+            loop {
+                let position = data.rng.range(p1, p2);
+                if !positions.contains(&position) {
+                    positions.insert(position);
+                    break;
+                }
+            }
+        }
+
+        positions
+    }
+
+    fn room(&self, data: &mut SpawnerSystemData, room: &Rect) {
+        let num_monsters = data.rng.range(0, MAX_MONSTERS + 1);
+        for position in self.random_positions_in_room(data, room, num_monsters) {
+            self.random_monster(data, position);
+        }
+
+        let num_potions = data.rng.range(0, MAX_ITEMS + 1);
+        for position in self.random_positions_in_room(data, room, num_potions) {
+            self.health_potion(data, position);
+        }
+    }
+
+    fn health_potion(&self, data: &mut SpawnerSystemData, position: Position) {
+        data.entity
+            .build_entity()
+            .with(position, &mut data.position)
+            .with(
+                Renderable {
+                    glyph: to_cp437('¡'),
+                    fg: RGB::named(MAGENTA),
+                    bg: RGB::named(BLACK),
+                },
+                &mut data.renderable,
+            )
+            .with(
+                Name {
+                    name: "Health Potion".to_string(),
+                },
+                &mut data.name,
+            )
+            .with(Item::new(), &mut data.item)
+            .with(Potion::new(8), &mut data.potion)
+            .build();
     }
 }

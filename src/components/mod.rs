@@ -1,10 +1,14 @@
 pub mod blocks_tile;
 pub mod combat_stats;
+pub mod in_backpack;
+pub mod item;
 pub mod monster;
 pub mod name;
 pub mod player;
 pub mod position;
+pub mod potion;
 pub mod renderable;
 pub mod suffer_damage;
 pub mod viewshed;
 pub mod wants_to_melee;
+pub mod wants_to_pick_up_item;
