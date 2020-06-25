@@ -3,115 +3,46 @@ use std::cmp::{max, min};
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
+use specs::shrev::EventChannel;
 
 use crate::{
-    components::{
-        blocks_tile::BlocksTile, combat_stats::CombatStats, monster::Monster, name::Name,
-        player::Player, position::Position, renderable::Renderable, viewshed::Viewshed,
-    },
+    components::position::Position,
     lib::rect::Rect,
     resources::map::{Map, TileType},
+    systems::spawner::{SpawnKind, SpawnRequest},
 };
 
 #[derive(SystemData)]
 pub struct MapgenSystemData<'a> {
-    position: WriteStorage<'a, Position>,
-    renderable: WriteStorage<'a, Renderable>,
-    player: WriteStorage<'a, Player>,
-    viewshed: WriteStorage<'a, Viewshed>,
-    monster: WriteStorage<'a, Monster>,
-    name: WriteStorage<'a, Name>,
-    blocks_tile: WriteStorage<'a, BlocksTile>,
-    combat_stats: WriteStorage<'a, CombatStats>,
-
+    rng: WriteExpect<'a, RandomNumberGenerator>,
     map: WriteExpect<'a, Map>,
-    entity: Entities<'a>,
+    spawn_requests: WriteExpect<'a, EventChannel<SpawnRequest>>,
 }
 
-pub struct MapgenSystem {
-    rng: RandomNumberGenerator,
-}
+pub struct MapgenSystem;
 
 impl<'a> System<'a> for MapgenSystem {
     type SystemData = MapgenSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
         let rooms = self.gen_map(&mut data);
-        self.gen_player(rooms[0].center().into(), &mut data);
-        self.gen_monsters(rooms, &mut data);
+
+        // Request player spawn
+        data.spawn_requests.single_write(SpawnRequest {
+            kind: SpawnKind::Player,
+            position: rooms[0].center().into(),
+        });
+
+        // Request monster spawns
+        data.spawn_requests
+            .iter_write(rooms.iter().skip(1).map(|room| SpawnRequest {
+                position: room.center().into(),
+                kind: SpawnKind::RandomMonster,
+            }))
     }
 }
 
 impl MapgenSystem {
-    pub fn new() -> MapgenSystem {
-        MapgenSystem {
-            rng: RandomNumberGenerator::new(),
-        }
-    }
-
-    fn gen_player(&mut self, start_position: Position, data: &mut MapgenSystemData) {
-        data.entity
-            .build_entity()
-            .with(start_position, &mut data.position)
-            .with(
-                Renderable {
-                    glyph: to_cp437('@'),
-                    fg: RGB::named(YELLOW),
-                    bg: RGB::named(BLACK),
-                },
-                &mut data.renderable,
-            )
-            .with(Player::new(), &mut data.player)
-            .with(Name::new("Player".to_string()), &mut data.name)
-            .with(Viewshed::new(8), &mut data.viewshed)
-            .with(BlocksTile::new(), &mut data.blocks_tile)
-            .with(
-                CombatStats {
-                    max_hp: 30,
-                    hp: 30,
-                    defense: 2,
-                    power: 5,
-                },
-                &mut data.combat_stats,
-            )
-            .build();
-    }
-
-    fn gen_monsters(&mut self, rooms: Vec<Rect>, data: &mut MapgenSystemData) {
-        for (i, room) in rooms.iter().skip(1).enumerate() {
-            let (x, y) = room.center();
-            let (letter, name) = match self.rng.roll_dice(1, 2) {
-                1 => ('g', "Goblin"),
-                _ => ('o', "Orc"),
-            };
-            data.entity
-                .build_entity()
-                .with(Position::new(x, y), &mut data.position)
-                .with(
-                    Renderable {
-                        glyph: to_cp437(letter),
-                        fg: RGB::named(RED),
-                        bg: RGB::named(BLACK),
-                    },
-                    &mut data.renderable,
-                )
-                .with(Viewshed::new(8), &mut data.viewshed)
-                .with(Monster::new(), &mut data.monster)
-                .with(Name::new(format!("{} #{}", name, i)), &mut data.name)
-                .with(BlocksTile::new(), &mut data.blocks_tile)
-                .with(
-                    CombatStats {
-                        max_hp: 16,
-                        hp: 16,
-                        defense: 1,
-                        power: 4,
-                    },
-                    &mut data.combat_stats,
-                )
-                .build();
-        }
-    }
-
     fn gen_map(&mut self, data: &mut MapgenSystemData) -> Vec<Rect> {
         let map = &mut data.map;
 
@@ -121,10 +52,10 @@ impl MapgenSystem {
         const MAX_SIZE: i32 = 10;
 
         for _ in 0..MAX_ROOMS {
-            let w = self.rng.range(MIN_SIZE, MAX_SIZE + 1);
-            let h = self.rng.range(MIN_SIZE, MAX_SIZE + 1);
-            let x = self.rng.range(1, map.width - w - 1);
-            let y = self.rng.range(1, map.height - h - 1);
+            let w = data.rng.range(MIN_SIZE, MAX_SIZE + 1);
+            let h = data.rng.range(MIN_SIZE, MAX_SIZE + 1);
+            let x = data.rng.range(1, map.width - w - 1);
+            let y = data.rng.range(1, map.height - h - 1);
             let new_room = Rect::new(x, y, w, h);
             let mut ok = true;
             for other_room in rooms.iter() {
@@ -139,7 +70,7 @@ impl MapgenSystem {
         }
 
         for (a, b) in rooms.iter().zip(rooms.iter().skip(1)) {
-            self.connect_rooms(a, b, map);
+            self.connect_rooms(a, b, map, &mut data.rng);
         }
 
         rooms
@@ -153,10 +84,16 @@ impl MapgenSystem {
         }
     }
 
-    fn connect_rooms(&mut self, a: &Rect, b: &Rect, map: &mut Map) {
+    fn connect_rooms(
+        &mut self,
+        a: &Rect,
+        b: &Rect,
+        map: &mut Map,
+        rng: &mut RandomNumberGenerator,
+    ) {
         let (prev_x, prev_y) = a.center();
         let (new_x, new_y) = b.center();
-        if self.rng.range(0, 2) == 1 {
+        if rng.range(0, 2) == 1 {
             Self::apply_horizontal_tunnel(map, prev_x, new_x, prev_y);
             Self::apply_vertical_tunnel(map, prev_y, new_y, new_x);
         } else {

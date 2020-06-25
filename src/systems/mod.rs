@@ -6,4 +6,5 @@ pub mod mapgen;
 pub mod melee_combat;
 pub mod player_movement;
 pub mod render;
+pub mod spawner;
 pub mod visibility;

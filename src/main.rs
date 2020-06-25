@@ -7,7 +7,8 @@ use crate::{
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
         map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
-        player_movement::PlayerMovementSystem, render::RenderSystem, visibility::VisibilitySystem,
+        player_movement::PlayerMovementSystem, render::RenderSystem, spawner::SpawnerSystem,
+        visibility::VisibilitySystem,
     },
 };
 
@@ -81,7 +82,7 @@ fn main() {
     };
     gs.dispatcher.setup(&mut gs.world);
 
-    // Create layout
+    // Create UI layout
     let layout = {
         let (width, height) = term.get_char_size();
         Layout {
@@ -92,13 +93,17 @@ fn main() {
     };
     gs.world.insert(layout);
 
+    // Invoke RNG
+    gs.world.insert(RandomNumberGenerator::new());
+
     // Generate map
     gs.world.insert({
         let map_rect = layout.map();
         Map::new(map_rect.width(), map_rect.height())
     });
     let mut init_dispatcher = DispatcherBuilder::new()
-        .with(MapgenSystem::new(), "mapgen", &[])
+        .with(MapgenSystem, "mapgen", &[])
+        .with(SpawnerSystem::default(), "spawner", &["mapgen"])
         .build();
     init_dispatcher.setup(&mut gs.world);
     init_dispatcher.dispatch(&gs.world);
