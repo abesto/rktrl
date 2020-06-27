@@ -9,7 +9,7 @@ use crate::{
     components::{
         blocks_tile::BlocksTile,
         combat_stats::CombatStats,
-        effects::{Consumable, ProvidesHealing},
+        effects::{Consumable, InflictsDamage, ProvidesHealing, Ranged},
         item::Item,
         monster::Monster,
         name::Name,
@@ -46,6 +46,8 @@ pub struct SpawnerSystemData<'a> {
 
     consumable: WriteStorage<'a, Consumable>,
     healing: WriteStorage<'a, ProvidesHealing>,
+    ranged: WriteStorage<'a, Ranged>,
+    inflicts_damage: WriteStorage<'a, InflictsDamage>,
 
     rng: WriteExpect<'a, RandomNumberGenerator>,
     spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
@@ -201,7 +203,7 @@ impl SpawnerSystem {
 
         let num_potions = data.rng.range(0, MAX_ITEMS + 1);
         for position in self.random_positions_in_room(data, room, num_potions) {
-            self.health_potion(data, position);
+            self.random_item(data, position);
         }
     }
 
@@ -219,8 +221,42 @@ impl SpawnerSystem {
             )
             .with(Name::from("Health Potion".to_string()), &mut data.name)
             .with(Item, &mut data.item)
-            .with(ProvidesHealing::new(8), &mut data.healing)
+            .with(ProvidesHealing { heal_amount: 8 }, &mut data.healing)
             .with(Consumable, &mut data.consumable)
             .build();
+    }
+
+    fn magic_missile_scroll(&self, data: &mut SpawnerSystemData, position: Position) {
+        data.entity
+            .build_entity()
+            .with(position, &mut data.position)
+            .with(
+                Renderable {
+                    glyph: to_cp437(')'),
+                    color: ColorPair::new(RGB::named(CYAN), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderable,
+            )
+            .with(
+                Name::from("Magic Missile Scroll".to_string()),
+                &mut data.name,
+            )
+            .with(Item, &mut data.item)
+            .with(Consumable, &mut data.consumable)
+            .with(Ranged { range: 6 }, &mut data.ranged)
+            .with(InflictsDamage { damage: 8 }, &mut data.inflicts_damage)
+            .build();
+    }
+
+    fn random_item(&self, data: &mut SpawnerSystemData, position: Position) {
+        let roll: i32;
+        {
+            roll = data.rng.roll_dice(1, 2);
+        }
+        match roll {
+            1 => self.health_potion(data, position),
+            _ => self.magic_missile_scroll(data, position),
+        }
     }
 }

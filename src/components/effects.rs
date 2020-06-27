@@ -5,14 +5,17 @@ use specs_derive::Component;
 #[storage(NullStorage)]
 pub struct Consumable;
 
-#[derive(PartialEq, Component, Debug, Clone)]
+#[derive(Component, Debug)]
 pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
 
-impl ProvidesHealing {
-    #[must_use]
-    pub const fn new(heal_amount: i32) -> ProvidesHealing {
-        ProvidesHealing { heal_amount }
-    }
+#[derive(Component, Debug)]
+pub struct Ranged {
+    pub range: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct InflictsDamage {
+    pub damage: i32,
 }
