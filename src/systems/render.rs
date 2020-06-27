@@ -75,7 +75,11 @@ impl<'a> RenderSystem {
 
     fn render_entities(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
         let visible = self.player_visible_tiles(data);
-        for (position, renderable) in (&data.position, &data.renderable).join() {
+        let mut data = (&data.position, &data.renderable)
+            .join()
+            .collect::<Vec<_>>();
+        data.sort_unstable_by_key(|r| &r.1.render_order);
+        for (position, renderable) in data {
             if !visible.contains(position) {
                 continue;
             }

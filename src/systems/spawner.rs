@@ -7,8 +7,15 @@ use specs::shrev::*;
 
 use crate::{
     components::{
-        blocks_tile::BlocksTile, combat_stats::CombatStats, item::Item, monster::Monster,
-        name::Name, player::Player, position::Position, potion::Potion, renderable::Renderable,
+        blocks_tile::BlocksTile,
+        combat_stats::CombatStats,
+        item::Item,
+        monster::Monster,
+        name::Name,
+        player::Player,
+        position::Position,
+        potion::Potion,
+        renderable::{RenderOrder, Renderable},
         viewshed::Viewshed,
     },
     lib::rect_ext::RectExt,
@@ -85,6 +92,7 @@ impl SpawnerSystem {
                 Renderable {
                     glyph: to_cp437('@'),
                     color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                    render_order: RenderOrder::Player,
                 },
                 &mut data.renderable,
             )
@@ -118,6 +126,7 @@ impl SpawnerSystem {
                 Renderable {
                     glyph: to_cp437(letter),
                     color: ColorPair::new(RGB::named(RED), RGB::named(BLACK)),
+                    render_order: RenderOrder::Monsters,
                 },
                 &mut data.renderable,
             )
@@ -201,6 +210,7 @@ impl SpawnerSystem {
                 Renderable {
                     glyph: to_cp437('¡'),
                     color: ColorPair::new(RGB::named(MAGENTA), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
                 },
                 &mut data.renderable,
             )
