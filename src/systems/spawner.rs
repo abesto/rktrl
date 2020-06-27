@@ -9,12 +9,12 @@ use crate::{
     components::{
         blocks_tile::BlocksTile,
         combat_stats::CombatStats,
+        effects::{Consumable, ProvidesHealing},
         item::Item,
         monster::Monster,
         name::Name,
         player::Player,
         position::Position,
-        potion::Potion,
         renderable::{RenderOrder, Renderable},
         viewshed::Viewshed,
     },
@@ -32,6 +32,8 @@ pub enum SpawnRequest {
 
 #[derive(SystemData)]
 pub struct SpawnerSystemData<'a> {
+    entity: Entities<'a>,
+
     position: WriteStorage<'a, Position>,
     renderable: WriteStorage<'a, Renderable>,
     player: WriteStorage<'a, Player>,
@@ -41,11 +43,12 @@ pub struct SpawnerSystemData<'a> {
     blocks_tile: WriteStorage<'a, BlocksTile>,
     combat_stats: WriteStorage<'a, CombatStats>,
     item: WriteStorage<'a, Item>,
-    potion: WriteStorage<'a, Potion>,
+
+    consumable: WriteStorage<'a, Consumable>,
+    healing: WriteStorage<'a, ProvidesHealing>,
 
     rng: WriteExpect<'a, RandomNumberGenerator>,
     spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
-    entity: Entities<'a>,
 }
 
 #[derive(Default)]
@@ -216,7 +219,8 @@ impl SpawnerSystem {
             )
             .with(Name::from("Health Potion".to_string()), &mut data.name)
             .with(Item, &mut data.item)
-            .with(Potion::new(8), &mut data.potion)
+            .with(ProvidesHealing::new(8), &mut data.healing)
+            .with(Consumable, &mut data.consumable)
             .build();
     }
 }

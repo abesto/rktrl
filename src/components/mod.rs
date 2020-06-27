@@ -1,5 +1,6 @@
 pub mod blocks_tile;
 pub mod combat_stats;
+pub mod effects;
 pub mod in_backpack;
 pub mod intents;
 pub mod item;
@@ -7,7 +8,6 @@ pub mod monster;
 pub mod name;
 pub mod player;
 pub mod position;
-pub mod potion;
 pub mod renderable;
 pub mod suffer_damage;
 pub mod viewshed;
