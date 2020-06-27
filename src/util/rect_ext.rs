@@ -2,7 +2,7 @@ use std::cmp::{max, min};
 
 use bracket_lib::prelude::*;
 
-use crate::{components::position::Position, lib::vector::Vector};
+use crate::{components::position::Position, util::vector::Vector};
 
 pub trait RectExt {
     fn p1(&self) -> Position;

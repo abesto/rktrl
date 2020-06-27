@@ -10,7 +10,6 @@ use crate::{
         combat_stats::CombatStats, in_backpack::InBackpack, name::Name, player::Player,
         position::Position, renderable::Renderable, viewshed::Viewshed,
     },
-    lib::{rect_ext::RectExt, vector::Vector},
     resources::{
         gamelog::GameLog,
         input::Input,
@@ -19,6 +18,7 @@ use crate::{
         runstate::RunState,
         shown_inventory::ShownInventory,
     },
+    util::{rect_ext::RectExt, vector::Vector},
 };
 use std::convert::TryInto;
 

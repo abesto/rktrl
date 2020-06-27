@@ -13,11 +13,11 @@ use crate::{
         position::Position,
         viewshed::Viewshed,
     },
-    lib::vector::{Heading, Vector},
     resources::{
         gamelog::GameLog, input::Input, map::Map, runstate::RunState,
         shown_inventory::ShownInventory,
     },
+    util::vector::{Heading, Vector},
 };
 
 #[derive(SystemData)]

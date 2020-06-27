@@ -19,7 +19,7 @@ use crate::{
         renderable::{RenderOrder, Renderable},
         viewshed::Viewshed,
     },
-    lib::rect_ext::RectExt,
+    util::rect_ext::RectExt,
 };
 
 const MAX_MONSTERS: i32 = 4;

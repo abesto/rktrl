@@ -13,7 +13,7 @@ use strum::IntoEnumIterator;
 
 use crate::{
     components::position::Position,
-    lib::vector::{Heading, Vector},
+    util::vector::{Heading, Vector},
 };
 
 #[derive(PartialEq, Copy, Clone, Debug)]

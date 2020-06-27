@@ -9,7 +9,7 @@ use rand::Rng;
 use specs::prelude::*;
 use specs_derive::Component;
 
-use crate::lib::vector::Vector;
+use crate::util::vector::Vector;
 
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
