@@ -1,43 +1,25 @@
-use shred_derive::SystemData;
-use specs::prelude::*;
+use shipyard::*;
 
 use crate::{
     components::{blocks_tile::BlocksTile, player::Player, position::Position},
     resources::map::Map,
 };
 
-#[derive(SystemData)]
-pub struct MapIndexingSystemData<'a> {
-    entities: Entities<'a>,
-    position: ReadStorage<'a, Position>,
-    blocks_tile: ReadStorage<'a, BlocksTile>,
-    player: ReadStorage<'a, Player>,
+pub fn map_indexing(
+    ref entities: EntitiesView,
+    ref positions: View<Position>,
+    ref players: View<Player>,
+    ref tile_blockers: View<BlocksTile>,
+    ref mut map: UniqueViewMut<Map>,
+) {
+    map.populate_blocked();
+    map.clear_content_index();
 
-    map: WriteExpect<'a, Map>,
-}
+    for (entity, position) in positions.iter().with_id() {
+        map.add_tile_content(*position, entity.clone());
 
-pub struct MapIndexingSystem;
-
-impl<'a> System<'a> for MapIndexingSystem {
-    type SystemData = MapIndexingSystemData<'a>;
-
-    fn run(&mut self, mut data: Self::SystemData) {
-        data.map.populate_blocked();
-        data.map.clear_content_index();
-
-        for (entity, position, player, blocks) in (
-            &data.entities,
-            &data.position,
-            data.player.maybe(),
-            data.blocks_tile.maybe(),
-        )
-            .join()
-        {
-            data.map.add_tile_content(*position, entity);
-
-            if player.is_none() && blocks.is_some() {
-                data.map.block(*position)
-            }
+        if !players.contains(entity.clone()) && tile_blockers.contains(entity.clone()) {
+            map.block(*position)
         }
     }
 }

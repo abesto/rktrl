@@ -7,8 +7,8 @@ use std::{
 };
 
 use bracket_lib::prelude::*;
+use shipyard::EntityId;
 use smallvec::SmallVec;
-use specs::prelude::Entity;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -27,7 +27,7 @@ pub struct Map {
     pub height: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
-    tile_content: HashMap<Position, Vec<Entity>>,
+    tile_content: HashMap<Position, Vec<EntityId>>,
 }
 
 impl Map {
@@ -112,14 +112,14 @@ impl Map {
         }
     }
 
-    pub fn add_tile_content(&mut self, position: Position, entity: Entity) {
+    pub fn add_tile_content(&mut self, position: Position, entity: EntityId) {
         self.tile_content
             .entry(position)
             .or_insert_with(Vec::new)
             .push(entity);
     }
 
-    pub fn get_tile_contents(&self, position: Position) -> Option<&Vec<Entity>> {
+    pub fn get_tile_contents(&self, position: Position) -> Option<&Vec<EntityId>> {
         if !self.tile_content.contains_key(&position) {
             None
         } else {

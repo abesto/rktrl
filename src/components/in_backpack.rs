@@ -1,13 +1,12 @@
-use specs::prelude::*;
-use specs_derive::Component;
+use shipyard::EntityId;
 
-#[derive(PartialEq, Component, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct InBackpack {
-    pub owner: Entity,
+    pub owner: EntityId,
 }
 
 impl InBackpack {
-    pub fn new(owner: Entity) -> InBackpack {
+    pub fn new(owner: EntityId) -> InBackpack {
         InBackpack { owner }
     }
 }

@@ -1,70 +1,54 @@
 use bracket_lib::prelude::{a_star_search, DistanceAlg};
-use shred_derive::SystemData;
-use specs::prelude::*;
+use shipyard::*;
 
 use crate::{
     components::{
-        monster::Monster, player::Player, position::Position, viewshed::Viewshed,
-        wants_to_melee::WantsToMelee,
+        intents::MeleeIntent, monster::Monster, player::Player, position::Position,
+        viewshed::Viewshed,
     },
     resources::{map::Map, runstate::RunState},
 };
 
-#[derive(SystemData)]
-pub struct AISystemData<'a> {
-    viewshed: WriteStorage<'a, Viewshed>,
-    position: WriteStorage<'a, Position>,
-    monster: ReadStorage<'a, Monster>,
-    player: ReadStorage<'a, Player>,
-    wants_to_melee: WriteStorage<'a, WantsToMelee>,
+pub fn ai(
+    entities: EntitiesView,
 
-    entities: Entities<'a>,
-    runstate: Read<'a, RunState>,
-    map: ReadExpect<'a, Map>,
-}
+    players: View<Player>,
+    monsters: View<Monster>,
 
-pub struct AISystem;
+    mut melee_intents: ViewMut<MeleeIntent>,
+    mut positions: ViewMut<Position>,
+    mut viewsheds: ViewMut<Viewshed>,
 
-impl<'a> System<'a> for AISystem {
-    type SystemData = AISystemData<'a>;
-
-    fn run(&mut self, mut data: Self::SystemData) {
-        if *data.runstate != RunState::MonsterTurn {
+    runstate: UniqueView<RunState>,
+    map: UniqueView<Map>,
+) {
+    if *runstate != RunState::MonsterTurn {
+        return;
+    }
+    let (player_entity, (&player_pos, _player)) =
+        (&positions, &players).iter().with_id().next().unwrap();
+    for (entity, (viewshed, pos, _monster)) in
+        (&mut viewsheds, &mut positions, &monsters).iter().with_id()
+    {
+        let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
+        if distance < 1.5 {
+            entities.add_component(
+                &mut melee_intents,
+                MeleeIntent {
+                    target: player_entity,
+                },
+                entity,
+            );
             return;
-        }
-        let (&player_pos, player_entity, _player) = (&data.position, &data.entities, &data.player)
-            .join()
-            .next()
-            .unwrap();
-        for (entity, mut viewshed, pos, _monster) in (
-            &data.entities,
-            &mut data.viewshed,
-            &mut data.position,
-            &data.monster,
-        )
-            .join()
-        {
-            let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
-            if distance < 1.5 {
-                data.wants_to_melee
-                    .insert(
-                        entity,
-                        WantsToMelee {
-                            target: player_entity,
-                        },
-                    )
-                    .expect("Unable to insert attack");
-                return;
-            } else if viewshed.visible_tiles.contains(&player_pos) {
-                let path = a_star_search(
-                    data.map.pos_idx(*pos) as i32,
-                    data.map.pos_idx(player_pos) as i32,
-                    &*data.map,
-                );
-                if path.success && path.steps.len() > 1 {
-                    *pos = data.map.idx_pos(path.steps[1]);
-                    viewshed.dirty = true;
-                }
+        } else if viewshed.visible_tiles.contains(&player_pos) {
+            let path = a_star_search(
+                map.pos_idx(*pos) as i32,
+                map.pos_idx(player_pos) as i32,
+                &*map,
+            );
+            if path.success && path.steps.len() > 1 {
+                *pos = map.idx_pos(path.steps[1]);
+                viewshed.dirty = true;
             }
         }
     }

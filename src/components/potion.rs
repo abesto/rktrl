@@ -1,7 +1,4 @@
-use specs::prelude::*;
-use specs_derive::Component;
-
-#[derive(PartialEq, Component, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Potion {
     pub heal_amount: i32,
 }

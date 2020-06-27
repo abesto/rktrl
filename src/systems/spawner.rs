@@ -1,9 +1,6 @@
 use std::collections::HashSet;
 
 use bracket_lib::prelude::*;
-use shred_derive::SystemData;
-use specs::prelude::*;
-use specs::shrev::*;
 
 use crate::components::{
     blocks_tile::BlocksTile,
@@ -27,24 +24,7 @@ pub enum SpawnRequest {
     Room(Rect),
 }
 
-#[derive(SystemData)]
-pub struct SpawnerSystemData<'a> {
-    position: WriteStorage<'a, Position>,
-    renderable: WriteStorage<'a, Renderable>,
-    player: WriteStorage<'a, Player>,
-    viewshed: WriteStorage<'a, Viewshed>,
-    monster: WriteStorage<'a, Monster>,
-    name: WriteStorage<'a, Name>,
-    blocks_tile: WriteStorage<'a, BlocksTile>,
-    combat_stats: WriteStorage<'a, CombatStats>,
-    item: WriteStorage<'a, Item>,
-    potion: WriteStorage<'a, Potion>,
-
-    rng: WriteExpect<'a, RandomNumberGenerator>,
-    spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
-    entity: Entities<'a>,
-}
-
+/*
 #[derive(Default)]
 pub struct SpawnerSystem {
     spawn_requests_reader: Option<ReaderId<SpawnRequest>>,
@@ -222,3 +202,4 @@ impl SpawnerSystem {
             .build();
     }
 }
+ */

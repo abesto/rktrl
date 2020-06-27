@@ -1,12 +1,25 @@
 pub mod ai;
-pub mod damage_system;
+pub mod damage;
 pub mod death;
 pub mod item_collection;
 pub mod item_use;
 pub mod map_indexing;
 pub mod mapgen;
 pub mod melee_combat;
+pub mod movement;
 pub mod player_action;
 pub mod render;
 pub mod spawner;
-pub mod visibility;
+//pub mod visibility;
+
+pub use ai::ai;
+pub use damage::damage;
+pub use death::death;
+pub use item_collection::item_collection;
+pub use item_use::item_use;
+pub use map_indexing::map_indexing;
+pub use mapgen::mapgen;
+pub use melee_combat::melee_combat;
+pub use movement::movement;
+pub use player_action::player_action;
+pub use render::render;

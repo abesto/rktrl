@@ -1,13 +1,8 @@
-use specs::prelude::*;
-use specs_derive::Component;
+use macro_attr::*;
+use newtype_derive::*;
 
-#[derive(PartialEq, Component, Debug, Clone)]
-pub struct Name {
-    pub name: String,
-}
-
-impl Name {
-    pub fn new(name: String) -> Name {
-        Name { name }
-    }
+macro_attr! {
+    #[derive(Clone, PartialEq, Eq, Hash,
+             NewtypeDebug!, NewtypeDeref!, NewtypeFrom!, NewtypeDisplay!)]
+    pub struct Name(String);
 }

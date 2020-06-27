@@ -1,8 +1,4 @@
-use specs::{Component, NullStorage};
-use specs_derive::Component;
-
-#[derive(PartialEq, Clone, Component, Debug)]
-#[storage(NullStorage)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct BlocksTile;
 
 impl BlocksTile {

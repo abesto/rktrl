@@ -1,9 +1,7 @@
-use std::collections::HashSet;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use bracket_lib::prelude::*;
-use shred_derive::SystemData;
-use specs::prelude::*;
+use shipyard::*;
 
 use crate::{
     components::{
@@ -18,73 +16,36 @@ use crate::{
         shown_inventory::ShownInventory,
     },
 };
-use std::convert::TryInto;
 
-#[derive(SystemData)]
-pub struct RenderSystemData<'a> {
-    entity: Entities<'a>,
-    position: ReadStorage<'a, Position>,
-    renderable: ReadStorage<'a, Renderable>,
-    player: ReadStorage<'a, Player>,
-    viewshed: ReadStorage<'a, Viewshed>,
-    combat_stats: ReadStorage<'a, CombatStats>,
-    name: ReadStorage<'a, Name>,
-    backpack: ReadStorage<'a, InBackpack>,
+pub fn render(
+    ref entities: EntitiesView,
 
-    gamelog: Read<'a, GameLog>,
-    layout: ReadExpect<'a, Layout>,
-    map: ReadExpect<'a, Map>,
-    runstate: Read<'a, RunState>,
-    shown_inventory: Write<'a, ShownInventory>,
-}
+    ref players: View<Player>,
+    ref viewsheds: View<Viewshed>,
+    ref positions: View<Position>,
+    ref renderables: View<Renderable>,
+    ref statses: View<CombatStats>,
+    ref names: View<Name>,
+    ref backpacks: View<InBackpack>,
 
-pub struct RenderSystem {}
+    map: UniqueView<Map>,
+    layout: UniqueView<Layout>,
+    runstate: UniqueView<RunState>,
 
-impl<'a> System<'a> for RenderSystem {
-    type SystemData = RenderSystemData<'a>;
+    mut shown_inventory: UniqueView<ShownInventory>,
+    mut gamelog: UniqueViewMut<GameLog>,
+    mut term: UniqueViewMut<BTerm>,
+) {
+    let player_viewshed = (players, viewsheds).iter().next().unwrap().1;
+    let visible = player_viewshed.visible_tiles;
+    let revealed = player_viewshed.revealed_tiles;
 
-    fn run(&mut self, _data: Self::SystemData) {
-        unimplemented!();
-        // bracket-lib requires the BTerm to be *moved* into main_loop(),
-        // so we need to borrow it on each tick.
-        // The only way I know of doing that is by implementing
-        // run_now_with_term below, breaking the normal System interface.
-        // Logic should move back here if/when specs-bracket-lib integration is improved.
-    }
-}
+    // Clear the screen first
+    term.cls();
 
-impl<'a> RenderSystem {
-    pub fn new() -> RenderSystem {
-        RenderSystem {}
-    }
-
-    pub fn run_now_with_term(&mut self, world: &mut World, term: &mut BTerm) {
-        let data = &mut RenderSystemData::fetch(world);
-        term.cls();
-        self.render_map(data, term);
-        self.render_entities(data, term);
-        self.render_gui(data, term);
-        self.draw_tooltips(data, term);
-        self.show_inventory(data, term);
-    }
-
-    fn player_visible_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
-        (&data.player, &data.viewshed)
-            .join()
-            .flat_map(|t| t.1.visible_tiles.clone())
-            .collect()
-    }
-
-    fn player_revealed_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
-        (&data.player, &data.viewshed)
-            .join()
-            .flat_map(|t| t.1.revealed_tiles.clone())
-            .collect()
-    }
-
-    fn render_entities(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
-        let visible = self.player_visible_tiles(data);
-        for (position, renderable) in (&data.position, &data.renderable).join() {
+    // Render entities
+    {
+        for (position, renderable) in (positions, renderables).iter() {
             if !visible.contains(position) {
                 continue;
             }
@@ -98,12 +59,10 @@ impl<'a> RenderSystem {
         }
     }
 
-    fn render_map(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
-        let visible = self.player_visible_tiles(data);
-        let revealed = self.player_revealed_tiles(data);
-
+    // Render map
+    {
         for position in revealed {
-            let tile = data.map[&position];
+            let tile = map[&position];
             let (mut fg, bg, c) = match tile {
                 TileType::Floor => (RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), '.'),
                 TileType::Wall => (RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), '#'),
@@ -115,13 +74,14 @@ impl<'a> RenderSystem {
         }
     }
 
-    fn render_gui(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+    // Render GUI
+    {
         // This can go away once the fix for
         // https://github.com/thebracket/bracket-lib/issues/96 released
         let bracket_96_workaround = 1;
 
         // Draw a box around the main bottom gui panel
-        let panel_rect = data.layout.panel();
+        let panel_rect = layout.panel();
         term.draw_box(
             panel_rect.x1,
             panel_rect.y1,
@@ -136,7 +96,7 @@ impl<'a> RenderSystem {
         let max_hp_str_len: i32 = 16;
         let hp_bar_offset = hp_offset + max_hp_str_len;
 
-        let stats = (&data.combat_stats, &data.player).join().next().unwrap().0;
+        let stats = (statses, players).iter().next().unwrap().0;
         let mut health = format!(" HP: {} / {} ", stats.hp, stats.max_hp);
         health.truncate(max_hp_str_len.try_into().unwrap());
 
@@ -158,7 +118,7 @@ impl<'a> RenderSystem {
         );
 
         // Render game log
-        data.gamelog
+        gamelog
             .entries
             .iter()
             .rev()
@@ -175,20 +135,20 @@ impl<'a> RenderSystem {
         // Draw mouse cursor
         let mouse_pos = term.mouse_pos();
         term.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(MAGENTA));
-    }
+    };
 
-    fn draw_tooltips(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
+    // Draw tooltips
+    {
         let mouse_pos = Position::from(term.mouse_pos());
-        if !data.map.contains(mouse_pos) {
+        if !map.contains(mouse_pos) {
             return;
         }
 
-        let player_viewshed = (&data.viewshed, &data.player).join().next().unwrap().0;
-        if !player_viewshed.visible_tiles.contains(&mouse_pos) {
+        if !visible.contains(&mouse_pos) {
             return;
         }
 
-        let tile_contents = data.map.get_tile_contents(mouse_pos);
+        let tile_contents = map.get_tile_contents(mouse_pos);
         if tile_contents.is_none() {
             return;
         }
@@ -196,17 +156,14 @@ impl<'a> RenderSystem {
         let names: Vec<String> = tile_contents
             .unwrap()
             .iter()
-            .filter_map(|&entity| match data.name.get(entity) {
-                Some(name) => Some(name.name.to_string()),
-                None => None,
-            })
+            .filter_map(|&entity| names.get(entity).map(ToString::to_string).ok())
             .collect();
 
         if names.is_empty() {
             return;
         }
 
-        let point_right = mouse_pos.x > data.layout.width / 2;
+        let point_right = mouse_pos.x > layout.width / 2;
 
         let max_length = names.iter().map(|entry| entry.len()).max().unwrap_or(0);
         let tooltip: Vec<String> = names
@@ -248,17 +205,19 @@ impl<'a> RenderSystem {
         }
     }
 
-    fn show_inventory(&mut self, data: &mut RenderSystemData, term: &mut BTerm) {
-        if *data.runstate != RunState::ShowInventory {
+    // Show inventory
+    {
+        if *runstate != RunState::ShowInventory {
             return;
         }
 
-        let player_entity = (&data.player, &data.entity).join().next().unwrap().1;
-        let inventory: Vec<(&InBackpack, &Name, Entity)> =
-            (&data.backpack, &data.name, &data.entity)
-                .join()
-                .filter(|item| item.0.owner == player_entity)
-                .collect();
+        let player_entity = players.iter().with_id().next().unwrap().0;
+        let inventory: Vec<(&InBackpack, &Name, EntityId)> = (backpacks, names)
+            .iter()
+            .filter(|item| item.0.owner == player_entity)
+            .with_id()
+            .map(|(id, (backpack, name))| (backpack, name, id))
+            .collect();
         let count = inventory.len();
 
         let mut y = (25 - (count / 2)) as i32;
@@ -296,11 +255,11 @@ impl<'a> RenderSystem {
             );
             term.set(19, y, RGB::named(WHITE), RGB::named(BLACK), to_cp437(')'));
 
-            term.print(21, y, &name.name.to_string());
+            term.print(21, y, name.to_string());
             y += 1;
         }
 
-        let shown_entities: Vec<Entity> = inventory.iter().map(|x| x.2).collect();
-        *data.shown_inventory = shown_entities.into();
+        let shown_entities: Vec<EntityId> = inventory.iter().map(|x| x.2).collect();
+        *shown_inventory = shown_entities.into();
     }
 }

@@ -7,14 +7,11 @@ use macro_attr::*;
 use newtype_derive::*;
 use rand::distributions::uniform::{SampleBorrow, SampleUniform, UniformSampler};
 use rand::Rng;
-use specs::prelude::*;
-use specs_derive::Component;
 
 use crate::lib::vector::Vector;
 
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
-             Component,
              NewtypeDebug!, NewtypeDeref!, NewtypeFrom!)]
     pub struct Position(Point);
 }

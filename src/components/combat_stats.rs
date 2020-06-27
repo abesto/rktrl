@@ -1,7 +1,4 @@
-use specs::prelude::*;
-use specs_derive::Component;
-
-#[derive(Component, Debug)]
+#[derive(Debug)]
 pub struct CombatStats {
     pub max_hp: i32,
     pub hp: i32,
