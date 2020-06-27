@@ -5,6 +5,7 @@ use specs::prelude::*;
 use crate::{
     components::{
         combat_stats::CombatStats,
+        effects::Ranged,
         in_backpack::InBackpack,
         intents::{DropIntent, MeleeIntent, PickupIntent, UseIntent},
         item::Item,
@@ -21,8 +22,11 @@ use crate::{
 
 #[derive(SystemData)]
 pub struct PlayerActionSystemData<'a> {
+    entities: Entities<'a>,
+
     player: ReadStorage<'a, Player>,
     combat_stats: ReadStorage<'a, CombatStats>,
+
     position: WriteStorage<'a, Position>,
     viewshed: WriteStorage<'a, Viewshed>,
     melee_intent: WriteStorage<'a, MeleeIntent>,
@@ -31,13 +35,14 @@ pub struct PlayerActionSystemData<'a> {
     drop_intent: WriteStorage<'a, DropIntent>,
     item: ReadStorage<'a, Item>,
     backpack: ReadStorage<'a, InBackpack>,
+    ranged: ReadStorage<'a, Ranged>,
+
+    shown_inventory: Read<'a, ShownInventory>,
+    input: ReadExpect<'a, Input>,
 
     map: WriteExpect<'a, Map>,
     gamelog: Write<'a, GameLog>,
-    input: Read<'a, Input>,
     runstate: Write<'a, RunState>,
-    entities: Entities<'a>,
-    shown_inventory: Read<'a, ShownInventory>,
 }
 
 pub struct PlayerActionSystem;
@@ -48,8 +53,10 @@ enum Action {
     ShowInventory,
     ShowDropItem,
     CloseInventory,
-    Use(i32),
-    Drop(i32),
+    Use { choice: i32 },
+    UseOnTarget { item: Entity, target: Position },
+    Drop { choice: i32 },
+    CancelTargeting,
 }
 
 impl<'a> System<'a> for PlayerActionSystem {
@@ -57,7 +64,7 @@ impl<'a> System<'a> for PlayerActionSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         let old_runstate = *data.runstate;
-        *data.runstate = match Self::key_to_action(old_runstate, data.input.key) {
+        *data.runstate = match Self::resolve_action(old_runstate, &*data.input) {
             Some(Action::Move(vector)) => {
                 Self::try_move_player(&mut data, vector);
                 RunState::PlayerTurn
@@ -67,15 +74,8 @@ impl<'a> System<'a> for PlayerActionSystem {
                 RunState::PlayerTurn
             }
             Some(Action::ShowInventory) => RunState::ShowInventory,
-            Some(Action::Use(choice)) => {
-                if Self::try_use(&mut data, choice).is_some() {
-                    RunState::PlayerTurn
-                } else {
-                    RunState::ShowInventory
-                }
-            }
             Some(Action::ShowDropItem) => RunState::ShowDropItem,
-            Some(Action::Drop(choice)) => {
+            Some(Action::Drop { choice }) => {
                 if Self::try_drop(&mut data, choice).is_some() {
                     RunState::PlayerTurn
                 } else {
@@ -86,23 +86,50 @@ impl<'a> System<'a> for PlayerActionSystem {
                 assert!(data.runstate.show_inventory());
                 RunState::AwaitingInput
             }
+            Some(Action::CancelTargeting) => RunState::AwaitingInput,
+            Some(Action::Use { choice }) => {
+                Self::try_use(&mut data, choice).unwrap_or(RunState::ShowInventory)
+            }
+            Some(Action::UseOnTarget { item, target }) => {
+                if Self::try_use_on_target(&mut data, item, target).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::AwaitingInput
+                }
+            }
             None => old_runstate,
         }
     }
 }
 
 impl PlayerActionSystem {
-    fn key_to_action(runstate: RunState, key: Option<VirtualKeyCode>) -> Option<Action> {
+    fn resolve_action(runstate: RunState, input: &Input) -> Option<Action> {
         match runstate {
-            RunState::ShowInventory => match key? {
+            RunState::ShowInventory => match input.key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
-                key => Some(Action::Use(letter_to_option(key))),
+                key => Some(Action::Use {
+                    choice: letter_to_option(key),
+                }),
             },
-            RunState::ShowDropItem => match key? {
+            RunState::ShowDropItem => match input.key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
-                key => Some(Action::Drop(letter_to_option(key))),
+                key => Some(Action::Drop {
+                    choice: letter_to_option(key),
+                }),
             },
-            RunState::AwaitingInput => match key? {
+            RunState::ShowTargeting { item, .. } => {
+                if input.key == Some(VirtualKeyCode::Escape) {
+                    Some(Action::CancelTargeting)
+                } else if input.left_click {
+                    Some(Action::UseOnTarget {
+                        item,
+                        target: input.mouse_pos.into(),
+                    })
+                } else {
+                    None
+                }
+            }
+            RunState::AwaitingInput => match input.key? {
                 // Cardinal directions
                 VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
                     Some(Action::Move(Heading::North.into()))
@@ -218,11 +245,44 @@ impl PlayerActionSystem {
         Some(item)
     }
 
-    fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+    fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<RunState> {
         let player_entity = Self::player_entity(data);
         let item = Self::choice_to_entity_from_player_backpack(data, choice)?;
+        if let Some(ranged) = data.ranged.get(item) {
+            Some(RunState::ShowTargeting {
+                item,
+                range: ranged.range,
+            })
+        } else {
+            data.use_intent
+                .insert(player_entity, UseIntent { item, target: None })
+                .expect("Failed to insert UseIntent");
+            Some(RunState::PlayerTurn)
+        }
+    }
+
+    fn try_use_on_target(
+        data: &mut PlayerActionSystemData,
+        item: Entity,
+        target: Position,
+    ) -> Option<()> {
+        let player_entity = Self::player_entity(data);
+        let player_pos = data.position.get(player_entity)?;
+        let ranged = data.ranged.get(item)?;
+
+        assert_eq!(data.backpack.get(item)?.owner, player_entity);
+        if (*player_pos - target).len() > ranged.range as f32 {
+            return None;
+        }
+
         data.use_intent
-            .insert(player_entity, UseIntent { item })
+            .insert(
+                player_entity,
+                UseIntent {
+                    item,
+                    target: Some(target),
+                },
+            )
             .expect("Failed to insert UseIntent");
         Some(())
     }

@@ -1,3 +1,5 @@
+use specs::prelude::Entity;
+
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
@@ -6,6 +8,7 @@ pub enum RunState {
     MonsterTurn,
     ShowInventory,
     ShowDropItem,
+    ShowTargeting { range: i32, item: Entity },
 }
 
 impl RunState {

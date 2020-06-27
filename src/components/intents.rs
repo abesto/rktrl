@@ -1,3 +1,4 @@
+use crate::components::position::Position;
 use specs::prelude::*;
 use specs_derive::Component;
 
@@ -14,6 +15,7 @@ pub struct PickupIntent {
 #[derive(Component, Debug, Clone)]
 pub struct UseIntent {
     pub item: Entity,
+    pub target: Option<Position>,
 }
 
 #[derive(Component, Debug, Clone)]

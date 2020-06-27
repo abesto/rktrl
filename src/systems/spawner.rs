@@ -10,6 +10,7 @@ use crate::{
         blocks_tile::BlocksTile,
         combat_stats::CombatStats,
         effects::{Consumable, InflictsDamage, ProvidesHealing, Ranged},
+        in_backpack::InBackpack,
         item::Item,
         monster::Monster,
         name::Name,
@@ -43,6 +44,7 @@ pub struct SpawnerSystemData<'a> {
     blocks_tile: WriteStorage<'a, BlocksTile>,
     combat_stats: WriteStorage<'a, CombatStats>,
     item: WriteStorage<'a, Item>,
+    backpack: WriteStorage<'a, InBackpack>,
 
     consumable: WriteStorage<'a, Consumable>,
     healing: WriteStorage<'a, ProvidesHealing>,
@@ -90,7 +92,8 @@ impl<'a> System<'a> for SpawnerSystem {
 
 impl SpawnerSystem {
     fn player(&self, data: &mut SpawnerSystemData, position: Position) {
-        data.entity
+        let player_entity = data
+            .entity
             .build_entity()
             .with(position, &mut data.position)
             .with(
@@ -115,6 +118,23 @@ impl SpawnerSystem {
                 &mut data.combat_stats,
             )
             .build();
+
+        // Wizard mode!
+        let wizard_items = vec![
+            self.health_potion(data, position),
+            self.magic_missile_scroll(data, position),
+        ];
+        for wizard_item in wizard_items {
+            data.position.remove(wizard_item);
+            data.backpack
+                .insert(
+                    wizard_item,
+                    InBackpack {
+                        owner: player_entity,
+                    },
+                )
+                .expect("Failed to insert wizzard item");
+        }
     }
 
     fn monster<S: ToString>(
@@ -207,7 +227,7 @@ impl SpawnerSystem {
         }
     }
 
-    fn health_potion(&self, data: &mut SpawnerSystemData, position: Position) {
+    fn health_potion(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
             .with(position, &mut data.position)
@@ -223,10 +243,10 @@ impl SpawnerSystem {
             .with(Item, &mut data.item)
             .with(ProvidesHealing { heal_amount: 8 }, &mut data.healing)
             .with(Consumable, &mut data.consumable)
-            .build();
+            .build()
     }
 
-    fn magic_missile_scroll(&self, data: &mut SpawnerSystemData, position: Position) {
+    fn magic_missile_scroll(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
             .with(position, &mut data.position)
@@ -246,10 +266,10 @@ impl SpawnerSystem {
             .with(Consumable, &mut data.consumable)
             .with(Ranged { range: 6 }, &mut data.ranged)
             .with(InflictsDamage { damage: 8 }, &mut data.inflicts_damage)
-            .build();
+            .build()
     }
 
-    fn random_item(&self, data: &mut SpawnerSystemData, position: Position) {
+    fn random_item(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         let roll: i32;
         {
             roll = data.rng.roll_dice(1, 2);

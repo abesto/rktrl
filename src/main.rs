@@ -3,10 +3,7 @@ use core::convert::TryInto;
 use specs::prelude::*;
 
 use crate::{
-    resources::{
-        gamelog::GameLog, input::Input, layout::Layout, map::Map, mouse_pos::MousePos,
-        runstate::RunState,
-    },
+    resources::{gamelog::GameLog, input::Input, layout::Layout, map::Map, runstate::RunState},
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
         item_collection::ItemCollectionSystem, item_drop::ItemDropSystem, item_use::ItemUseSystem,
@@ -33,8 +30,8 @@ struct State {
 }
 
 impl GameState for State {
-    fn tick(&mut self, term: &mut BTerm) {
-        self.world.insert(MousePos::new(term.mouse_point()));
+    fn tick(&mut self, mut term: &mut BTerm) {
+        self.world.insert(Input::from(&*term));
 
         let runstate = *self.world.fetch::<RunState>();
         let maybe_newrunstate = match runstate {
@@ -42,8 +39,10 @@ impl GameState for State {
                 self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
-            RunState::AwaitingInput | RunState::ShowInventory | RunState::ShowDropItem => {
-                self.world.insert(Input::key(term.key));
+            RunState::AwaitingInput
+            | RunState::ShowInventory
+            | RunState::ShowDropItem
+            | RunState::ShowTargeting { .. } => {
                 self.dispatchers.player_action.dispatch(&self.world);
                 None
             }
@@ -61,7 +60,7 @@ impl GameState for State {
             *self.world.write_resource::<RunState>() = newrunstate;
         }
 
-        render_draw_buffer(term).unwrap();
+        render_draw_buffer(&mut term).unwrap();
         self.world.maintain();
     }
 }

@@ -13,9 +13,9 @@ use crate::{
     lib::{rect_ext::RectExt, vector::Vector},
     resources::{
         gamelog::GameLog,
+        input::Input,
         layout::Layout,
         map::{Map, TileType},
-        mouse_pos::MousePos,
         runstate::RunState,
         shown_inventory::ShownInventory,
     },
@@ -25,6 +25,7 @@ use std::convert::TryInto;
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {
     entity: Entities<'a>,
+
     position: ReadStorage<'a, Position>,
     renderable: ReadStorage<'a, Renderable>,
     player: ReadStorage<'a, Player>,
@@ -37,7 +38,8 @@ pub struct RenderSystemData<'a> {
     layout: ReadExpect<'a, Layout>,
     map: ReadExpect<'a, Map>,
     runstate: Read<'a, RunState>,
-    mouse_pos: Read<'a, MousePos>,
+    input: ReadExpect<'a, Input>,
+
     shown_inventory: Write<'a, ShownInventory>,
 }
 
@@ -52,6 +54,7 @@ impl<'a> System<'a> for RenderSystem {
         self.render_map(&mut data, draw_batch);
         self.render_entities(&mut data, draw_batch);
         self.render_gui(&mut data, draw_batch);
+        self.targeting_overlay(&mut data, draw_batch);
         self.draw_tooltips(&mut data, draw_batch);
         self.show_inventory(&mut data, draw_batch);
         draw_batch.submit(0).unwrap();
@@ -168,23 +171,23 @@ impl<'a> RenderSystem {
             });
 
         // Draw mouse cursor
-        draw_batch.set_bg(data.mouse_pos.point, RGB::named(MAGENTA));
+        draw_batch.set_bg(data.input.mouse_pos, RGB::named(MAGENTA));
     }
 
     fn draw_tooltips(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        if !data.map.contains(data.mouse_pos.point.into()) {
+        if !data.map.contains(data.input.mouse_pos.into()) {
             return;
         }
 
         let player_viewshed = (&data.viewshed, &data.player).join().next().unwrap().0;
         if !player_viewshed
             .visible_tiles
-            .contains(&data.mouse_pos.point.into())
+            .contains(&data.input.mouse_pos.into())
         {
             return;
         }
 
-        let tile_contents = data.map.get_tile_contents(data.mouse_pos.point.into());
+        let tile_contents = data.map.get_tile_contents(data.input.mouse_pos.into());
         if tile_contents.is_none() {
             return;
         }
@@ -202,7 +205,7 @@ impl<'a> RenderSystem {
             return;
         }
 
-        let point_right = data.mouse_pos.point.x > data.layout.width / 2;
+        let point_right = data.input.mouse_pos.x > data.layout.width / 2;
 
         let max_length = names.iter().map(|entry| entry.len()).max().unwrap_or(0);
         let tooltip: Vec<String> = names
@@ -228,14 +231,14 @@ impl<'a> RenderSystem {
         let width = tooltip[0].len();
 
         let x = if point_right {
-            (data.mouse_pos.point.x as usize) - width
+            (data.input.mouse_pos.x as usize) - width
         } else {
-            (data.mouse_pos.point.x as usize) + 1
+            (data.input.mouse_pos.x as usize) + 1
         };
 
         for (i, entry) in tooltip.iter().enumerate() {
             draw_batch.print_color(
-                Point::new(x, (data.mouse_pos.point.y as usize) + i),
+                Point::new(x, (data.input.mouse_pos.y as usize) + i),
                 entry,
                 ColorPair::new(RGB::named(WHITE), RGB::named(GREY)),
             );
@@ -306,5 +309,45 @@ impl<'a> RenderSystem {
 
         let shown_entities: Vec<Entity> = inventory.iter().map(|x| x.2).collect();
         *data.shown_inventory = shown_entities.into();
+    }
+
+    fn targeting_overlay(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
+        if let RunState::ShowTargeting { range, .. } = *data.runstate {
+            draw_batch.print_color(
+                Point::new(5, 0),
+                "Select Target:",
+                ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+            );
+
+            // Highlight available target cells
+            let (_, viewshed, &player_pos) = (&data.player, &data.viewshed, &data.position)
+                .join()
+                .next()
+                .unwrap();
+
+            let range_f32 = range as f32;
+            let available_cells = &viewshed
+                .visible_tiles
+                .iter()
+                .map(|&position| *position)
+                .filter(|point| {
+                    DistanceAlg::Pythagoras.distance2d(*player_pos, *point) <= range_f32
+                })
+                .collect::<Vec<Point>>();
+
+            for tile in available_cells {
+                draw_batch.set_bg(*tile, RGB::named(BLUE));
+            }
+
+            // Draw mouse cursor
+            draw_batch.set_bg(
+                data.input.mouse_pos,
+                if available_cells.contains(&data.input.mouse_pos) {
+                    RGB::named(CYAN)
+                } else {
+                    RGB::named(RED)
+                },
+            );
+        };
     }
 }
