@@ -5,17 +5,13 @@ use shred_derive::SystemData;
 use specs::prelude::*;
 use specs::shrev::*;
 
-use crate::components::{
-    blocks_tile::BlocksTile,
-    combat_stats::CombatStats,
-    item::Item,
-    monster::Monster,
-    name::Name,
-    player::Player,
-    position::{Position, RectExt},
-    potion::Potion,
-    renderable::Renderable,
-    viewshed::Viewshed,
+use crate::{
+    components::{
+        blocks_tile::BlocksTile, combat_stats::CombatStats, item::Item, monster::Monster,
+        name::Name, player::Player, position::Position, potion::Potion, renderable::Renderable,
+        viewshed::Viewshed,
+    },
+    lib::rect_ext::RectExt,
 };
 
 const MAX_MONSTERS: i32 = 4;
@@ -88,13 +84,12 @@ impl SpawnerSystem {
             .with(
                 Renderable {
                     glyph: to_cp437('@'),
-                    fg: RGB::named(YELLOW),
-                    bg: RGB::named(BLACK),
+                    color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
                 },
                 &mut data.renderable,
             )
-            .with(Player::new(), &mut data.player)
-            .with(Name::new("Player".to_string()), &mut data.name)
+            .with(Player, &mut data.player)
+            .with(Name::from("Player".to_string()), &mut data.name)
             .with(Viewshed::new(8), &mut data.viewshed)
             .with(BlocksTile::new(), &mut data.blocks_tile)
             .with(
@@ -122,14 +117,13 @@ impl SpawnerSystem {
             .with(
                 Renderable {
                     glyph: to_cp437(letter),
-                    fg: RGB::named(RED),
-                    bg: RGB::named(BLACK),
+                    color: ColorPair::new(RGB::named(RED), RGB::named(BLACK)),
                 },
                 &mut data.renderable,
             )
             .with(Viewshed::new(8), &mut data.viewshed)
-            .with(Monster::new(), &mut data.monster)
-            .with(Name::new(name.to_string()), &mut data.name)
+            .with(Monster, &mut data.monster)
+            .with(Name::from(name.to_string()), &mut data.name)
             .with(BlocksTile::new(), &mut data.blocks_tile)
             .with(
                 CombatStats {
@@ -206,18 +200,12 @@ impl SpawnerSystem {
             .with(
                 Renderable {
                     glyph: to_cp437('¡'),
-                    fg: RGB::named(MAGENTA),
-                    bg: RGB::named(BLACK),
+                    color: ColorPair::new(RGB::named(MAGENTA), RGB::named(BLACK)),
                 },
                 &mut data.renderable,
             )
-            .with(
-                Name {
-                    name: "Health Potion".to_string(),
-                },
-                &mut data.name,
-            )
-            .with(Item::new(), &mut data.item)
+            .with(Name::from("Health Potion".to_string()), &mut data.name)
+            .with(Item, &mut data.item)
             .with(Potion::new(8), &mut data.potion)
             .build();
     }

@@ -33,7 +33,7 @@ impl<'a> System<'a> for DeathSystem {
                 continue;
             }
             if player.is_none() {
-                data.gamelog.entries.push(format!("{} is dead", name.name));
+                data.gamelog.entries.push(format!("{} is dead", name));
                 data.entities.delete(entity).unwrap();
             } else {
                 data.gamelog.entries.push("You are dead".to_string());

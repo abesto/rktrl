@@ -40,7 +40,7 @@ impl<'a> System<'a> for ItemUseSystem {
                 if player.is_some() {
                     data.gamelog.entries.push(format!(
                         "You drink the {}, healing {} hp.",
-                        data.name.get(to_use.item).unwrap().name,
+                        data.name.get(to_use.item).unwrap(),
                         heal_amount
                     ));
                 }

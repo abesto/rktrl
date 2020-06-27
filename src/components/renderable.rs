@@ -1,11 +1,9 @@
-use bracket_lib::prelude::RGB;
-use specs::{Component, VecStorage};
+use bracket_lib::prelude::*;
+use specs::prelude::*;
 use specs_derive::Component;
 
 #[derive(Component)]
-#[storage(VecStorage)]
 pub struct Renderable {
+    pub color: ColorPair,
     pub glyph: u16,
-    pub fg: RGB,
-    pub bg: RGB,
 }

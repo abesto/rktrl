@@ -7,6 +7,7 @@ pub struct Potion {
 }
 
 impl Potion {
+    #[must_use]
     pub const fn new(heal_amount: i32) -> Potion {
         Potion { heal_amount }
     }

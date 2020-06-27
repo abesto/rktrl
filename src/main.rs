@@ -3,7 +3,10 @@ use core::convert::TryInto;
 use specs::prelude::*;
 
 use crate::{
-    resources::{gamelog::GameLog, input::Input, layout::Layout, map::Map, runstate::RunState},
+    resources::{
+        gamelog::GameLog, input::Input, layout::Layout, map::Map, mouse_pos::MousePos,
+        runstate::RunState,
+    },
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
         item_collection::ItemCollectionSystem, item_use::ItemUseSystem,
@@ -18,31 +21,38 @@ mod lib;
 mod resources;
 mod systems;
 
+struct Dispatchers {
+    main: Dispatcher<'static, 'static>,
+    player_action: Dispatcher<'static, 'static>,
+    mapgen: Dispatcher<'static, 'static>,
+}
+
 struct State {
     world: World,
-    dispatcher: Dispatcher<'static, 'static>,
-    render: RenderSystem,
+    dispatchers: Dispatchers,
 }
 
 impl GameState for State {
     fn tick(&mut self, term: &mut BTerm) {
+        self.world.insert(MousePos::new(term.mouse_point()));
+
         let runstate = *self.world.fetch::<RunState>();
         let maybe_newrunstate = match runstate {
             RunState::PreRun => {
-                self.dispatcher.dispatch(&self.world);
+                self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
             RunState::AwaitingInput | RunState::ShowInventory => {
                 self.world.insert(Input::key(term.key));
-                PlayerActionSystem {}.run_now(&self.world);
+                self.dispatchers.player_action.dispatch(&self.world);
                 None
             }
             RunState::PlayerTurn => {
-                self.dispatcher.dispatch(&self.world);
+                self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::MonsterTurn)
             }
             RunState::MonsterTurn => {
-                self.dispatcher.dispatch(&self.world);
+                self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
         };
@@ -51,8 +61,7 @@ impl GameState for State {
             *self.world.write_resource::<RunState>() = newrunstate;
         }
 
-        // RenderSystem needs special treatment (see RenderSystem::run)
-        self.render.run_now_with_term(&mut self.world, term);
+        render_draw_buffer(term).unwrap();
         self.world.maintain();
     }
 }
@@ -71,25 +80,37 @@ fn main() {
     // Initialize specs
     let mut gs = State {
         world: World::new(),
-        dispatcher: DispatcherBuilder::new()
-            .with(AISystem, "ai", &[])
-            .with(VisibilitySystem, "visibility", &["ai"])
-            .with(ItemCollectionSystem, "item_collection", &["ai"])
-            .with(ItemUseSystem, "item_use", &["ai"])
-            .with(MeleeCombatSystem, "melee", &["ai"])
-            .with(DamageSystem, "damage", &["melee"])
-            .with(DeathSystem, "death", &["damage"])
-            .with(
-                MapIndexingSystem,
-                "map_indexing",
-                &["death", "item_collection"],
-            )
-            .build(),
-        render: RenderSystem::new(),
+        dispatchers: Dispatchers {
+            main: DispatcherBuilder::new()
+                .with(AISystem, "ai", &[])
+                .with(VisibilitySystem, "visibility", &["ai"])
+                .with(ItemCollectionSystem, "item_collection", &["ai"])
+                .with(ItemUseSystem, "item_use", &["ai"])
+                .with(MeleeCombatSystem, "melee", &["ai"])
+                .with(DamageSystem, "damage", &["melee"])
+                .with(DeathSystem, "death", &["damage"])
+                .with(
+                    MapIndexingSystem,
+                    "map_indexing",
+                    &["death", "item_collection"],
+                )
+                .with_barrier()
+                .with(RenderSystem, "render", &[])
+                .build(),
+            player_action: DispatcherBuilder::new()
+                .with(PlayerActionSystem, "player_action", &[])
+                .with(RenderSystem, "render", &["player_action"])
+                .build(),
+            mapgen: DispatcherBuilder::new()
+                .with(MapgenSystem, "mapgen", &[])
+                .with(SpawnerSystem::default(), "spawner", &["mapgen"])
+                .build(),
+        },
     };
-    gs.dispatcher.setup(&mut gs.world);
-    System::setup(&mut PlayerActionSystem, &mut gs.world);
-    System::setup(&mut gs.render, &mut gs.world);
+
+    gs.dispatchers.main.setup(&mut gs.world);
+    gs.dispatchers.player_action.setup(&mut gs.world);
+    gs.dispatchers.mapgen.setup(&mut gs.world);
 
     // Create UI layout
     let layout = {
@@ -110,12 +131,7 @@ fn main() {
         let map_rect = layout.map();
         Map::new(map_rect.width(), map_rect.height())
     });
-    let mut init_dispatcher = DispatcherBuilder::new()
-        .with(MapgenSystem, "mapgen", &[])
-        .with(SpawnerSystem::default(), "spawner", &["mapgen"])
-        .build();
-    init_dispatcher.setup(&mut gs.world);
-    init_dispatcher.dispatch(&gs.world);
+    gs.dispatchers.mapgen.dispatch(&gs.world);
 
     // Welcome!
     gs.world.insert(GameLog {

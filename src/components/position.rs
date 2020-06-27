@@ -1,4 +1,3 @@
-use std::cmp::{max, min};
 use std::convert::TryInto;
 
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
@@ -20,7 +19,6 @@ macro_attr! {
 }
 
 impl Position {
-    #[inline]
     #[must_use]
     pub fn new<T>(x: T, y: T) -> Position
     where
@@ -86,30 +84,4 @@ impl UniformSampler for PositionSampler {
 
 impl SampleUniform for Position {
     type Sampler = PositionSampler;
-}
-
-pub trait RectExt {
-    fn p1(&self) -> Position;
-    fn p2(&self) -> Position;
-    fn interior(&self) -> Rect;
-}
-
-impl RectExt for Rect {
-    fn p1(&self) -> Position {
-        Position::new(self.x1, self.y1)
-    }
-
-    fn p2(&self) -> Position {
-        Position::new(self.x2, self.y2)
-    }
-
-    fn interior(&self) -> Rect {
-        let smaller = Rect::with_exact(self.x1 + 1, self.y1 + 1, self.x2 - 1, self.y2 - 1);
-        Rect::with_exact(
-            min(smaller.x1, smaller.x2),
-            min(smaller.y1, smaller.y2),
-            max(smaller.x1, smaller.x2),
-            max(smaller.y1, smaller.y2),
-        )
-    }
 }

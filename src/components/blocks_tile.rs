@@ -6,6 +6,7 @@ use specs_derive::Component;
 pub struct BlocksTile;
 
 impl BlocksTile {
+    #[must_use]
     pub const fn new() -> BlocksTile {
         BlocksTile
     }

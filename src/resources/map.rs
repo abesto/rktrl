@@ -31,6 +31,7 @@ pub struct Map {
 }
 
 impl Map {
+    #[must_use]
     pub fn new(width: i32, height: i32) -> Map {
         Map {
             width,

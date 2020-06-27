@@ -15,6 +15,7 @@ pub struct Viewshed {
 }
 
 impl Viewshed {
+    #[must_use]
     pub fn new(range: u16) -> Viewshed {
         Viewshed {
             visible_tiles: HashSet::new(),

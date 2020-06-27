@@ -38,7 +38,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
             if player.is_some() {
                 data.gamelog.entries.push(format!(
                     "You pick up the {}.",
-                    data.name.get(pickup.item).unwrap().name
+                    data.name.get(pickup.item).unwrap()
                 ));
             }
         }

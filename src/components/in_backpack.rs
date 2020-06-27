@@ -7,6 +7,7 @@ pub struct InBackpack {
 }
 
 impl InBackpack {
+    #[must_use]
     pub fn new(owner: Entity) -> InBackpack {
         InBackpack { owner }
     }
