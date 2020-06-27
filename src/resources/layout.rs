@@ -1,3 +1,4 @@
+use std::cmp::{max, min};
 use std::convert::TryInto;
 
 use bracket_lib::prelude::Rect;
@@ -23,13 +24,22 @@ impl Layout {
         )
     }
 
-    pub fn inventory<T>(&self, item_count: T) -> Rect
+    pub fn inventory<T>(&self, item_count: T, max_item_len: T) -> Rect
     where
         T: TryInto<i32>,
     {
-        let width_third = self.width / 3;
         let item_count_i32: i32 = item_count.try_into().ok().unwrap();
+        let max_item_len_i32: i32 = max_item_len.try_into().ok().unwrap();
+
+        // +7 width: 2 border + 2 padding + 4 shortcut - 1 bracket_lib issue 96 workaround
+        let width = min(self.width, max(self.width / 3, max_item_len_i32 + 7));
+        // +3 height: 2 border + 2 padding - 1 bracket_lib issue 96 workaround
         let height = item_count_i32 + 3;
-        Rect::with_size(width_third, (self.height + height) / 2, width_third, height)
+        Rect::with_size(
+            (self.width - width) / 2,
+            (self.height - height) / 2,
+            width,
+            height,
+        )
     }
 }

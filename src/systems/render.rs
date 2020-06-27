@@ -260,8 +260,9 @@ impl<'a> RenderSystem {
                 .filter(|item| item.0.owner == player_entity)
                 .collect();
         let count = inventory.len();
+        let max_len = inventory.iter().map(|x| x.1.len()).max().unwrap_or(0);
 
-        let inventory_rect = data.layout.inventory(count);
+        let inventory_rect = data.layout.inventory(count, max_len);
         draw_batch
             .draw_box(
                 inventory_rect,
@@ -292,6 +293,7 @@ impl<'a> RenderSystem {
                     .append(name)
                     .ln();
             }
+
             let mut text_block = TextBlock::new(
                 inventory_rect.x1 + 2,
                 inventory_rect.y1 + 2,
