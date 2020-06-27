@@ -15,3 +15,8 @@ pub struct PickupIntent {
 pub struct UseIntent {
     pub item: Entity,
 }
+
+#[derive(Component, Debug, Clone)]
+pub struct DropIntent {
+    pub item: Entity,
+}

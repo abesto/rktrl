@@ -6,7 +6,7 @@ use crate::{
     components::{
         combat_stats::CombatStats,
         in_backpack::InBackpack,
-        intents::{MeleeIntent, PickupIntent, UseIntent},
+        intents::{DropIntent, MeleeIntent, PickupIntent, UseIntent},
         item::Item,
         player::Player,
         position::Position,
@@ -28,6 +28,7 @@ pub struct PlayerActionSystemData<'a> {
     melee_intent: WriteStorage<'a, MeleeIntent>,
     pickup_intent: WriteStorage<'a, PickupIntent>,
     use_intent: WriteStorage<'a, UseIntent>,
+    drop_intent: WriteStorage<'a, DropIntent>,
     item: ReadStorage<'a, Item>,
     backpack: ReadStorage<'a, InBackpack>,
 
@@ -45,8 +46,10 @@ enum Action {
     Move(Vector),
     PickUp,
     ShowInventory,
+    ShowDropItem,
     CloseInventory,
     Use(i32),
+    Drop(i32),
 }
 
 impl<'a> System<'a> for PlayerActionSystem {
@@ -71,8 +74,16 @@ impl<'a> System<'a> for PlayerActionSystem {
                     RunState::ShowInventory
                 }
             }
+            Some(Action::ShowDropItem) => RunState::ShowDropItem,
+            Some(Action::Drop(choice)) => {
+                if Self::try_drop(&mut data, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowDropItem
+                }
+            }
             Some(Action::CloseInventory) => {
-                assert_eq!(*data.runstate, RunState::ShowInventory);
+                assert!(data.runstate.show_inventory());
                 RunState::AwaitingInput
             }
             None => old_runstate,
@@ -82,50 +93,56 @@ impl<'a> System<'a> for PlayerActionSystem {
 
 impl PlayerActionSystem {
     fn key_to_action(runstate: RunState, key: Option<VirtualKeyCode>) -> Option<Action> {
-        if runstate == RunState::ShowInventory {
-            return match key? {
+        match runstate {
+            RunState::ShowInventory => match key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
                 key => Some(Action::Use(letter_to_option(key))),
-            };
-        }
+            },
+            RunState::ShowDropItem => match key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Drop(letter_to_option(key))),
+            },
+            RunState::AwaitingInput => match key? {
+                // Cardinal directions
+                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                    Some(Action::Move(Heading::North.into()))
+                }
 
-        match key? {
-            // Cardinal directions
-            VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
-                Some(Action::Move(Heading::North.into()))
-            }
+                VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
+                    Some(Action::Move(Heading::East.into()))
+                }
 
-            VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
-                Some(Action::Move(Heading::East.into()))
-            }
+                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                    Some(Action::Move(Heading::South.into()))
+                }
 
-            VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
-                Some(Action::Move(Heading::South.into()))
-            }
+                VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
+                    Some(Action::Move(Heading::West.into()))
+                }
 
-            VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
-                Some(Action::Move(Heading::West.into()))
-            }
+                // Diagonals
+                VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
+                    Some(Action::Move(Heading::North + Heading::East))
+                }
+                VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
+                    Some(Action::Move(Heading::North + Heading::West))
+                }
+                VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
+                    Some(Action::Move(Heading::South + Heading::East))
+                }
+                VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
+                    Some(Action::Move(Heading::South + Heading::West))
+                }
 
-            // Diagonals
-            VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
-                Some(Action::Move(Heading::North + Heading::East))
-            }
-            VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
-                Some(Action::Move(Heading::North + Heading::West))
-            }
-            VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
-                Some(Action::Move(Heading::South + Heading::East))
-            }
-            VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
-                Some(Action::Move(Heading::South + Heading::West))
-            }
+                // Inventory things
+                VirtualKeyCode::G => Some(Action::PickUp),
+                VirtualKeyCode::I => Some(Action::ShowInventory),
+                VirtualKeyCode::D => Some(Action::ShowDropItem),
 
-            // Inventory things
-            VirtualKeyCode::G => Some(Action::PickUp),
-            VirtualKeyCode::I => Some(Action::ShowInventory),
-
-            // We don't know any other keys
+                // We don't know any other keys
+                _ => None,
+            },
+            // We don't care about keypresses during other runstates
             _ => None,
         }
     }
@@ -187,13 +204,35 @@ impl PlayerActionSystem {
         }
     }
 
-    fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+    fn player_entity(data: &mut PlayerActionSystemData) -> Entity {
+        (&data.player, &data.entities).join().next().unwrap().1
+    }
+
+    fn choice_to_entity_from_player_backpack(
+        data: &mut PlayerActionSystemData,
+        choice: i32,
+    ) -> Option<Entity> {
+        let player_entity = Self::player_entity(data);
         let &item = data.shown_inventory.get(choice as usize)?;
-        let player_entity = (&data.player, &data.entities).join().next().unwrap().1;
-        assert_eq!(data.backpack.get(item).unwrap().owner, player_entity);
+        assert_eq!(data.backpack.get(item)?.owner, player_entity);
+        Some(item)
+    }
+
+    fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+        let player_entity = Self::player_entity(data);
+        let item = Self::choice_to_entity_from_player_backpack(data, choice)?;
         data.use_intent
             .insert(player_entity, UseIntent { item })
-            .expect("Failed to insert WantsToUse");
+            .expect("Failed to insert UseIntent");
+        Some(())
+    }
+
+    fn try_drop(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+        let player_entity = Self::player_entity(data);
+        let item = Self::choice_to_entity_from_player_backpack(data, choice)?;
+        data.drop_intent
+            .insert(player_entity, DropIntent { item })
+            .expect("Failed to insert DropIntent");
         Some(())
     }
 }

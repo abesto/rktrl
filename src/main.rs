@@ -9,7 +9,7 @@ use crate::{
     },
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
-        item_collection::ItemCollectionSystem, item_use::ItemUseSystem,
+        item_collection::ItemCollectionSystem, item_drop::ItemDropSystem, item_use::ItemUseSystem,
         map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
         player_action::PlayerActionSystem, render::RenderSystem, spawner::SpawnerSystem,
         visibility::VisibilitySystem,
@@ -42,7 +42,7 @@ impl GameState for State {
                 self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
-            RunState::AwaitingInput | RunState::ShowInventory => {
+            RunState::AwaitingInput | RunState::ShowInventory | RunState::ShowDropItem => {
                 self.world.insert(Input::key(term.key));
                 self.dispatchers.player_action.dispatch(&self.world);
                 None
@@ -85,6 +85,7 @@ fn main() {
                 .with(AISystem, "ai", &[])
                 .with(VisibilitySystem, "visibility", &["ai"])
                 .with(ItemCollectionSystem, "item_collection", &["ai"])
+                .with(ItemDropSystem, "item_drop", &["ai"])
                 .with(ItemUseSystem, "item_use", &["ai"])
                 .with(MeleeCombatSystem, "melee", &["ai"])
                 .with(DamageSystem, "damage", &["melee"])

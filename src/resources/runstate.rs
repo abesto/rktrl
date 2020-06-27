@@ -5,6 +5,14 @@ pub enum RunState {
     PlayerTurn,
     MonsterTurn,
     ShowInventory,
+    ShowDropItem,
+}
+
+impl RunState {
+    #[must_use]
+    pub fn show_inventory(self) -> bool {
+        self == RunState::ShowDropItem || self == RunState::ShowInventory
+    }
 }
 
 impl Default for RunState {

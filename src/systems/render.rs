@@ -239,9 +239,15 @@ impl<'a> RenderSystem {
     }
 
     fn show_inventory(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        if *data.runstate != RunState::ShowInventory {
+        if !data.runstate.show_inventory() {
             return;
         }
+
+        let title = match *data.runstate {
+            RunState::ShowDropItem => "Drop Which Item?",
+            RunState::ShowInventory => "Inventory",
+            _ => panic!(),
+        };
 
         let player_entity = (&data.player, &data.entity).join().next().unwrap().1;
         let inventory: Vec<(&InBackpack, &Name, Entity)> =
@@ -259,7 +265,7 @@ impl<'a> RenderSystem {
             )
             .print_color(
                 *inventory_rect.position(Vector::new(3, 0)),
-                "Inventory",
+                title,
                 ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
             )
             .print_color(
