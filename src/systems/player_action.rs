@@ -4,9 +4,13 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, in_backpack::InBackpack, item::Item, player::Player,
-        position::Position, viewshed::Viewshed, wants_to_melee::WantsToMelee,
-        wants_to_pick_up_item::WantsToPickUpItem, wants_to_use::WantsToUse,
+        combat_stats::CombatStats,
+        in_backpack::InBackpack,
+        intents::{MeleeIntent, PickupIntent, UseIntent},
+        item::Item,
+        player::Player,
+        position::Position,
+        viewshed::Viewshed,
     },
     lib::vector::{Heading, Vector},
     resources::{
@@ -21,9 +25,9 @@ pub struct PlayerActionSystemData<'a> {
     combat_stats: ReadStorage<'a, CombatStats>,
     position: WriteStorage<'a, Position>,
     viewshed: WriteStorage<'a, Viewshed>,
-    wants_to_melee: WriteStorage<'a, WantsToMelee>,
-    wants_to_pickup: WriteStorage<'a, WantsToPickUpItem>,
-    wants_to_use: WriteStorage<'a, WantsToUse>,
+    melee_intent: WriteStorage<'a, MeleeIntent>,
+    pickup_intent: WriteStorage<'a, PickupIntent>,
+    use_intent: WriteStorage<'a, UseIntent>,
     item: ReadStorage<'a, Item>,
     backpack: ReadStorage<'a, InBackpack>,
 
@@ -140,10 +144,10 @@ impl PlayerActionSystem {
             if let Some(contents) = data.map.get_tile_contents(new_position) {
                 for potential_target in contents.iter() {
                     if data.combat_stats.get(*potential_target).is_some() {
-                        data.wants_to_melee
+                        data.melee_intent
                             .insert(
                                 player_entity,
-                                WantsToMelee {
+                                MeleeIntent {
                                     target: *potential_target,
                                 },
                             )
@@ -176,8 +180,8 @@ impl PlayerActionSystem {
                 .entries
                 .push("There is nothing here to pick up.".to_string()),
             Some(item) => {
-                data.wants_to_pickup
-                    .insert(player_entity, WantsToPickUpItem { item })
+                data.pickup_intent
+                    .insert(player_entity, PickupIntent { item })
                     .expect("Unable to insert want to pickup");
             }
         }
@@ -187,8 +191,8 @@ impl PlayerActionSystem {
         let &item = data.shown_inventory.get(choice as usize)?;
         let player_entity = (&data.player, &data.entities).join().next().unwrap().1;
         assert_eq!(data.backpack.get(item).unwrap().owner, player_entity);
-        data.wants_to_use
-            .insert(player_entity, WantsToUse { item })
+        data.use_intent
+            .insert(player_entity, UseIntent { item })
             .expect("Failed to insert WantsToUse");
         Some(())
     }

@@ -3,8 +3,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        in_backpack::InBackpack, name::Name, player::Player, position::Position,
-        wants_to_pick_up_item::WantsToPickUpItem,
+        in_backpack::InBackpack, intents::PickupIntent, name::Name, player::Player,
+        position::Position,
     },
     resources::gamelog::GameLog,
 };
@@ -12,7 +12,7 @@ use crate::{
 #[derive(SystemData)]
 pub struct ItemCollectionSystemData<'a> {
     entity: Entities<'a>,
-    pickup: WriteStorage<'a, WantsToPickUpItem>,
+    pickup_intent: WriteStorage<'a, PickupIntent>,
     position: WriteStorage<'a, Position>,
     name: ReadStorage<'a, Name>,
     backpack: WriteStorage<'a, InBackpack>,
@@ -27,7 +27,9 @@ impl<'a> System<'a> for ItemCollectionSystem {
     type SystemData = ItemCollectionSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        for (actor, pickup, player) in (&data.entity, &data.pickup, data.player.maybe()).join() {
+        for (actor, pickup, player) in
+            (&data.entity, &data.pickup_intent, data.player.maybe()).join()
+        {
             data.position.remove(pickup.item);
             data.backpack
                 .insert(pickup.item, InBackpack::new(actor))
@@ -41,6 +43,6 @@ impl<'a> System<'a> for ItemCollectionSystem {
             }
         }
 
-        data.pickup.clear();
+        data.pickup_intent.clear();
     }
 }

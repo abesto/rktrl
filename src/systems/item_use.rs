@@ -3,8 +3,7 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, name::Name, player::Player, potion::Potion,
-        wants_to_use::WantsToUse,
+        combat_stats::CombatStats, intents::UseIntent, name::Name, player::Player, potion::Potion,
     },
     resources::gamelog::GameLog,
 };
@@ -14,7 +13,7 @@ pub struct ItemUseSystemData<'a> {
     entity: Entities<'a>,
     name: ReadStorage<'a, Name>,
     player: ReadStorage<'a, Player>,
-    wants_to_use: WriteStorage<'a, WantsToUse>,
+    wants_to_use: WriteStorage<'a, UseIntent>,
     combat_stats: WriteStorage<'a, CombatStats>,
     potion: ReadStorage<'a, Potion>,
 

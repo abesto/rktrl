@@ -4,8 +4,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        monster::Monster, player::Player, position::Position, viewshed::Viewshed,
-        wants_to_melee::WantsToMelee,
+        intents::MeleeIntent, monster::Monster, player::Player, position::Position,
+        viewshed::Viewshed,
     },
     resources::{map::Map, runstate::RunState},
 };
@@ -16,7 +16,7 @@ pub struct AISystemData<'a> {
     position: WriteStorage<'a, Position>,
     monster: ReadStorage<'a, Monster>,
     player: ReadStorage<'a, Player>,
-    wants_to_melee: WriteStorage<'a, WantsToMelee>,
+    wants_to_melee: WriteStorage<'a, MeleeIntent>,
 
     entities: Entities<'a>,
     runstate: Read<'a, RunState>,
@@ -49,7 +49,7 @@ impl<'a> System<'a> for AISystem {
                 data.wants_to_melee
                     .insert(
                         entity,
-                        WantsToMelee {
+                        MeleeIntent {
                             target: player_entity,
                         },
                     )

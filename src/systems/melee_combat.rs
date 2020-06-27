@@ -3,15 +3,14 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, name::Name, suffer_damage::SufferDamage,
-        wants_to_melee::WantsToMelee,
+        combat_stats::CombatStats, intents::MeleeIntent, name::Name, suffer_damage::SufferDamage,
     },
     resources::gamelog::GameLog,
 };
 
 #[derive(SystemData)]
 pub struct MeleeCombatSystemData<'a> {
-    wants_to_melee: WriteStorage<'a, WantsToMelee>,
+    wants_to_melee: WriteStorage<'a, MeleeIntent>,
     name: ReadStorage<'a, Name>,
     combat_stats: ReadStorage<'a, CombatStats>,
     suffer_damage: WriteStorage<'a, SufferDamage>,
