@@ -9,7 +9,7 @@ use crate::{
     components::{
         blocks_tile::BlocksTile,
         combat_stats::CombatStats,
-        effects::{AreaOfEffect, Consumable, InflictsDamage, ProvidesHealing, Ranged},
+        effects::{AreaOfEffect, Confusion, Consumable, InflictsDamage, ProvidesHealing, Ranged},
         in_backpack::InBackpack,
         item::Item,
         monster::Monster,
@@ -51,6 +51,7 @@ pub struct SpawnerSystemData<'a> {
     ranged: WriteStorage<'a, Ranged>,
     inflicts_damage: WriteStorage<'a, InflictsDamage>,
     area_of_effect: WriteStorage<'a, AreaOfEffect>,
+    confusion: WriteStorage<'a, Confusion>,
 
     rng: WriteExpect<'a, RandomNumberGenerator>,
     spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
@@ -125,6 +126,7 @@ impl SpawnerSystem {
             self.health_potion(data, position),
             self.magic_missile_scroll(data, position),
             self.fireball_scroll(data, position),
+            self.confusion_scroll(data, position),
         ];
         for wizard_item in wizard_items {
             data.position.remove(wizard_item);
@@ -292,14 +294,35 @@ impl SpawnerSystem {
             .build()
     }
 
+    fn confusion_scroll(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
+        data.entity
+            .build_entity()
+            .with(position, &mut data.position)
+            .with(
+                Renderable {
+                    glyph: to_cp437(')'),
+                    color: ColorPair::new(RGB::named(PINK), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderable,
+            )
+            .with(Name::from("Confusion Scroll".to_string()), &mut data.name)
+            .with(Item, &mut data.item)
+            .with(Consumable, &mut data.consumable)
+            .with(Ranged { range: 6 }, &mut data.ranged)
+            .with(Confusion { turns: 4 }, &mut data.confusion)
+            .build()
+    }
+
     fn random_item(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         let roll: i32;
         {
-            roll = data.rng.roll_dice(1, 3);
+            roll = data.rng.roll_dice(1, 4);
         }
         match roll {
             1 => self.health_potion(data, position),
             2 => self.fireball_scroll(data, position),
+            3 => self.confusion_scroll(data, position),
             _ => self.magic_missile_scroll(data, position),
         }
     }

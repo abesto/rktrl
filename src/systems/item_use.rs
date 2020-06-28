@@ -4,8 +4,9 @@ use specs::prelude::*;
 use crate::{
     components::{
         combat_stats::CombatStats,
-        effects::{AreaOfEffect, Consumable, InflictsDamage, ProvidesHealing, Ranged},
+        effects::{AreaOfEffect, Confusion, Consumable, InflictsDamage, ProvidesHealing, Ranged},
         intents::UseIntent,
+        monster::Monster,
         name::Name,
         player::Player,
         position::Position,
@@ -26,11 +27,13 @@ pub struct ItemUseSystemData<'a> {
     ranged: ReadStorage<'a, Ranged>,
     position: ReadStorage<'a, Position>,
     area_of_effect: ReadStorage<'a, AreaOfEffect>,
+    monster: ReadStorage<'a, Monster>,
 
     use_intent: WriteStorage<'a, UseIntent>,
     combat_stats: WriteStorage<'a, CombatStats>,
     consumable: WriteStorage<'a, Consumable>,
     suffer_damage: WriteStorage<'a, SufferDamage>,
+    confusion: WriteStorage<'a, Confusion>,
 
     map: ReadExpect<'a, Map>,
 
@@ -131,6 +134,36 @@ impl<'a> System<'a> for ItemUseSystem {
                                     item_name, mob_name, damage.damage
                                 ));
                             }
+                        }
+                        true
+                    }
+                }
+            };
+
+            used_item |= match { data.confusion.get(to_use.item).cloned() } {
+                None => false,
+                Some(confusion) => {
+                    let valid_targets: Vec<&Entity> = targets
+                        .iter()
+                        // TODO Allow hitting players, maybe once the AI system is generalized
+                        .filter(|&t| data.monster.get(*t).is_some())
+                        .collect();
+
+                    if valid_targets.is_empty() {
+                        false
+                    } else {
+                        for &target in valid_targets {
+                            let target_name = data
+                                .name
+                                .get(target)
+                                .expect("Tried to confuse something with no name :O");
+                            data.confusion
+                                .insert(target, confusion)
+                                .expect("Unable to insert Confusion");
+                            data.gamelog.entries.push(format!(
+                                "You use {} on {}, confusing them for {} turns.",
+                                item_name, target_name, confusion.turns
+                            ));
                         }
                         true
                     }

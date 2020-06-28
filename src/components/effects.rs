@@ -24,3 +24,8 @@ pub struct InflictsDamage {
 pub struct AreaOfEffect {
     pub radius: i32,
 }
+
+#[derive(Clone, Copy, Component, Debug)]
+pub struct Confusion {
+    pub turns: i32,
+}

@@ -4,21 +4,26 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        intents::MeleeIntent, monster::Monster, player::Player, position::Position,
-        viewshed::Viewshed,
+        effects::Confusion, intents::MeleeIntent, monster::Monster, name::Name, player::Player,
+        position::Position, viewshed::Viewshed,
     },
-    resources::{map::Map, runstate::RunState},
+    resources::{gamelog::GameLog, map::Map, runstate::RunState},
 };
 
 #[derive(SystemData)]
 pub struct AISystemData<'a> {
-    viewshed: WriteStorage<'a, Viewshed>,
-    position: WriteStorage<'a, Position>,
+    entities: Entities<'a>,
+
     monster: ReadStorage<'a, Monster>,
     player: ReadStorage<'a, Player>,
-    wants_to_melee: WriteStorage<'a, MeleeIntent>,
+    name: ReadStorage<'a, Name>,
 
-    entities: Entities<'a>,
+    viewshed: WriteStorage<'a, Viewshed>,
+    position: WriteStorage<'a, Position>,
+    wants_to_melee: WriteStorage<'a, MeleeIntent>,
+    confusion: WriteStorage<'a, Confusion>,
+
+    gamelog: WriteExpect<'a, GameLog>,
     runstate: Read<'a, RunState>,
     map: ReadExpect<'a, Map>,
 }
@@ -44,6 +49,26 @@ impl<'a> System<'a> for AISystem {
         )
             .join()
         {
+            let can_act = {
+                if let Some(confusion) = data.confusion.get_mut(entity) {
+                    confusion.turns -= 1;
+                    if confusion.turns < 0 {
+                        data.confusion.remove(entity);
+                        data.gamelog.entries.push(format!(
+                            "{} is no longer confused!",
+                            data.name.get(entity).unwrap()
+                        ));
+                    }
+                    false
+                } else {
+                    true
+                }
+            };
+
+            if !can_act {
+                continue;
+            }
+
             let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
             if distance < 1.5 {
                 data.wants_to_melee
