@@ -352,7 +352,7 @@ impl<'a> RenderSystem {
                             .cloned()
                             .collect::<Vec<_>>();
                     for cell in affected_cells {
-                        draw_batch.set_bg(cell, RGB::named(DARK_CYAN));
+                        draw_batch.set_bg(cell, RGB::named(DARK_GOLDENROD));
                     }
                 }
             }
