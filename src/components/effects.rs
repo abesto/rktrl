@@ -10,7 +10,7 @@ pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Clone, Copy, Component, Debug)]
 pub struct Ranged {
     pub range: i32,
 }

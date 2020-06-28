@@ -267,14 +267,8 @@ impl PlayerActionSystem {
         target: Position,
     ) -> Option<()> {
         let player_entity = Self::player_entity(data);
-        let player_pos = data.position.get(player_entity)?;
-        let ranged = data.ranged.get(item)?;
 
         assert_eq!(data.backpack.get(item)?.owner, player_entity);
-        if (*player_pos - target).len() > ranged.range as f32 {
-            return None;
-        }
-
         data.use_intent
             .insert(
                 player_entity,
