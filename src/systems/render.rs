@@ -4,7 +4,9 @@ use std::convert::TryFrom;
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
+use strum::IntoEnumIterator;
 
+use crate::resources::runstate::MainMenuSelection;
 use crate::{
     components::{
         combat_stats::CombatStats, effects::AreaOfEffect, in_backpack::InBackpack, name::Name,
@@ -52,12 +54,17 @@ impl<'a> System<'a> for RenderSystem {
     fn run(&mut self, mut data: Self::SystemData) {
         let draw_batch = &mut DrawBatch::new();
         draw_batch.cls();
-        self.render_map(&mut data, draw_batch);
-        self.render_entities(&mut data, draw_batch);
-        self.render_gui(&mut data, draw_batch);
-        self.targeting_overlay(&mut data, draw_batch);
-        self.draw_tooltips(&mut data, draw_batch);
-        self.show_inventory(&mut data, draw_batch);
+        match *data.runstate {
+            RunState::MainMenu { .. } => self.render_main_menu(&mut data, draw_batch),
+            _ => {
+                self.render_map(&mut data, draw_batch);
+                self.render_entities(&mut data, draw_batch);
+                self.render_gui(&mut data, draw_batch);
+                self.targeting_overlay(&mut data, draw_batch);
+                self.draw_tooltips(&mut data, draw_batch);
+                self.show_inventory(&mut data, draw_batch);
+            }
+        };
         draw_batch.submit(0).unwrap();
     }
 }
@@ -367,5 +374,33 @@ impl<'a> RenderSystem {
                 },
             );
         };
+    }
+
+    fn render_main_menu(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
+        match *data.runstate {
+            RunState::MainMenu { selection } => {
+                draw_batch.print_color_centered(
+                    15,
+                    "Rust Roguelike Tutorial",
+                    ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                );
+
+                for (i, item) in MainMenuSelection::iter().enumerate() {
+                    draw_batch.print_color_centered(
+                        24 + i,
+                        item,
+                        ColorPair::new(
+                            if selection == item {
+                                RGB::named(MAGENTA)
+                            } else {
+                                RGB::named(WHITE)
+                            },
+                            RGB::named(BLACK),
+                        ),
+                    );
+                }
+            }
+            _ => (),
+        }
     }
 }

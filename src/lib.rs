@@ -6,7 +6,13 @@ use specs::prelude::*;
 bracket_terminal::add_wasm_support!();
 
 use crate::{
-    resources::{gamelog::GameLog, input::Input, layout::Layout, map::Map, runstate::RunState},
+    resources::{
+        gamelog::GameLog,
+        input::Input,
+        layout::Layout,
+        map::Map,
+        runstate::{RunState, RunStateQueue},
+    },
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
         item_collection::ItemCollectionSystem, item_drop::ItemDropSystem, item_use::ItemUseSystem,
@@ -36,15 +42,21 @@ impl GameState for State {
     fn tick(&mut self, mut term: &mut BTerm) {
         self.world.insert(Input::from(&*term));
 
+        let maybe_new_runstate = self.world.fetch_mut::<RunStateQueue>().pop_front();
+        if let Some(new_runstate) = maybe_new_runstate {
+            self.world.insert(new_runstate);
+        }
+
         let runstate = *self.world.fetch::<RunState>();
         let maybe_newrunstate = match runstate {
             RunState::PreRun => {
-                self.dispatchers.main.dispatch(&self.world);
+                self.dispatchers.mapgen.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
             RunState::AwaitingInput
             | RunState::ShowInventory
             | RunState::ShowDropItem
+            | RunState::MainMenu { .. }
             | RunState::ShowTargeting { .. } => {
                 self.dispatchers.player_action.dispatch(&self.world);
                 None
@@ -60,7 +72,7 @@ impl GameState for State {
         };
 
         if let Some(newrunstate) = maybe_newrunstate {
-            *self.world.write_resource::<RunState>() = newrunstate;
+            self.world.insert(newrunstate);
         }
 
         render_draw_buffer(&mut term).unwrap();
@@ -108,6 +120,7 @@ pub fn main() -> BError {
             mapgen: DispatcherBuilder::new()
                 .with(MapgenSystem, "mapgen", &[])
                 .with(SpawnerSystem::default(), "spawner", &["mapgen"])
+                .with(VisibilitySystem, "visibility", &["spawner"])
                 .build(),
         },
     };
@@ -130,12 +143,11 @@ pub fn main() -> BError {
     // Invoke RNG
     gs.world.insert(RandomNumberGenerator::new());
 
-    // Generate map
+    // Inject the map object
     gs.world.insert({
         let map_rect = layout.map();
         Map::new(map_rect.width(), map_rect.height())
     });
-    gs.dispatchers.mapgen.dispatch(&gs.world);
 
     // Welcome!
     gs.world.insert(GameLog {

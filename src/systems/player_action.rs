@@ -14,7 +14,10 @@ use crate::{
         viewshed::Viewshed,
     },
     resources::{
-        gamelog::GameLog, input::Input, map::Map, runstate::RunState,
+        gamelog::GameLog,
+        input::Input,
+        map::Map,
+        runstate::{MainMenuSelection, RunState, RunStateQueue},
         shown_inventory::ShownInventory,
     },
     util::vector::{Heading, Vector},
@@ -39,10 +42,11 @@ pub struct PlayerActionSystemData<'a> {
 
     shown_inventory: Read<'a, ShownInventory>,
     input: ReadExpect<'a, Input>,
+    runstate: Read<'a, RunState>,
 
     map: WriteExpect<'a, Map>,
     gamelog: Write<'a, GameLog>,
-    runstate: Write<'a, RunState>,
+    runstate_queue: Write<'a, RunStateQueue>,
 }
 
 pub struct PlayerActionSystem;
@@ -52,11 +56,16 @@ enum Action {
     PickUp,
     ShowInventory,
     ShowDropItem,
+
     CloseInventory,
     Use { choice: i32 },
     UseOnTarget { item: Entity, target: Position },
     Drop { choice: i32 },
     CancelTargeting,
+
+    MainMenuSelect { selection: MainMenuSelection },
+    NewGame,
+    Quit,
 }
 
 impl<'a> System<'a> for PlayerActionSystem {
@@ -64,11 +73,12 @@ impl<'a> System<'a> for PlayerActionSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         let old_runstate = *data.runstate;
-        *data.runstate = match Self::resolve_action(old_runstate, &*data.input) {
+        let new_runstate = match Self::resolve_action(old_runstate, &*data.input) {
             Some(Action::Move(vector)) => {
                 Self::try_move_player(&mut data, vector);
                 RunState::PlayerTurn
             }
+
             Some(Action::PickUp) => {
                 Self::try_pickup(&mut data);
                 RunState::PlayerTurn
@@ -86,6 +96,7 @@ impl<'a> System<'a> for PlayerActionSystem {
                 assert!(data.runstate.show_inventory());
                 RunState::AwaitingInput
             }
+
             Some(Action::CancelTargeting) => RunState::AwaitingInput,
             Some(Action::Use { choice }) => {
                 Self::try_use(&mut data, choice).unwrap_or(RunState::ShowInventory)
@@ -97,14 +108,45 @@ impl<'a> System<'a> for PlayerActionSystem {
                     RunState::AwaitingInput
                 }
             }
+
+            Some(Action::MainMenuSelect { selection }) => RunState::MainMenu { selection },
+            Some(Action::NewGame) => RunState::PreRun,
+            Some(Action::Quit) => {
+                ::std::process::exit(0);
+            }
+
             None => old_runstate,
+        };
+
+        if new_runstate != old_runstate {
+            data.runstate_queue.push_back(new_runstate);
         }
     }
 }
 
 impl PlayerActionSystem {
     fn resolve_action(runstate: RunState, input: &Input) -> Option<Action> {
+        // TODO deduplicate patterns like Down|J|Numpad2
+        // (maybe only when we do a proper keymap)
         match runstate {
+            RunState::MainMenu { selection } => match input.key? {
+                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                    Some(Action::MainMenuSelect {
+                        selection: selection.down(),
+                    })
+                }
+                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                    Some(Action::MainMenuSelect {
+                        selection: selection.up(),
+                    })
+                }
+                VirtualKeyCode::Return => match selection {
+                    MainMenuSelection::NewGame => Some(Action::NewGame),
+                    MainMenuSelection::LoadGame => None,
+                    MainMenuSelection::Quit => Some(Action::Quit),
+                },
+                _ => None,
+            },
             RunState::ShowInventory => match input.key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
                 key => Some(Action::Use {
