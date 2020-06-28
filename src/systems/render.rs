@@ -7,8 +7,8 @@ use specs::prelude::*;
 
 use crate::{
     components::{
-        combat_stats::CombatStats, in_backpack::InBackpack, name::Name, player::Player,
-        position::Position, renderable::Renderable, viewshed::Viewshed,
+        combat_stats::CombatStats, effects::AreaOfEffect, in_backpack::InBackpack, name::Name,
+        player::Player, position::Position, renderable::Renderable, viewshed::Viewshed,
     },
     resources::{
         gamelog::GameLog,
@@ -33,6 +33,7 @@ pub struct RenderSystemData<'a> {
     combat_stats: ReadStorage<'a, CombatStats>,
     name: ReadStorage<'a, Name>,
     backpack: ReadStorage<'a, InBackpack>,
+    area_of_effect: ReadStorage<'a, AreaOfEffect>,
 
     gamelog: Read<'a, GameLog>,
     layout: ReadExpect<'a, Layout>,
@@ -312,7 +313,7 @@ impl<'a> RenderSystem {
     }
 
     fn targeting_overlay(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        if let RunState::ShowTargeting { range, .. } = *data.runstate {
+        if let RunState::ShowTargeting { range, item } = *data.runstate {
             draw_batch.print_color(
                 Point::new(5, 0),
                 "Select Target:",
@@ -339,10 +340,27 @@ impl<'a> RenderSystem {
                 draw_batch.set_bg(*tile, RGB::named(BLUE));
             }
 
+            let valid_aim = available_cells.contains(&data.input.mouse_pos);
+
+            // Highlight AoE, if applicable
+            if valid_aim {
+                if let Some(aoe) = data.area_of_effect.get(item) {
+                    let affected_cells =
+                        field_of_view(data.input.mouse_pos, aoe.radius, &*data.map)
+                            .iter()
+                            .filter(|&p| viewshed.revealed_tiles.contains(&Position::from(*p)))
+                            .cloned()
+                            .collect::<Vec<_>>();
+                    for cell in affected_cells {
+                        draw_batch.set_bg(cell, RGB::named(DARK_CYAN));
+                    }
+                }
+            }
+
             // Draw mouse cursor
             draw_batch.set_bg(
                 data.input.mouse_pos,
-                if available_cells.contains(&data.input.mouse_pos) {
+                if valid_aim {
                     RGB::named(CYAN)
                 } else {
                     RGB::named(RED)
