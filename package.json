@@ -1,0 +1,13 @@
+{
+  "name": "rktrl",
+  "collaborators": [
+    "Zoltán Nagy <abesto@abesto.net>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "rktrl_lib_bg.wasm",
+    "rktrl_lib.js"
+  ],
+  "module": "rktrl_lib.js",
+  "sideEffects": false
+}
