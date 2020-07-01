@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 use strum::IntoEnumIterator;
 
-use crate::resources::runstate::MainMenuSelection;
 use crate::{
     components::{
         combat_stats::CombatStats, effects::AreaOfEffect, in_backpack::InBackpack, name::Name,
@@ -22,7 +22,7 @@ use crate::{
     },
     util::{rect_ext::RectExt, vector::Vector},
 };
-use std::convert::TryInto;
+use crate::resources::runstate::MainMenuSelection;
 
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {

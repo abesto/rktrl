@@ -7,6 +7,7 @@ use std::{
 };
 
 use bracket_lib::prelude::*;
+use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use specs::prelude::Entity;
 use strum::IntoEnumIterator;
@@ -16,17 +17,21 @@ use crate::{
     util::vector::{Heading, Vector},
 };
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum TileType {
     Wall,
     Floor,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Map {
     pub width: i32,
     pub height: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     tile_content: HashMap<Position, Vec<Entity>>,
 }
 

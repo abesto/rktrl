@@ -1,13 +1,58 @@
+use heck::SnekCase;
 use proc_macro::TokenStream;
 use quote::*;
 use syn::{parse::*, punctuated::*, *};
 
+mod kw {
+    syn::custom_keyword!(components);
+    syn::custom_keyword!(resources);
+}
+
+struct InputStruct {
+    _components_token: kw::components,
+    _components_paren: token::Paren,
+    components: Punctuated<Ident, Token![,]>,
+
+    _resources_token: kw::resources,
+    _resources_paren: token::Paren,
+    resources: Punctuated<Ident, Token![,]>,
+}
+
+impl Parse for InputStruct {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let components;
+        let resources;
+        Ok(InputStruct {
+            _components_token: input.parse()?,
+            _components_paren: parenthesized!(components in input),
+            components: components.parse_terminated(Ident::parse)?,
+
+            _resources_token: input.parse()?,
+            _resources_paren: parenthesized!(resources in input),
+            resources: resources.parse_terminated(Ident::parse)?,
+        })
+    }
+}
+
 #[proc_macro]
 pub fn save_system_data(input: TokenStream) -> TokenStream {
-    let parser = Punctuated::<Ident, Token![,]>::parse_terminated;
+    let parsed = parse_macro_input!(input as InputStruct);
 
-    let component_types: Vec<Ident> = parser.parse(input).unwrap().iter().cloned().collect();
-    let component_chunks: Vec<Vec<Ident>> = component_types.chunks(8).map(Vec::from).collect();
+    let resource_types: Vec<Ident> = parsed.resources.iter().cloned().collect();
+    let resource_names: Vec<Ident> = resource_types
+        .iter()
+        .cloned()
+        .map(|ident| syn::Ident::new(&ident.to_string().to_snek_case(), ident.span()))
+        .collect();
+
+    let component_types: Vec<Ident> = parsed.components.iter().cloned().collect();
+    let component_names: Vec<Ident> = component_types
+        .iter()
+        .cloned()
+        .map(|ident| syn::Ident::new(&ident.to_string().to_snek_case(), ident.span()))
+        .collect();
+
+    let component_chunks: Vec<Vec<Ident>> = component_types.chunks(16).map(Vec::from).collect();
     let component_tuples: Vec<_> = component_chunks
         .iter()
         .map(|chunk| quote! { (#(ReadStorage<'a, #chunk>,)*) })
@@ -25,8 +70,14 @@ pub fn save_system_data(input: TokenStream) -> TokenStream {
         #[derive(SystemData)]
         pub struct SaveSystemData<'a> {
             entities: Entities<'a>,
+
             markers: ReadStorage<'a, SimpleMarker<SerializeMe>>,
-            components: SaveSystemDataComponents<'a>
+            marker_alloc: Write<'a, SimpleMarkerAllocator<SerializeMe>>,
+            components: SaveSystemDataComponents<'a>,
+
+            #(
+            #resource_names: ReadExpect<'a, #resource_types>,
+            )*
         }
 
         impl<'a> SaveSystemData<'a> {

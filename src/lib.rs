@@ -1,9 +1,8 @@
+use core::convert::TryInto;
 use std::panic;
 
 use bracket_lib::prelude::*;
-use core::convert::TryInto;
 use specs::prelude::*;
-bracket_terminal::add_wasm_support!();
 
 use crate::{
     resources::{
@@ -21,6 +20,8 @@ use crate::{
         spawner::SpawnerSystem, visibility::VisibilitySystem,
     },
 };
+
+bracket_terminal::add_wasm_support!();
 
 mod components;
 mod resources;
@@ -71,6 +72,7 @@ impl GameState for State {
                 Some(RunState::AwaitingInput)
             }
             RunState::SaveGame => {
+                SaveSystem::prepare(&mut self.world);
                 self.dispatchers.save.dispatch(&self.world);
                 Some(RunState::MainMenu {
                     selection: MainMenuSelection::LoadGame,

@@ -17,7 +17,7 @@ use crate::{
         name::Name,
         player::Player,
         position::Position,
-        renderable::{RenderOrder, Renderable},
+        renderable::{Renderable, RenderOrder},
         serialize_me::SerializeMe,
         viewshed::Viewshed,
     },

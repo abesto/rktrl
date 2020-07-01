@@ -1,3 +1,4 @@
+use bracket_lib::prelude::field_of_view;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
@@ -14,7 +15,6 @@ use crate::{
     },
     resources::{gamelog::GameLog, map::Map},
 };
-use bracket_lib::prelude::field_of_view;
 
 #[derive(SystemData)]
 pub struct ItemUseSystemData<'a> {
