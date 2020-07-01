@@ -28,7 +28,7 @@ impl<'a> System<'a> for ItemDropSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         for (actor, to_drop, player) in
-            (&data.entities, &data.drop_intent, data.player.maybe()).join()
+        (&data.entities, &data.drop_intent, data.player.maybe()).join()
         {
             assert_eq!(
                 Some(actor),

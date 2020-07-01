@@ -13,11 +13,20 @@ use crate::{
         runstate::{MainMenuSelection, RunState, RunStateQueue},
     },
     systems::{
-        ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
-        item_collection::ItemCollectionSystem, item_drop::ItemDropSystem, item_use::ItemUseSystem,
-        map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
-        player_action::PlayerActionSystem, render::RenderSystem, save::SaveSystem,
-        spawner::SpawnerSystem, visibility::VisibilitySystem,
+        ai::AISystem,
+        damage_system::DamageSystem,
+        death::DeathSystem,
+        item_collection::ItemCollectionSystem,
+        item_drop::ItemDropSystem,
+        item_use::ItemUseSystem,
+        map_indexing::MapIndexingSystem,
+        mapgen::MapgenSystem,
+        melee_combat::MeleeCombatSystem,
+        player_action::PlayerActionSystem,
+        render::RenderSystem,
+        saveload::{LoadSystem, SaveSystem},
+        spawner::SpawnerSystem,
+        visibility::VisibilitySystem,
     },
 };
 
@@ -33,6 +42,7 @@ struct Dispatchers {
     player_action: Dispatcher<'static, 'static>,
     mapgen: Dispatcher<'static, 'static>,
     save: Dispatcher<'static, 'static>,
+    load: Dispatcher<'static, 'static>,
 }
 
 struct State {
@@ -77,6 +87,10 @@ impl GameState for State {
                 Some(RunState::MainMenu {
                     selection: MainMenuSelection::LoadGame,
                 })
+            }
+            RunState::LoadGame => {
+                self.dispatchers.load.dispatch(&self.world);
+                Some(RunState::AwaitingInput)
             }
         };
 
@@ -134,6 +148,10 @@ pub fn main() -> BError {
             save: DispatcherBuilder::new()
                 .with(SaveSystem, "save", &[])
                 .build(),
+            load: DispatcherBuilder::new()
+                .with(LoadSystem, "load", &[])
+                .with(MapIndexingSystem, "map_indexing", &["load"])
+                .build(),
         },
     };
 
@@ -141,6 +159,7 @@ pub fn main() -> BError {
     gs.dispatchers.player_action.setup(&mut gs.world);
     gs.dispatchers.mapgen.setup(&mut gs.world);
     gs.dispatchers.save.setup(&mut gs.world);
+    gs.dispatchers.load.setup(&mut gs.world);
 
     // Create UI layout
     let layout = {

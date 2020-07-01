@@ -63,6 +63,7 @@ pub enum RunState {
     ShowTargeting { range: i32, item: Entity },
     MainMenu { selection: MainMenuSelection },
     SaveGame,
+    LoadGame,
 }
 
 impl RunState {

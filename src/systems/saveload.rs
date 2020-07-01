@@ -1,12 +1,13 @@
 use std::fs::File;
+use std::io::Read;
 
-use rktrl_macros::save_system_data;
-use serde::{Deserialize, Serialize, Serializer};
+use rktrl_macros::saveload_system_data;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use specs::error::NoError;
 use specs::prelude::*;
 use specs::saveload::{
-    ConvertSaveload, MarkedBuilder, Marker, SerializeComponents, SimpleMarker,
-    SimpleMarkerAllocator,
+    ConvertSaveload, DeserializeComponents, MarkedBuilder, Marker, SerializeComponents,
+    SimpleMarker, SimpleMarkerAllocator,
 };
 use specs_derive::{Component, ConvertSaveload};
 
@@ -23,10 +24,10 @@ use crate::{
 #[derive(Clone, Component, ConvertSaveload)]
 pub struct SerializationHelper {
     map: Map,
-    gamelog: GameLog,
+    game_log: GameLog,
 }
 
-save_system_data!(
+saveload_system_data!(
     components(
         SerializationHelper,
         BlocksTile,
@@ -66,7 +67,10 @@ impl SaveSystem {
         let gamelog = (*world.fetch::<GameLog>()).clone();
         world
             .create_entity()
-            .with(SerializationHelper { map, gamelog })
+            .with(SerializationHelper {
+                map,
+                game_log: gamelog,
+            })
             .marked::<SimpleMarker<SerializeMe>>()
             .build();
     }
@@ -77,7 +81,7 @@ impl<'a> System<'a> for SaveSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let serialization_helper = &(data.components.0).0;
-        assert_eq!((serialization_helper,).join().count(), 1);
+        assert_eq!((serialization_helper, ).join().count(), 1);
 
         let file = File::create("./savegame.ron.gz").expect("Failed to create file");
         let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::fast());
@@ -91,6 +95,37 @@ impl<'a> System<'a> for SaveSystem {
                 .delete(entity)
                 .expect("Failed to clean up serialization helper");
         }
-        assert_eq!((serialization_helper,).join().count(), 0);
+    }
+}
+
+pub struct LoadSystem;
+
+impl<'a> System<'a> for LoadSystem {
+    type SystemData = LoadSystemData<'a>;
+
+    fn run(&mut self, mut data: Self::SystemData) {
+        let compressed = File::open("./savegame.ron.gz").expect("Savegame doesn't exist");
+        let mut ron_data = String::new();
+        flate2::read::GzDecoder::new(compressed)
+            .read_to_string(&mut ron_data)
+            .expect("Failed to decompress savegame");
+
+        let deserializer =
+            ron::Deserializer::from_str(&ron_data).expect("Failed to create deserializer");
+        data.deser(deserializer);
+
+        // Load resources from the serialization helper
+        let serialization_helper = &(data.components.0).0;
+        assert_eq!((serialization_helper, ).join().count(), 1);
+        let resources: &SerializationHelper = (serialization_helper, ).join().next().unwrap().0;
+        *data.map = resources.map.clone();
+        *data.game_log = resources.game_log.clone();
+
+        // Clean up serialization helper entities
+        for (entity, _) in (&data.entities, serialization_helper).join() {
+            data.entities
+                .delete(entity)
+                .expect("Failed to clean up serialization helper");
+        }
     }
 }

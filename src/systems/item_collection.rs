@@ -28,7 +28,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         for (actor, pickup, player) in
-            (&data.entity, &data.pickup_intent, data.player.maybe()).join()
+        (&data.entity, &data.pickup_intent, data.player.maybe()).join()
         {
             data.position.remove(pickup.item);
             data.backpack

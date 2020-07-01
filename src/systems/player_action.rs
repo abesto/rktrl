@@ -65,6 +65,7 @@ enum Action {
 
     MainMenuSelect { selection: MainMenuSelection },
     NewGame,
+    LoadGame,
     SaveGame,
     Quit,
 }
@@ -113,6 +114,7 @@ impl<'a> System<'a> for PlayerActionSystem {
             Some(Action::MainMenuSelect { selection }) => RunState::MainMenu { selection },
             Some(Action::NewGame) => RunState::PreRun,
             Some(Action::SaveGame) => RunState::SaveGame,
+            Some(Action::LoadGame) => RunState::LoadGame,
             Some(Action::Quit) => {
                 ::std::process::exit(0);
             }
@@ -144,7 +146,7 @@ impl PlayerActionSystem {
                 }
                 VirtualKeyCode::Return => match selection {
                     MainMenuSelection::NewGame => Some(Action::NewGame),
-                    MainMenuSelection::LoadGame => None,
+                    MainMenuSelection::LoadGame => Some(Action::LoadGame),
                     MainMenuSelection::Quit => Some(Action::Quit),
                 },
                 _ => None,

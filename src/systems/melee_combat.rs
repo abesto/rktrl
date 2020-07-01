@@ -25,7 +25,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         for (wants_melee, name, stats) in
-            (&data.wants_to_melee, &data.name, &data.combat_stats).join()
+        (&data.wants_to_melee, &data.name, &data.combat_stats).join()
         {
             if stats.hp > 0 {
                 let target_stats = data.combat_stats.get(wants_melee.target).unwrap();
