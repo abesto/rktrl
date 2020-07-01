@@ -1,6 +1,7 @@
 use rktrl_macros::save_system_data;
 use std::fs::File;
 
+use serde::Serializer;
 use specs::error::NoError;
 use specs::prelude::*;
 use specs::saveload::{SerializeComponents, SimpleMarker};
@@ -42,9 +43,11 @@ impl<'a> System<'a> for SaveSystem {
     type SystemData = SaveSystemData<'a>;
 
     fn run(&mut self, data: Self::SystemData) {
-        let writer = File::create("./savegame.json").unwrap();
-        let mut serializer = serde_json::Serializer::new(writer);
-        ser(&data, &mut serializer);
+        let file = File::create("./savegame.ron.gz").expect("Failed to create file");
+        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::fast());
+        let serializer =
+            ron::Serializer::new(encoder, None, false).expect("Failed to create serializer");
+        data.ser(serializer);
     }
 }
 

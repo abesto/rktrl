@@ -4,7 +4,6 @@ use syn::{parse::*, punctuated::*, *};
 
 #[proc_macro]
 pub fn save_system_data(input: TokenStream) -> TokenStream {
-    // Parse the input tokens into a syntax tree
     let parser = Punctuated::<Ident, Token![,]>::parse_terminated;
 
     let component_types: Vec<Ident> = parser.parse(input).unwrap().iter().cloned().collect();
@@ -21,30 +20,32 @@ pub fn save_system_data(input: TokenStream) -> TokenStream {
     let ser_fns: Vec<Ident> = chunk_ids.map(|n| format_ident!("ser_{}", n)).collect();
 
     let expanded = quote! {
+        type SaveSystemDataComponents<'a> = #components_tuple;
+
         #[derive(SystemData)]
         pub struct SaveSystemData<'a> {
             entities: Entities<'a>,
             markers: ReadStorage<'a, SimpleMarker<SerializeMe>>,
-            components: #components_tuple
+            components: SaveSystemDataComponents<'a>
         }
 
-        const COMPONENT_CHUNKS: usize = #component_chunk_count;
-
-        #(
-        fn #ser_fns(data: &SaveSystemData, serializer: &mut serde_json::Serializer<File>) {
-            SerializeComponents::<NoError, SimpleMarker<SerializeMe>>::serialize(
-                &data.components.#chunk_indexes,
-                &data.entities,
-                &data.markers,
-                serializer,
-            ).expect("Serialization failed");
-        }
-        )*
-
-        fn ser(data: &SaveSystemData, serializer: &mut serde_json::Serializer<File>) {
+        impl<'a> SaveSystemData<'a> {
             #(
-                #ser_fns(&data, serializer);
+            fn #ser_fns<S>(&self, serializer: S) where S: Serializer {
+                SerializeComponents::<NoError, SimpleMarker<SerializeMe>>::serialize(
+                    &self.components.#chunk_indexes,
+                    &self.entities,
+                    &self.markers,
+                    serializer,
+                ).expect("Serialization failed");
+            }
             )*
+
+            fn ser<W>(&self, mut serializer: ron::Serializer<W>) where W: std::io::Write {
+                #(
+                    self.#ser_fns(&mut serializer);
+                )*
+            }
         }
     };
 
