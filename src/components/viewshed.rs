@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
-use specs::{Component, HashMapStorage};
+use serde::{Deserialize, Serialize};
+use specs::prelude::*;
 use specs_derive::Component;
 
 use crate::components::position::Position;
 
-#[derive(PartialEq, Component, Debug, Clone)]
+#[derive(PartialEq, Component, Debug, Clone, Serialize, Deserialize)]
 #[storage(HashMapStorage)]
 pub struct Viewshed {
     pub visible_tiles: HashSet<Position>,

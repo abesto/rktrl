@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 shred = { version = "0.10.2", default-features = false, features = ["shred-derive"] }
-specs = { version = "0.16.1", default-features = false, features = ["wasm-bindgen"] }
+specs = { version = "0.16.1", default-features = false, features = ["wasm-bindgen", "serde"] }
 bracket-lib = { version = "0.8.1", features = ["serde"] }
 specs-derive = "0.4.1"
 serde = { version = "1.0.112", features = ["derive"] }
@@ -22,6 +22,7 @@ rand = "0.7.3"
 bracket-terminal = "0.8.1"
 wasm-bindgen = "0.2.63"
 console_error_panic_hook = "0.1.6"
+rktrl_macros = { path = "rktrl_macros" }
 
 [[bin]]
 name = "rktrl"
@@ -30,5 +31,3 @@ path = "src/main.rs"
 [lib]
 name = "rktrl_lib"
 crate-type = ["cdylib", "rlib"]
-
-

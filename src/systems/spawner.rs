@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
+use specs::saveload::{SimpleMarker, SimpleMarkerAllocator};
 use specs::shrev::*;
 
 use crate::{
@@ -17,6 +18,7 @@ use crate::{
         player::Player,
         position::Position,
         renderable::{RenderOrder, Renderable},
+        serialize_me::SerializeMe,
         viewshed::Viewshed,
     },
     util::rect_ext::RectExt,
@@ -55,6 +57,9 @@ pub struct SpawnerSystemData<'a> {
 
     rng: WriteExpect<'a, RandomNumberGenerator>,
     spawn_requests: ReadExpect<'a, EventChannel<SpawnRequest>>,
+
+    serialize_me: WriteStorage<'a, SimpleMarker<SerializeMe>>,
+    serialize_me_alloc: Write<'a, SimpleMarkerAllocator<SerializeMe>>,
 }
 
 #[derive(Default)]
@@ -97,6 +102,7 @@ impl SpawnerSystem {
         let player_entity = data
             .entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {
@@ -150,6 +156,7 @@ impl SpawnerSystem {
     ) {
         data.entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {
@@ -234,6 +241,7 @@ impl SpawnerSystem {
     fn health_potion(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {
@@ -253,6 +261,7 @@ impl SpawnerSystem {
     fn magic_missile_scroll(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {
@@ -276,6 +285,7 @@ impl SpawnerSystem {
     fn fireball_scroll(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {
@@ -297,6 +307,7 @@ impl SpawnerSystem {
     fn confusion_scroll(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         data.entity
             .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
             .with(position, &mut data.position)
             .with(
                 Renderable {

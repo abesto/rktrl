@@ -1,7 +1,12 @@
-use specs::prelude::*;
-use specs_derive::Component;
+use serde::{Deserialize, Serialize};
+use specs::{
+    error::NoError,
+    prelude::*,
+    saveload::{ConvertSaveload, Marker},
+};
+use specs_derive::{Component, ConvertSaveload};
 
-#[derive(PartialEq, Component, Debug, Clone)]
+#[derive(PartialEq, Component, Debug, Clone, ConvertSaveload)]
 pub struct InBackpack {
     pub owner: Entity,
 }

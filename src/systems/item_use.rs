@@ -5,7 +5,7 @@ use crate::{
     components::{
         combat_stats::CombatStats,
         effects::{AreaOfEffect, Confusion, Consumable, InflictsDamage, ProvidesHealing, Ranged},
-        intents::UseIntent,
+        intents::{UseIntent, UseTarget},
         monster::Monster,
         name::Name,
         player::Player,
@@ -58,8 +58,8 @@ impl<'a> System<'a> for ItemUseSystem {
             let item_name = data.name.get(to_use.item).unwrap();
 
             let targets: Vec<Entity> = match to_use.target {
-                None => vec![actor_entity],
-                Some(target_position) => {
+                UseTarget::SelfCast => vec![actor_entity],
+                UseTarget::Position(target_position) => {
                     let ranged = data
                         .ranged
                         .get(to_use.item)

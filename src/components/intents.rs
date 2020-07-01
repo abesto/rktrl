@@ -1,24 +1,36 @@
-use crate::components::position::Position;
-use specs::prelude::*;
-use specs_derive::Component;
+use serde::{Deserialize, Serialize};
+use specs::{
+    error::NoError,
+    prelude::*,
+    saveload::{ConvertSaveload, Marker},
+};
+use specs_derive::{Component, ConvertSaveload};
 
-#[derive(Component, Debug, Clone)]
+use crate::components::position::Position;
+
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct MeleeIntent {
     pub target: Entity,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct PickupIntent {
     pub item: Entity,
 }
 
-#[derive(Component, Debug, Clone)]
-pub struct UseIntent {
-    pub item: Entity,
-    pub target: Option<Position>,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UseTarget {
+    SelfCast,
+    Position(Position),
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Component, Debug, Clone, ConvertSaveload)]
+pub struct UseIntent {
+    pub item: Entity,
+    pub target: UseTarget,
+}
+
+#[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct DropIntent {
     pub item: Entity,
 }

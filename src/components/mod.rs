@@ -9,5 +9,6 @@ pub mod name;
 pub mod player;
 pub mod position;
 pub mod renderable;
+pub mod serialize_me;
 pub mod suffer_damage;
 pub mod viewshed;

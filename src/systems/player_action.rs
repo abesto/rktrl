@@ -7,7 +7,7 @@ use crate::{
         combat_stats::CombatStats,
         effects::Ranged,
         in_backpack::InBackpack,
-        intents::{DropIntent, MeleeIntent, PickupIntent, UseIntent},
+        intents::{DropIntent, MeleeIntent, PickupIntent, UseIntent, UseTarget},
         item::Item,
         player::Player,
         position::Position,
@@ -65,6 +65,7 @@ enum Action {
 
     MainMenuSelect { selection: MainMenuSelection },
     NewGame,
+    SaveGame,
     Quit,
 }
 
@@ -111,6 +112,7 @@ impl<'a> System<'a> for PlayerActionSystem {
 
             Some(Action::MainMenuSelect { selection }) => RunState::MainMenu { selection },
             Some(Action::NewGame) => RunState::PreRun,
+            Some(Action::SaveGame) => RunState::SaveGame,
             Some(Action::Quit) => {
                 ::std::process::exit(0);
             }
@@ -208,6 +210,9 @@ impl PlayerActionSystem {
                 VirtualKeyCode::I => Some(Action::ShowInventory),
                 VirtualKeyCode::D => Some(Action::ShowDropItem),
 
+                // Save and exit to main menu
+                VirtualKeyCode::Escape => Some(Action::SaveGame),
+
                 // We don't know any other keys
                 _ => None,
             },
@@ -297,7 +302,13 @@ impl PlayerActionSystem {
             })
         } else {
             data.use_intent
-                .insert(player_entity, UseIntent { item, target: None })
+                .insert(
+                    player_entity,
+                    UseIntent {
+                        item,
+                        target: UseTarget::SelfCast,
+                    },
+                )
                 .expect("Failed to insert UseIntent");
             Some(RunState::PlayerTurn)
         }
@@ -316,7 +327,7 @@ impl PlayerActionSystem {
                 player_entity,
                 UseIntent {
                     item,
-                    target: Some(target),
+                    target: UseTarget::Position(target),
                 },
             )
             .expect("Failed to insert UseIntent");

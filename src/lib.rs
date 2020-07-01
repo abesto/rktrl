@@ -11,14 +11,14 @@ use crate::{
         input::Input,
         layout::Layout,
         map::Map,
-        runstate::{RunState, RunStateQueue},
+        runstate::{MainMenuSelection, RunState, RunStateQueue},
     },
     systems::{
         ai::AISystem, damage_system::DamageSystem, death::DeathSystem,
         item_collection::ItemCollectionSystem, item_drop::ItemDropSystem, item_use::ItemUseSystem,
         map_indexing::MapIndexingSystem, mapgen::MapgenSystem, melee_combat::MeleeCombatSystem,
-        player_action::PlayerActionSystem, render::RenderSystem, spawner::SpawnerSystem,
-        visibility::VisibilitySystem,
+        player_action::PlayerActionSystem, render::RenderSystem, save::SaveSystem,
+        spawner::SpawnerSystem, visibility::VisibilitySystem,
     },
 };
 
@@ -31,6 +31,7 @@ struct Dispatchers {
     main: Dispatcher<'static, 'static>,
     player_action: Dispatcher<'static, 'static>,
     mapgen: Dispatcher<'static, 'static>,
+    save: Dispatcher<'static, 'static>,
 }
 
 struct State {
@@ -68,6 +69,12 @@ impl GameState for State {
             RunState::MonsterTurn => {
                 self.dispatchers.main.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
+            }
+            RunState::SaveGame => {
+                self.dispatchers.save.dispatch(&self.world);
+                Some(RunState::MainMenu {
+                    selection: MainMenuSelection::LoadGame,
+                })
             }
         };
 
@@ -122,12 +129,16 @@ pub fn main() -> BError {
                 .with(SpawnerSystem::default(), "spawner", &["mapgen"])
                 .with(VisibilitySystem, "visibility", &["spawner"])
                 .build(),
+            save: DispatcherBuilder::new()
+                .with(SaveSystem, "save", &[])
+                .build(),
         },
     };
 
     gs.dispatchers.main.setup(&mut gs.world);
     gs.dispatchers.player_action.setup(&mut gs.world);
     gs.dispatchers.mapgen.setup(&mut gs.world);
+    gs.dispatchers.save.setup(&mut gs.world);
 
     // Create UI layout
     let layout = {

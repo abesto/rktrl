@@ -1273,6 +1273,7 @@ dependencies = [
  "macro-attr",
  "newtype_derive",
  "rand",
+ "rktrl_macros",
  "serde",
  "serde_json",
  "shred",
@@ -1283,6 +1284,15 @@ dependencies = [
  "strum",
  "strum_macros",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "rktrl_macros"
+version = "0.1.0"
+dependencies = [
+ "heck",
+ "quote 1.0.7",
+ "syn",
 ]
 
 [[package]]
@@ -1496,6 +1506,7 @@ dependencies = [
  "hashbrown",
  "hibitset",
  "log",
+ "serde",
  "shred",
  "shrev",
  "tuple_utils",
@@ -1542,9 +1553,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.31"
+version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5304cfdf27365b7585c25d4af91b35016ed21ef88f17ced89c7093b43dba8b6"
+checksum = "e8d5d96e8cbb005d6959f119f773bfaebb5684296108fb32600c00cde305b2cd"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",

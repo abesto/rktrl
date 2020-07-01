@@ -1,0 +1,13 @@
+[package]
+name = "rktrl_macros"
+version = "0.1.0"
+authors = ["Zoltán Nagy <abesto@abesto.net>"]
+edition = "2018"
+
+[dependencies]
+syn = { version = "1.0.33", features = ["full"] }
+quote = "1.0.7"
+heck = "0.3.1"
+
+[lib]
+proc-macro = true

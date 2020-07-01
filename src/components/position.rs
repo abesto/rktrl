@@ -1,19 +1,21 @@
 use std::convert::TryInto;
 
+use serde::{Deserialize, Serialize};
+use specs::prelude::*;
+use specs_derive::Component;
+
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 use bracket_lib::prelude::{Point, Rect};
 use macro_attr::*;
 use newtype_derive::*;
 use rand::distributions::uniform::{SampleBorrow, SampleUniform, UniformSampler};
 use rand::Rng;
-use specs::prelude::*;
-use specs_derive::Component;
 
 use crate::util::vector::Vector;
 
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
-             Component,
+             Component, Serialize, Deserialize,
              NewtypeDebug!, NewtypeDeref!, NewtypeFrom!)]
     pub struct Position(Point);
 }

@@ -1,7 +1,8 @@
-use specs::{Component, NullStorage};
+use serde::{Deserialize, Serialize};
+use specs::prelude::*;
 use specs_derive::Component;
 
-#[derive(PartialEq, Clone, Component, Debug)]
+#[derive(PartialEq, Clone, Component, Debug, Serialize, Deserialize)]
 #[storage(NullStorage)]
 pub struct BlocksTile;
 

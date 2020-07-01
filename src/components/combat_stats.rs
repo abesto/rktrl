@@ -1,7 +1,12 @@
-use specs::prelude::*;
-use specs_derive::Component;
+use serde::{Deserialize, Serialize};
+use specs::{
+    error::NoError,
+    prelude::*,
+    saveload::{ConvertSaveload, Marker},
+};
+use specs_derive::{Component, ConvertSaveload};
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, ConvertSaveload)]
 pub struct CombatStats {
     pub max_hp: i32,
     pub hp: i32,
