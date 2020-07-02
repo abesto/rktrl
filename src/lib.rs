@@ -50,6 +50,21 @@ struct State {
     dispatchers: Dispatchers,
 }
 
+impl State {
+    fn reset(&mut self) {
+        // Probably this would be cleaner as a system, but whatevs
+        self.world.delete_all();
+        self.world.fetch_mut::<GameLog>().entries.clear();
+        self.world.insert({
+            let map_rect = self.world.fetch::<Layout>().map();
+            Map::new(map_rect.width(), map_rect.height())
+        });
+        self.world.insert(GameLog {
+            entries: vec!["Welcome to Rusty Roguelike".to_string()],
+        });
+    }
+}
+
 impl GameState for State {
     fn tick(&mut self, mut term: &mut BTerm) {
         self.world.insert(Input::from(&*term));
@@ -62,6 +77,7 @@ impl GameState for State {
         let runstate = *self.world.fetch::<RunState>();
         let maybe_newrunstate = match runstate {
             RunState::PreRun => {
+                self.reset();
                 self.dispatchers.mapgen.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
@@ -89,6 +105,7 @@ impl GameState for State {
                 })
             }
             RunState::LoadGame => {
+                self.reset();
                 self.dispatchers.load.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
@@ -175,18 +192,8 @@ pub fn main() -> BError {
     // Invoke RNG
     gs.world.insert(RandomNumberGenerator::new());
 
-    // Inject the map object
-    gs.world.insert({
-        let map_rect = layout.map();
-        Map::new(map_rect.width(), map_rect.height())
-    });
-
-    // Welcome!
-    gs.world.insert(GameLog {
-        entries: vec!["Welcome to Rusty Roguelike".to_string()],
-    });
-
     // And go!
+    gs.reset();
     gs.world.maintain();
     main_loop(term, gs)
 }

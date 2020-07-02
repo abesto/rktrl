@@ -1,10 +1,14 @@
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-use std::io::Read;
+#[cfg(target_arch = "wasm32")]
+use std::io::{Cursor, Error, ErrorKind, Read, Result as IOResult, Write};
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Read, Write};
 
 use rktrl_macros::saveload_system_data;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use specs::error::NoError;
-use specs::prelude::*;
+use specs::prelude::{Write as SpecsWrite, *};
 use specs::saveload::{
     ConvertSaveload, DeserializeComponents, MarkedBuilder, Marker, SerializeComponents,
     SimpleMarker, SimpleMarkerAllocator,
@@ -55,6 +59,39 @@ saveload_system_data!(
     resources(Map, GameLog)
 );
 
+#[cfg(target_arch = "wasm32")]
+pub struct LocalStorageWriter {
+    buffer: Vec<u8>,
+    storage: stdweb::web::Storage,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl LocalStorageWriter {
+    fn new() -> LocalStorageWriter {
+        LocalStorageWriter {
+            buffer: vec![],
+            storage: stdweb::web::window().local_storage(),
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl std::io::Write for LocalStorageWriter {
+    fn write(&mut self, buf: &[u8]) -> IOResult<usize> {
+        self.buffer.append(&mut buf.to_vec());
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> IOResult<()> {
+        let encoded = base64::encode(&self.buffer);
+        print!("{}", encoded);
+        self.buffer.clear();
+        self.storage
+            .insert("savegame", &encoded)
+            .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into local storage"))
+    }
+}
+
 pub struct SaveSystem;
 
 impl SaveSystem {
@@ -74,6 +111,16 @@ impl SaveSystem {
             .marked::<SimpleMarker<SerializeMe>>()
             .build();
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn writer() -> File {
+        File::create("./savegame.ron.gz").expect("Failed to create file")
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn writer() -> LocalStorageWriter {
+        LocalStorageWriter::new()
+    }
 }
 
 impl<'a> System<'a> for SaveSystem {
@@ -81,13 +128,14 @@ impl<'a> System<'a> for SaveSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let serialization_helper = &(data.components.0).0;
-        assert_eq!((serialization_helper, ).join().count(), 1);
+        assert_eq!((serialization_helper,).join().count(), 1);
 
-        let file = File::create("./savegame.ron.gz").expect("Failed to create file");
-        let encoder = flate2::write::GzEncoder::new(file, flate2::Compression::fast());
+        let mut writer = Self::writer();
+        let encoder = flate2::write::GzEncoder::new(&mut writer, flate2::Compression::fast());
         let serializer =
             ron::Serializer::new(encoder, None, false).expect("Failed to create serializer");
         data.ser(serializer);
+        writer.flush().expect("Failed to flush savegame");
 
         // Clean up serialization helper entities
         for (entity, _) in (&data.entities, serialization_helper).join() {
@@ -100,13 +148,30 @@ impl<'a> System<'a> for SaveSystem {
 
 pub struct LoadSystem;
 
+impl LoadSystem {
+    #[cfg(not(target_arch = "wasm32"))]
+    fn reader() -> File {
+        File::open("savegame.ron.gz").expect("Failed to open file")
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn reader<'a>() -> Cursor<Vec<u8>> {
+        let storage = stdweb::web::window().local_storage();
+        let encoded = storage
+            .get("savegame")
+            .expect("Failed to read from local storage")
+            .into_bytes();
+        Cursor::new(base64::decode(encoded).expect("Failed to base64 decode savegame"))
+    }
+}
+
 impl<'a> System<'a> for LoadSystem {
     type SystemData = LoadSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        let compressed = File::open("./savegame.ron.gz").expect("Savegame doesn't exist");
+        let reader = Self::reader();
         let mut ron_data = String::new();
-        flate2::read::GzDecoder::new(compressed)
+        flate2::read::GzDecoder::new(reader)
             .read_to_string(&mut ron_data)
             .expect("Failed to decompress savegame");
 
@@ -116,8 +181,8 @@ impl<'a> System<'a> for LoadSystem {
 
         // Load resources from the serialization helper
         let serialization_helper = &(data.components.0).0;
-        assert_eq!((serialization_helper, ).join().count(), 1);
-        let resources: &SerializationHelper = (serialization_helper, ).join().next().unwrap().0;
+        assert_eq!((serialization_helper,).join().count(), 1);
+        let resources: &SerializationHelper = (serialization_helper,).join().next().unwrap().0;
         *data.map = resources.map.clone();
         *data.game_log = resources.game_log.clone();
 

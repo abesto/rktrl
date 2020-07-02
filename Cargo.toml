@@ -23,8 +23,10 @@ bracket-terminal = "0.8.1"
 wasm-bindgen = "0.2.63"
 console_error_panic_hook = "0.1.6"
 rktrl_macros = { path = "rktrl_macros" }
-flate2 = { version = "1.0.16", features = ["cloudflare_zlib"], default-features = false }
+flate2 = "1.0.16"
 ron = "0.6.0"
+stdweb = "0.4.20"
+base64 = "0.12.3"
 
 [[bin]]
 name = "rktrl"

@@ -2,7 +2,7 @@ PAGES := ..\rktrl-pages
 HASH := $(shell git rev-parse HEAD)
 GIT := git -C $(PAGES)
 
-$(PAGES)\rktrl_lib.js: $(wildcard src/**/*.rs)
+$(PAGES)\rktrl_lib.js: $(wildcard src/**/*.rs) $(wildcard src/*.rs)
 	wasm-pack build --target web --no-typescript --out-dir ..\rktrl-pages
 
 $(PAGES)\rktrl_lib_bg.wasm: $(PAGES)\rktrl_lib.js

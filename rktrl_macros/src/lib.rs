@@ -83,7 +83,7 @@ pub fn saveload_system_data(input: TokenStream) -> TokenStream {
             entities: Entities<'a>,
 
             markers: ReadStorage<'a, SimpleMarker<SerializeMe>>,
-            marker_alloc: Write<'a, SimpleMarkerAllocator<SerializeMe>>,
+            marker_alloc: SpecsWrite<'a, SimpleMarkerAllocator<SerializeMe>>,
             components: SaveSystemDataComponents<'a>,
 
             #(
@@ -103,7 +103,7 @@ pub fn saveload_system_data(input: TokenStream) -> TokenStream {
             }
             )*
 
-            fn ser<W>(&self, mut serializer: ron::Serializer<W>) where W: std::io::Write {
+            fn ser<W>(&self, mut serializer: ron::Serializer<W>) where W: Write {
                 #(
                     self.#ser_fns(&mut serializer);
                 )*
@@ -117,7 +117,7 @@ pub fn saveload_system_data(input: TokenStream) -> TokenStream {
             entities: Entities<'a>,
 
             markers: WriteStorage<'a, SimpleMarker<SerializeMe>>,
-            marker_alloc: Write<'a, SimpleMarkerAllocator<SerializeMe>>,
+            marker_alloc: SpecsWrite<'a, SimpleMarkerAllocator<SerializeMe>>,
             components: LoadSystemDataComponents<'a>,
 
             #(
