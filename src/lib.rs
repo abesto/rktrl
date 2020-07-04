@@ -22,6 +22,7 @@ use crate::{
         map_indexing::MapIndexingSystem,
         mapgen::MapgenSystem,
         melee_combat::MeleeCombatSystem,
+        next_level::NextLevelSystem,
         player_action::PlayerActionSystem,
         render::RenderSystem,
         saveload::{LoadSystem, SaveSystem},
@@ -81,7 +82,10 @@ impl GameState for State {
                 self.dispatchers.mapgen.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
-            RunState::NextLevel => unimplemented!(),
+            RunState::NextLevel => {
+                self.dispatchers.mapgen.dispatch(&self.world);
+                Some(RunState::AwaitingInput)
+            }
             RunState::AwaitingInput
             | RunState::ShowInventory
             | RunState::ShowDropItem
@@ -157,8 +161,9 @@ pub fn main() -> BError {
                 .with(RenderSystem, "render", &["player_action"])
                 .build(),
             mapgen: DispatcherBuilder::new()
+                .with(NextLevelSystem, "cleanup", &[])
                 .with(MapgenSystem, "mapgen", &[])
-                .with(SpawnerSystem::default(), "spawner", &["mapgen"])
+                .with(SpawnerSystem::default(), "spawner", &["mapgen", "cleanup"])
                 .with(VisibilitySystem, "visibility", &["spawner"])
                 .build(),
             save: DispatcherBuilder::new()

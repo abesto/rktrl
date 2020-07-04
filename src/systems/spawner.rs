@@ -17,7 +17,7 @@ use crate::{
         name::Name,
         player::Player,
         position::Position,
-        renderable::{Renderable, RenderOrder},
+        renderable::{RenderOrder, Renderable},
         serialize_me::SerializeMe,
         viewshed::Viewshed,
     },
@@ -99,51 +99,57 @@ impl<'a> System<'a> for SpawnerSystem {
 
 impl SpawnerSystem {
     fn player(&self, data: &mut SpawnerSystemData, position: Position) {
-        let player_entity = data
-            .entity
-            .build_entity()
-            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
-            .with(position, &mut data.position)
-            .with(
-                Renderable {
-                    glyph: to_cp437('@'),
-                    color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
-                    render_order: RenderOrder::Player,
-                },
-                &mut data.renderable,
-            )
-            .with(Player, &mut data.player)
-            .with(Name::from("Player".to_string()), &mut data.name)
-            .with(Viewshed::new(8), &mut data.viewshed)
-            .with(BlocksTile::new(), &mut data.blocks_tile)
-            .with(
-                CombatStats {
-                    max_hp: 30,
-                    hp: 30,
-                    defense: 2,
-                    power: 5,
-                },
-                &mut data.combat_stats,
-            )
-            .build();
-
-        // Wizard mode!
-        let wizard_items = vec![
-            self.health_potion(data, position),
-            self.magic_missile_scroll(data, position),
-            self.fireball_scroll(data, position),
-            self.confusion_scroll(data, position),
-        ];
-        for wizard_item in wizard_items {
-            data.position.remove(wizard_item);
-            data.backpack
-                .insert(
-                    wizard_item,
-                    InBackpack {
-                        owner: player_entity,
+        if let Some((player_entity, _)) = (&data.entity, &data.player).join().next() {
+            data.position
+                .insert(player_entity, position)
+                .expect("Failed to set new position for player");
+        } else {
+            let player_entity = data
+                .entity
+                .build_entity()
+                .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
+                .with(position, &mut data.position)
+                .with(
+                    Renderable {
+                        glyph: to_cp437('@'),
+                        color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                        render_order: RenderOrder::Player,
                     },
+                    &mut data.renderable,
                 )
-                .expect("Failed to insert wizzard item");
+                .with(Player, &mut data.player)
+                .with(Name::from("Player".to_string()), &mut data.name)
+                .with(Viewshed::new(8), &mut data.viewshed)
+                .with(BlocksTile::new(), &mut data.blocks_tile)
+                .with(
+                    CombatStats {
+                        max_hp: 30,
+                        hp: 30,
+                        defense: 2,
+                        power: 5,
+                    },
+                    &mut data.combat_stats,
+                )
+                .build();
+
+            // Wizard mode!
+            let wizard_items = vec![
+                self.health_potion(data, position),
+                self.magic_missile_scroll(data, position),
+                self.fireball_scroll(data, position),
+                self.confusion_scroll(data, position),
+            ];
+            for wizard_item in wizard_items {
+                data.position.remove(wizard_item);
+                data.backpack
+                    .insert(
+                        wizard_item,
+                        InBackpack {
+                            owner: player_entity,
+                        },
+                    )
+                    .expect("Failed to insert wizzard item");
+            }
         }
     }
 
