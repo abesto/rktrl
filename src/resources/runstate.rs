@@ -96,7 +96,7 @@ impl RunState {
     {
         match self {
             RunState::MainMenu { selection, .. } => {
-                let mut candidate = selection.down();
+                let mut candidate = next_fn(*selection);
                 while !self.main_menu_item_enabled(candidate) && &candidate != selection {
                     candidate = next_fn(candidate);
                 }

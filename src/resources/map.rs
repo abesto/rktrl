@@ -27,6 +27,7 @@ pub enum TileType {
 pub struct Map {
     pub width: i32,
     pub height: i32,
+    pub depth: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
 
@@ -37,10 +38,11 @@ pub struct Map {
 
 impl Map {
     #[must_use]
-    pub fn new(width: i32, height: i32) -> Map {
+    pub fn new(width: i32, height: i32, depth: i32) -> Map {
         Map {
             width,
             height,
+            depth,
             tiles: vec![TileType::Wall; (width * height).try_into().unwrap()],
             blocked: HashSet::new(),
             tile_content: HashMap::new(),
@@ -233,13 +235,13 @@ mod tests {
     #[test]
     fn pos_idx_symmetry() {
         let pos = Position::new(10, 15);
-        let map = Map::new(30, 49);
+        let map = Map::new(30, 49, 1);
         assert_eq!(pos, map.idx_pos(map.pos_idx(pos)));
     }
 
     #[test]
     fn map_iterator_size_hint() {
-        let map = &Map::new(20, 39);
+        let map = &Map::new(20, 39, 1);
 
         let mut iter: MapIterator = map.into_iter();
         let mut expected: usize = 20 * 39;

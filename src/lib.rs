@@ -57,7 +57,7 @@ impl State {
         self.world.fetch_mut::<GameLog>().entries.clear();
         self.world.insert({
             let map_rect = self.world.fetch::<Layout>().map();
-            Map::new(map_rect.width(), map_rect.height())
+            Map::new(map_rect.width(), map_rect.height(), 1)
         });
         self.world.insert(GameLog {
             entries: vec!["Welcome to Rusty Roguelike".to_string()],

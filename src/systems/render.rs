@@ -138,6 +138,13 @@ impl<'a> RenderSystem {
             ColorPair::new(RGB::named(WHITE), RGB::named(BLACK)),
         );
 
+        // Show depth
+        draw_batch.print_color(
+            Point::new(panel_rect.x1 + 2, panel_rect.y1),
+            format!("Depth: {}", data.map.depth),
+            ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+        );
+
         // Show player health
         let hp_offset: i32 = 12;
         let max_hp_str_len: i32 = 16;
