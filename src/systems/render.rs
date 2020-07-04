@@ -7,6 +7,7 @@ use shred_derive::SystemData;
 use specs::prelude::*;
 use strum::IntoEnumIterator;
 
+use crate::resources::runstate::MainMenuSelection;
 use crate::{
     components::{
         combat_stats::CombatStats, effects::AreaOfEffect, in_backpack::InBackpack, name::Name,
@@ -22,7 +23,6 @@ use crate::{
     },
     util::{rect_ext::RectExt, vector::Vector},
 };
-use crate::resources::runstate::MainMenuSelection;
 
 #[derive(SystemData)]
 pub struct RenderSystemData<'a> {
@@ -377,30 +377,33 @@ impl<'a> RenderSystem {
     }
 
     fn render_main_menu(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        match *data.runstate {
-            RunState::MainMenu { selection } => {
-                draw_batch.print_color_centered(
-                    15,
-                    "Rust Roguelike Tutorial",
-                    ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
-                );
+        if let RunState::MainMenu {
+            selection,
+            load_enabled,
+        } = *data.runstate
+        {
+            draw_batch.print_color_centered(
+                15,
+                "Rust Roguelike Tutorial",
+                ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+            );
 
-                for (i, item) in MainMenuSelection::iter().enumerate() {
-                    draw_batch.print_color_centered(
-                        24 + i,
-                        item,
-                        ColorPair::new(
-                            if selection == item {
-                                RGB::named(MAGENTA)
-                            } else {
-                                RGB::named(WHITE)
-                            },
-                            RGB::named(BLACK),
-                        ),
-                    );
-                }
+            for (i, item) in MainMenuSelection::iter().enumerate() {
+                draw_batch.print_color_centered(
+                    24 + i,
+                    item,
+                    ColorPair::new(
+                        if selection == item {
+                            RGB::named(MAGENTA)
+                        } else if !load_enabled && item == MainMenuSelection::LoadGame {
+                            RGB::named(GRAY)
+                        } else {
+                            RGB::named(WHITE)
+                        },
+                        RGB::named(BLACK),
+                    ),
+                );
             }
-            _ => (),
         }
     }
 }

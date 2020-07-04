@@ -111,7 +111,9 @@ impl<'a> System<'a> for PlayerActionSystem {
                 }
             }
 
-            Some(Action::MainMenuSelect { selection }) => RunState::MainMenu { selection },
+            Some(Action::MainMenuSelect { selection }) => {
+                old_runstate.with_main_menu_selection(selection)
+            }
             Some(Action::NewGame) => RunState::PreRun,
             Some(Action::SaveGame) => RunState::SaveGame,
             Some(Action::LoadGame) => RunState::LoadGame,
@@ -133,18 +135,20 @@ impl PlayerActionSystem {
         // TODO deduplicate patterns like Down|J|Numpad2
         // (maybe only when we do a proper keymap)
         match runstate {
-            RunState::MainMenu { selection } => match input.key? {
+            state @ RunState::MainMenu { .. } => match input.key? {
                 VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
                     Some(Action::MainMenuSelect {
-                        selection: selection.down(),
+                        selection: state.main_menu_down(),
                     })
                 }
                 VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
                     Some(Action::MainMenuSelect {
-                        selection: selection.up(),
+                        selection: state.main_menu_up(),
                     })
                 }
-                VirtualKeyCode::Return => match selection {
+                // Need .main_menu_selection() trickery due to
+                // #![feature(bindings_after_at)] being unstable
+                VirtualKeyCode::Return => match state.main_menu_selection() {
                     MainMenuSelection::NewGame => Some(Action::NewGame),
                     MainMenuSelection::LoadGame => Some(Action::LoadGame),
                     MainMenuSelection::Quit => Some(Action::Quit),

@@ -10,7 +10,7 @@ use crate::{
         input::Input,
         layout::Layout,
         map::Map,
-        runstate::{MainMenuSelection, RunState, RunStateQueue},
+        runstate::{RunState, RunStateQueue},
     },
     systems::{
         ai::AISystem,
@@ -100,9 +100,7 @@ impl GameState for State {
             RunState::SaveGame => {
                 SaveSystem::prepare(&mut self.world);
                 self.dispatchers.save.dispatch(&self.world);
-                Some(RunState::MainMenu {
-                    selection: MainMenuSelection::LoadGame,
-                })
+                Some(RunState::default())
             }
             RunState::LoadGame => {
                 self.reset();

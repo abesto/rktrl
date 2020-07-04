@@ -155,7 +155,7 @@ impl LoadSystem {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn reader<'a>() -> Cursor<Vec<u8>> {
+    fn reader() -> Cursor<Vec<u8>> {
         let storage = stdweb::web::window().local_storage();
         let encoded = storage
             .get("savegame")
@@ -163,12 +163,25 @@ impl LoadSystem {
             .into_bytes();
         Cursor::new(base64::decode(encoded).expect("Failed to base64 decode savegame"))
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn savegame_exists() -> bool {
+        std::path::Path::new("./savegame.ron.gz").exists()
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn savegame_exists() -> bool {
+        stdweb::web::window()
+            .local_storage()
+            .contains_key("savegame")
+    }
 }
 
 impl<'a> System<'a> for LoadSystem {
     type SystemData = LoadSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
+        assert!(Self::savegame_exists());
         let reader = Self::reader();
         let mut ron_data = String::new();
         flate2::read::GzDecoder::new(reader)

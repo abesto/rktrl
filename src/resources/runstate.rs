@@ -7,6 +7,8 @@ use specs::prelude::Entity;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+use crate::systems::saveload::LoadSystem;
+
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter)]
 pub enum MainMenuSelection {
     NewGame,
@@ -60,8 +62,14 @@ pub enum RunState {
     MonsterTurn,
     ShowInventory,
     ShowDropItem,
-    ShowTargeting { range: i32, item: Entity },
-    MainMenu { selection: MainMenuSelection },
+    ShowTargeting {
+        range: i32,
+        item: Entity,
+    },
+    MainMenu {
+        selection: MainMenuSelection,
+        load_enabled: bool,
+    },
     SaveGame,
     LoadGame,
 }
@@ -71,12 +79,72 @@ impl RunState {
     pub fn show_inventory(self) -> bool {
         self == RunState::ShowDropItem || self == RunState::ShowInventory
     }
+
+    pub fn main_menu_item_enabled(&self, item: MainMenuSelection) -> bool {
+        match self {
+            RunState::MainMenu { load_enabled, .. } => match item {
+                MainMenuSelection::LoadGame => *load_enabled,
+                _ => true,
+            },
+            _ => unimplemented!(),
+        }
+    }
+
+    fn main_menu_next_enabled<F>(&self, next_fn: F) -> MainMenuSelection
+    where
+        F: Fn(MainMenuSelection) -> MainMenuSelection,
+    {
+        match self {
+            RunState::MainMenu { selection, .. } => {
+                let mut candidate = selection.down();
+                while !self.main_menu_item_enabled(candidate) && &candidate != selection {
+                    candidate = next_fn(candidate);
+                }
+                assert!(self.main_menu_item_enabled(candidate));
+                candidate
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn main_menu_down(&self) -> MainMenuSelection {
+        self.main_menu_next_enabled(MainMenuSelection::down)
+    }
+
+    pub fn main_menu_up(&self) -> MainMenuSelection {
+        self.main_menu_next_enabled(MainMenuSelection::up)
+    }
+
+    pub fn with_main_menu_selection(&self, selection: MainMenuSelection) -> RunState {
+        match self {
+            RunState::MainMenu { load_enabled, .. } => RunState::MainMenu {
+                selection,
+                load_enabled: *load_enabled,
+            },
+            _ => unimplemented!(),
+        }
+    }
+
+    // This method is needed only because of
+    // #![feature(bindings_after_at)] being unstable
+    pub fn main_menu_selection(&self) -> MainMenuSelection {
+        match self {
+            RunState::MainMenu { selection, .. } => *selection,
+            _ => unimplemented!(),
+        }
+    }
 }
 
 impl Default for RunState {
     fn default() -> Self {
+        let savegame_exists = LoadSystem::savegame_exists();
         RunState::MainMenu {
-            selection: MainMenuSelection::default(),
+            selection: if savegame_exists {
+                MainMenuSelection::LoadGame
+            } else {
+                MainMenuSelection::NewGame
+            },
+            load_enabled: savegame_exists,
         }
     }
 }
