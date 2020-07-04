@@ -25,6 +25,11 @@ use crate::{
     resources::{gamelog::GameLog, map::Map},
 };
 
+#[cfg(not(target_arch = "wasm32"))]
+const SAVEGAME: &str = "./savegame.ron.gz";
+#[cfg(target_arch = "wasm32")]
+const SAVEGAME: &str = "savegame";
+
 #[derive(Clone, Component, ConvertSaveload)]
 pub struct SerializationHelper {
     map: Map,
@@ -87,7 +92,7 @@ impl std::io::Write for LocalStorageWriter {
         print!("{}", encoded);
         self.buffer.clear();
         self.storage
-            .insert("savegame", &encoded)
+            .insert(SAVEGAME, &encoded)
             .map_err(|_| Error::new(ErrorKind::Other, "Failed to write into local storage"))
     }
 }
@@ -114,7 +119,7 @@ impl SaveSystem {
 
     #[cfg(not(target_arch = "wasm32"))]
     fn writer() -> File {
-        File::create("./savegame.ron.gz").expect("Failed to create file")
+        File::create(SAVEGAME).expect("Failed to create file")
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -151,14 +156,14 @@ pub struct LoadSystem;
 impl LoadSystem {
     #[cfg(not(target_arch = "wasm32"))]
     fn reader() -> File {
-        File::open("savegame.ron.gz").expect("Failed to open file")
+        File::open(SAVEGAME).expect("Failed to open file")
     }
 
     #[cfg(target_arch = "wasm32")]
     fn reader() -> Cursor<Vec<u8>> {
         let storage = stdweb::web::window().local_storage();
         let encoded = storage
-            .get("savegame")
+            .get(SAVEGAME)
             .expect("Failed to read from local storage")
             .into_bytes();
         Cursor::new(base64::decode(encoded).expect("Failed to base64 decode savegame"))
@@ -166,14 +171,22 @@ impl LoadSystem {
 
     #[cfg(not(target_arch = "wasm32"))]
     pub fn savegame_exists() -> bool {
-        std::path::Path::new("./savegame.ron.gz").exists()
+        std::path::Path::new(SAVEGAME).exists()
     }
 
     #[cfg(target_arch = "wasm32")]
     pub fn savegame_exists() -> bool {
-        stdweb::web::window()
-            .local_storage()
-            .contains_key("savegame")
+        stdweb::web::window().local_storage().contains_key(SAVEGAME)
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn delete_savegame() {
+        std::fs::remove_file(std::path::Path::new(SAVEGAME)).expect("Failed to delete savegame");
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn delete_savegame() {
+        stdweb::web::window().local_storage().remove(SAVEGAME);
     }
 }
 
@@ -205,5 +218,8 @@ impl<'a> System<'a> for LoadSystem {
                 .delete(entity)
                 .expect("Failed to clean up serialization helper");
         }
+
+        // We're a roguelike!
+        Self::delete_savegame();
     }
 }
