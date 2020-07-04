@@ -21,6 +21,7 @@ use crate::{
 pub enum TileType {
     Wall,
     Floor,
+    DownStairs,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

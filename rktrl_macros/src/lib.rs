@@ -6,38 +6,67 @@ use syn::{parse::*, punctuated::*, *};
 mod kw {
     syn::custom_keyword!(components);
     syn::custom_keyword!(resources);
+
+    syn::custom_keyword!(read);
+    syn::custom_keyword!(write);
+
+    syn::custom_keyword!(read_expect);
+    syn::custom_keyword!(write_expect);
+
+    syn::custom_keyword!(read_storage);
+    syn::custom_keyword!(write_storage);
+
+    syn::custom_keyword!(entities);
 }
 
-struct InputStruct {
-    _components_token: kw::components,
-    _components_paren: token::Paren,
-    components: Punctuated<Ident, Token![,]>,
-
-    _resources_token: kw::resources,
-    _resources_paren: token::Paren,
-    resources: Punctuated<Ident, Token![,]>,
+struct Values {
+    values: Punctuated<Ident, Token![,]>,
 }
 
-impl Parse for InputStruct {
-    #[allow(clippy::eval_order_dependence)]
+impl Parse for Values {
     fn parse(input: ParseStream) -> Result<Self> {
-        let components;
-        let resources;
-        Ok(InputStruct {
-            _components_token: input.parse()?,
-            _components_paren: parenthesized!(components in input),
-            components: components.parse_terminated(Ident::parse)?,
-
-            _resources_token: input.parse()?,
-            _resources_paren: parenthesized!(resources in input),
-            resources: resources.parse_terminated(Ident::parse)?,
+        let values;
+        parenthesized!(values in input);
+        Ok(Values {
+            values: values.parse_terminated(Ident::parse)?,
         })
     }
 }
 
+impl Values {
+    fn iter(&self) -> punctuated::Iter<Ident> {
+        self.values.iter()
+    }
+}
+
+struct SaveloadInputStruct {
+    _components_token: kw::components,
+    components: Values,
+
+    _resources_token: kw::resources,
+    resources: Values,
+}
+
+impl Parse for SaveloadInputStruct {
+    #[allow(clippy::eval_order_dependence)]
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(SaveloadInputStruct {
+            _components_token: input.parse()?,
+            components: input.parse()?,
+
+            _resources_token: input.parse()?,
+            resources: input.parse()?,
+        })
+    }
+}
+
+fn chunk_components(input: Vec<Ident>) -> Vec<Vec<Ident>> {
+    input.chunks(16).map(Vec::from).collect()
+}
+
 #[proc_macro]
 pub fn saveload_system_data(input: TokenStream) -> TokenStream {
-    let parsed = parse_macro_input!(input as InputStruct);
+    let parsed = parse_macro_input!(input as SaveloadInputStruct);
 
     // Prepare resources
     let resource_types: Vec<Ident> = parsed.resources.iter().cloned().collect();
@@ -50,7 +79,7 @@ pub fn saveload_system_data(input: TokenStream) -> TokenStream {
     // Chunk components into tuples of at most 16 items, as that's the limit of what
     // specs_derive defines
     let component_types: Vec<Ident> = parsed.components.iter().cloned().collect();
-    let component_chunks: Vec<Vec<Ident>> = component_types.chunks(16).map(Vec::from).collect();
+    let component_chunks = chunk_components(component_types);
     let component_chunk_count = component_chunks.len();
     let chunk_ids = 0..component_chunk_count;
     let chunk_indexes: Vec<Index> = chunk_ids.clone().map(Index::from).collect();
@@ -143,6 +172,151 @@ pub fn saveload_system_data(input: TokenStream) -> TokenStream {
                     self.#deser_fns(&mut deserializer);
                 )*
             }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+#[derive(Debug)]
+struct SystemdataInput {
+    name: Ident,
+    read: Vec<Ident>,
+    write: Vec<Ident>,
+    read_expect: Vec<Ident>,
+    write_expect: Vec<Ident>,
+    read_storage: Vec<Ident>,
+    write_storage: Vec<Ident>,
+    entities: Option<Ident>,
+}
+
+impl Parse for SystemdataInput {
+    fn parse(input: &ParseBuffer) -> Result<Self> {
+        let name = input.parse::<Ident>()?;
+        let inner: ParseBuffer;
+        parenthesized!(inner in input);
+
+        let mut read: Vec<Ident> = vec![];
+        let mut write: Vec<Ident> = vec![];
+        let mut read_expect: Vec<Ident> = vec![];
+        let mut write_expect: Vec<Ident> = vec![];
+        let mut read_storage: Vec<Ident> = vec![];
+        let mut write_storage: Vec<Ident> = vec![];
+        let mut entities: Option<Ident> = None;
+
+        while !inner.is_empty() {
+            let lookahead = inner.lookahead1();
+            if lookahead.peek(kw::entities) {
+                entities = Some(inner.parse()?);
+            } else {
+                let target = if lookahead.peek(kw::read) {
+                    inner.parse::<kw::read>()?;
+                    &mut read
+                } else if lookahead.peek(kw::write) {
+                    inner.parse::<kw::write>()?;
+                    &mut write
+                } else if lookahead.peek(kw::read_expect) {
+                    inner.parse::<kw::read_expect>()?;
+                    &mut read_expect
+                } else if lookahead.peek(kw::write_expect) {
+                    inner.parse::<kw::write_expect>()?;
+                    &mut write_expect
+                } else if lookahead.peek(kw::read_storage) {
+                    inner.parse::<kw::read_storage>()?;
+                    &mut read_storage
+                } else if lookahead.peek(kw::write_storage) {
+                    inner.parse::<kw::write_storage>()?;
+                    &mut write_storage
+                } else {
+                    unimplemented!()
+                };
+                let content;
+                parenthesized!(content in inner);
+                let values: Punctuated<Ident, Token![,]> =
+                    content.parse_terminated(Ident::parse)?;
+                let mut idents = values.iter().cloned().collect();
+                target.append(&mut idents);
+            }
+        }
+
+        Ok(SystemdataInput {
+            name,
+            read,
+            write,
+            read_expect,
+            write_expect,
+            read_storage,
+            write_storage,
+            entities,
+        })
+    }
+}
+
+fn component_names(component_types: &Vec<Ident>) -> Vec<Ident> {
+    component_types
+        .iter()
+        .map(|ident| {
+            let snek = ident.to_string().to_snek_case();
+            let suffix = if snek.ends_with('s') { "es" } else { "s" };
+            syn::Ident::new(&format!("{}{}", snek, suffix), ident.span())
+        })
+        .collect()
+}
+
+fn resource_names(resource_types: &Vec<Ident>) -> Vec<Ident> {
+    resource_types
+        .iter()
+        .map(|ident| syn::Ident::new(&ident.to_string().to_snek_case(), ident.span()))
+        .collect()
+}
+
+#[proc_macro]
+pub fn systemdata(input: TokenStream) -> TokenStream {
+    let parsed = parse_macro_input!(input as SystemdataInput);
+
+    let name = parsed.name;
+
+    let entities: Vec<Ident> = if let Some(ident) = parsed.entities {
+        vec![ident]
+    } else {
+        vec![]
+    };
+
+    let read_storage_types = parsed.read_storage;
+    let read_storage_names = component_names(&read_storage_types);
+
+    let write_storage_types = parsed.write_storage;
+    let write_storage_names = component_names(&write_storage_types);
+
+    let read_types = parsed.read;
+    let read_names = resource_names(&read_types);
+
+    let write_types = parsed.write;
+    let write_names = resource_names(&write_types);
+
+    let read_expect_types = parsed.read_expect;
+    let read_expect_names = resource_names(&read_expect_types);
+
+    let write_expect_types = parsed.write_expect;
+    let write_expect_names = resource_names(&write_expect_types);
+
+    let expanded = quote! {
+        use shred_derive::SystemData;
+        use crate::components::{#(#read_storage_types, )* #(#write_storage_types, )*};
+        use crate::resources::{#(#read_types, )* #(#write_types, )* #(#read_expect_types, )* #(#write_expect_types, )*};
+
+        #[derive(SystemData)]
+        pub struct #name<'a> {
+            #(#entities: Entities<'a>,)*
+
+            #(#read_storage_names: ReadStorage<'a, #read_storage_types>,)*
+            #(#write_storage_names: WriteStorage<'a, #write_storage_types>,)*
+
+            #(#read_names: Read<'a, #read_types>,)*
+            #(#write_names: Write<'a, #write_types>,)*
+
+            #(#read_expect_names: ReadExpect<'a, #read_expect_types>,)*
+            #(#write_expect_names: WriteExpect<'a, #write_expect_types>,)*
         }
     };
 

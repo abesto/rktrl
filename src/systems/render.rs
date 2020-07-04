@@ -104,20 +104,18 @@ impl<'a> RenderSystem {
 
         for position in revealed {
             let tile = data.map[&position];
-            let (mut color, c) = match tile {
-                TileType::Floor => (
-                    ColorPair::new(RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.)),
-                    '.',
-                ),
-                TileType::Wall => (
-                    ColorPair::new(RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.)),
-                    '#',
-                ),
+            let (fg_candidate, c) = match tile {
+                TileType::Floor => (RGB::named(GRAY50), '.'),
+                TileType::Wall => (RGB::named(GREEN), '#'),
+                TileType::DownStairs => (RGB::named(CYAN), '>'),
             };
-            if !visible.contains(&position) {
-                color.fg = color.fg.to_greyscale();
-            }
-            draw_batch.set(*position, color, to_cp437(c));
+            let bg = RGB::named(BLACK);
+            let fg = if visible.contains(&position) {
+                fg_candidate
+            } else {
+                fg_candidate.to_greyscale()
+            };
+            draw_batch.set(*position, ColorPair::new(fg, bg), to_cp437(c));
         }
     }
 

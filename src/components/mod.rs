@@ -12,3 +12,18 @@ pub mod renderable;
 pub mod serialize_me;
 pub mod suffer_damage;
 pub mod viewshed;
+
+pub use blocks_tile::*;
+pub use combat_stats::*;
+pub use effects::*;
+pub use in_backpack::*;
+pub use intents::*;
+pub use item::*;
+pub use monster::*;
+pub use name::*;
+pub use player::*;
+pub use position::*;
+pub use renderable::*;
+pub use serialize_me::*;
+pub use suffer_damage::*;
+pub use viewshed::*;

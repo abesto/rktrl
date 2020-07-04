@@ -81,6 +81,7 @@ impl GameState for State {
                 self.dispatchers.mapgen.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
+            RunState::NextLevel => unimplemented!(),
             RunState::AwaitingInput
             | RunState::ShowInventory
             | RunState::ShowDropItem

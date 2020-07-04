@@ -72,6 +72,7 @@ pub enum RunState {
     },
     SaveGame,
     LoadGame,
+    NextLevel,
 }
 
 impl RunState {

@@ -16,7 +16,7 @@ use crate::{
     resources::{
         gamelog::GameLog,
         input::Input,
-        map::Map,
+        map::{Map, TileType},
         runstate::{MainMenuSelection, RunState, RunStateQueue},
         shown_inventory::ShownInventory,
     },
@@ -53,6 +53,8 @@ pub struct PlayerActionSystem;
 
 enum Action {
     Move(Vector),
+    DownStairs,
+
     PickUp,
     ShowInventory,
     ShowDropItem,
@@ -79,6 +81,13 @@ impl<'a> System<'a> for PlayerActionSystem {
             Some(Action::Move(vector)) => {
                 Self::try_move_player(&mut data, vector);
                 RunState::PlayerTurn
+            }
+            Some(Action::DownStairs) => {
+                if Self::try_next_level(&mut data).is_some() {
+                    RunState::NextLevel
+                } else {
+                    old_runstate
+                }
             }
 
             Some(Action::PickUp) => {
@@ -196,6 +205,9 @@ impl PlayerActionSystem {
                 VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
                     Some(Action::Move(Heading::West.into()))
                 }
+
+                // Stairs
+                VirtualKeyCode::Period if input.shift => Some(Action::DownStairs),
 
                 // Diagonals
                 VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
@@ -347,5 +359,18 @@ impl PlayerActionSystem {
             .insert(player_entity, DropIntent { item })
             .expect("Failed to insert DropIntent");
         Some(())
+    }
+
+    fn try_next_level(data: &mut PlayerActionSystemData) -> Option<()> {
+        let player_entity = Self::player_entity(data);
+        let player_position = data.position.get(player_entity)?;
+        if data.map[&player_position] != TileType::DownStairs {
+            data.gamelog
+                .entries
+                .push("There is no way down from here.".to_string());
+            None
+        } else {
+            Some(())
+        }
     }
 }
