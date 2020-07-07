@@ -68,7 +68,7 @@ impl MapgenSystem {
         }
 
         // Place stairs down in last room
-        let last_room = rooms.first().unwrap();
+        let last_room = rooms.last().unwrap();
         data.map[&last_room.center().into()] = TileType::DownStairs;
 
         rooms

@@ -25,8 +25,7 @@ struct Values {
 
 impl Parse for Values {
     fn parse(input: ParseStream) -> Result<Self> {
-        let values;
-        parenthesized!(values in input);
+        let values = group::parse_parens(input)?.content;
         Ok(Values {
             values: values.parse_terminated(Ident::parse)?,
         })
@@ -40,22 +39,19 @@ impl Values {
 }
 
 struct SaveloadInputStruct {
-    _components_token: kw::components,
     components: Values,
-
-    _resources_token: kw::resources,
     resources: Values,
 }
 
 impl Parse for SaveloadInputStruct {
-    #[allow(clippy::eval_order_dependence)]
     fn parse(input: ParseStream) -> Result<Self> {
+        input.parse::<kw::components>()?;
+        let components = input.parse()?;
+        input.parse::<kw::resources>()?;
+        let resources = input.parse()?;
         Ok(SaveloadInputStruct {
-            _components_token: input.parse()?,
-            components: input.parse()?,
-
-            _resources_token: input.parse()?,
-            resources: input.parse()?,
+            components,
+            resources,
         })
     }
 }
@@ -208,6 +204,8 @@ impl Parse for SystemdataInput {
             let lookahead = inner.lookahead1();
             if lookahead.peek(kw::entities) {
                 entities = Some(inner.parse()?);
+            } else if lookahead.peek(Token![,]) {
+                inner.parse::<Token![,]>()?;
             } else {
                 let target = if lookahead.peek(kw::read) {
                     inner.parse::<kw::read>()?;
@@ -228,7 +226,7 @@ impl Parse for SystemdataInput {
                     inner.parse::<kw::write_storage>()?;
                     &mut write_storage
                 } else {
-                    unimplemented!()
+                    return Err(lookahead.error());
                 };
                 let content;
                 parenthesized!(content in inner);
@@ -252,7 +250,7 @@ impl Parse for SystemdataInput {
     }
 }
 
-fn component_names(component_types: &Vec<Ident>) -> Vec<Ident> {
+fn component_names(component_types: &[Ident]) -> Vec<Ident> {
     component_types
         .iter()
         .map(|ident| {
@@ -263,7 +261,7 @@ fn component_names(component_types: &Vec<Ident>) -> Vec<Ident> {
         .collect()
 }
 
-fn resource_names(resource_types: &Vec<Ident>) -> Vec<Ident> {
+fn resource_names(resource_types: &[Ident]) -> Vec<Ident> {
     resource_types
         .iter()
         .map(|ident| syn::Ident::new(&ident.to_string().to_snek_case(), ident.span()))

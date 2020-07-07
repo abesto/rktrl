@@ -6,7 +6,7 @@ pub mod runstate;
 pub mod shown_inventory;
 
 pub use gamelog::*;
-pub use input::*;
+pub use input::Input;
 pub use layout::*;
 pub use map::*;
 pub use runstate::*;

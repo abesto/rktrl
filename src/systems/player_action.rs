@@ -1,58 +1,29 @@
 use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
-use shred_derive::SystemData;
+use rktrl_macros::systemdata;
 use specs::prelude::*;
 
-use crate::{
-    components::{
-        combat_stats::CombatStats,
-        effects::Ranged,
-        in_backpack::InBackpack,
-        intents::{DropIntent, MeleeIntent, PickupIntent, UseIntent, UseTarget},
-        item::Item,
-        player::Player,
-        position::Position,
-        viewshed::Viewshed,
-    },
-    resources::{
-        gamelog::GameLog,
-        input::Input,
-        map::{Map, TileType},
-        runstate::{MainMenuSelection, RunState, RunStateQueue},
-        shown_inventory::ShownInventory,
-    },
-    util::vector::{Heading, Vector},
-};
+use crate::components::UseTarget;
+use crate::resources::{MainMenuSelection, TileType};
+use crate::util::vector::{Heading, Vector};
 
-#[derive(SystemData)]
-pub struct PlayerActionSystemData<'a> {
-    entities: Entities<'a>,
-
-    player: ReadStorage<'a, Player>,
-    combat_stats: ReadStorage<'a, CombatStats>,
-
-    position: WriteStorage<'a, Position>,
-    viewshed: WriteStorage<'a, Viewshed>,
-    melee_intent: WriteStorage<'a, MeleeIntent>,
-    pickup_intent: WriteStorage<'a, PickupIntent>,
-    use_intent: WriteStorage<'a, UseIntent>,
-    drop_intent: WriteStorage<'a, DropIntent>,
-    item: ReadStorage<'a, Item>,
-    backpack: ReadStorage<'a, InBackpack>,
-    ranged: ReadStorage<'a, Ranged>,
-
-    shown_inventory: Read<'a, ShownInventory>,
-    input: ReadExpect<'a, Input>,
-    runstate: Read<'a, RunState>,
-
-    map: WriteExpect<'a, Map>,
-    gamelog: Write<'a, GameLog>,
-    runstate_queue: Write<'a, RunStateQueue>,
-}
+systemdata!(PlayerActionSystemData(
+    entities
+    read_storage(Player, Monster),
+    write_storage(
+        CombatStats, Position, Viewshed, MeleeIntent, PickupIntent, UseIntent, DropIntent,
+        Item, InBackpack, Ranged
+    )
+    read(ShownInventory, RunState)
+    read_expect(Input)
+    write(RunStateQueue, GameLog)
+    write_expect(Map)
+));
 
 pub struct PlayerActionSystem;
 
 enum Action {
     Move(Vector),
+    SkipTurn,
     DownStairs,
 
     PickUp,
@@ -76,7 +47,7 @@ impl<'a> System<'a> for PlayerActionSystem {
     type SystemData = PlayerActionSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        let old_runstate = *data.runstate;
+        let old_runstate = *data.run_state;
         let new_runstate = match Self::resolve_action(old_runstate, &*data.input) {
             Some(Action::Move(vector)) => {
                 Self::try_move_player(&mut data, vector);
@@ -88,6 +59,10 @@ impl<'a> System<'a> for PlayerActionSystem {
                 } else {
                     old_runstate
                 }
+            }
+            Some(Action::SkipTurn) => {
+                Self::skip_turn(&mut data);
+                RunState::PlayerTurn
             }
 
             Some(Action::PickUp) => {
@@ -104,7 +79,7 @@ impl<'a> System<'a> for PlayerActionSystem {
                 }
             }
             Some(Action::CloseInventory) => {
-                assert!(data.runstate.show_inventory());
+                assert!(data.run_state.show_inventory());
                 RunState::AwaitingInput
             }
 
@@ -134,7 +109,7 @@ impl<'a> System<'a> for PlayerActionSystem {
         };
 
         if new_runstate != old_runstate {
-            data.runstate_queue.push_back(new_runstate);
+            data.run_state_queue.push_back(new_runstate);
         }
     }
 }
@@ -164,6 +139,7 @@ impl PlayerActionSystem {
                 },
                 _ => None,
             },
+
             RunState::ShowInventory => match input.key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
                 key => Some(Action::Use {
@@ -188,6 +164,7 @@ impl PlayerActionSystem {
                     None
                 }
             }
+
             RunState::AwaitingInput => match input.key? {
                 // Cardinal directions
                 VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
@@ -208,6 +185,9 @@ impl PlayerActionSystem {
 
                 // Stairs
                 VirtualKeyCode::Period if input.shift => Some(Action::DownStairs),
+
+                // Skip turn
+                VirtualKeyCode::Period | VirtualKeyCode::Numpad5 => Some(Action::SkipTurn),
 
                 // Diagonals
                 VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
@@ -242,9 +222,9 @@ impl PlayerActionSystem {
     fn try_move_player(data: &mut PlayerActionSystemData, vector: Vector) {
         for (player_entity, position, viewshed, _) in (
             &data.entities,
-            &mut data.position,
-            &mut data.viewshed,
-            &data.player,
+            &mut data.positions,
+            &mut data.viewsheds,
+            &data.players,
         )
             .join()
         {
@@ -252,8 +232,8 @@ impl PlayerActionSystem {
 
             if let Some(contents) = data.map.get_tile_contents(new_position) {
                 for potential_target in contents.iter() {
-                    if data.combat_stats.get(*potential_target).is_some() {
-                        data.melee_intent
+                    if data.combat_statses.get(*potential_target).is_some() {
+                        data.melee_intents
                             .insert(
                                 player_entity,
                                 MeleeIntent {
@@ -274,22 +254,22 @@ impl PlayerActionSystem {
     }
 
     fn try_pickup(data: &mut PlayerActionSystemData) {
-        let (_, player_entity, player_pos) = (&data.player, &data.entities, &data.position)
+        let (_, player_entity, player_pos) = (&data.players, &data.entities, &data.positions)
             .join()
             .next()
             .unwrap();
-        let target_item: Option<Entity> = (&data.entities, &data.item, &data.position)
+        let target_item: Option<Entity> = (&data.entities, &data.items, &data.positions)
             .join()
             .find(|x| x.2 == player_pos)
             .map(|x| x.0);
 
         match target_item {
             None => data
-                .gamelog
+                .game_log
                 .entries
                 .push("There is nothing here to pick up.".to_string()),
             Some(item) => {
-                data.pickup_intent
+                data.pickup_intents
                     .insert(player_entity, PickupIntent { item })
                     .expect("Unable to insert want to pickup");
             }
@@ -297,7 +277,7 @@ impl PlayerActionSystem {
     }
 
     fn player_entity(data: &mut PlayerActionSystemData) -> Entity {
-        (&data.player, &data.entities).join().next().unwrap().1
+        (&data.players, &data.entities).join().next().unwrap().1
     }
 
     fn choice_to_entity_from_player_backpack(
@@ -306,20 +286,20 @@ impl PlayerActionSystem {
     ) -> Option<Entity> {
         let player_entity = Self::player_entity(data);
         let &item = data.shown_inventory.get(choice as usize)?;
-        assert_eq!(data.backpack.get(item)?.owner, player_entity);
+        assert_eq!(data.in_backpacks.get(item)?.owner, player_entity);
         Some(item)
     }
 
     fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<RunState> {
         let player_entity = Self::player_entity(data);
         let item = Self::choice_to_entity_from_player_backpack(data, choice)?;
-        if let Some(ranged) = data.ranged.get(item) {
+        if let Some(ranged) = data.rangeds.get(item) {
             Some(RunState::ShowTargeting {
                 item,
                 range: ranged.range,
             })
         } else {
-            data.use_intent
+            data.use_intents
                 .insert(
                     player_entity,
                     UseIntent {
@@ -339,8 +319,8 @@ impl PlayerActionSystem {
     ) -> Option<()> {
         let player_entity = Self::player_entity(data);
 
-        assert_eq!(data.backpack.get(item)?.owner, player_entity);
-        data.use_intent
+        assert_eq!(data.in_backpacks.get(item)?.owner, player_entity);
+        data.use_intents
             .insert(
                 player_entity,
                 UseIntent {
@@ -355,7 +335,7 @@ impl PlayerActionSystem {
     fn try_drop(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
         let player_entity = Self::player_entity(data);
         let item = Self::choice_to_entity_from_player_backpack(data, choice)?;
-        data.drop_intent
+        data.drop_intents
             .insert(player_entity, DropIntent { item })
             .expect("Failed to insert DropIntent");
         Some(())
@@ -363,14 +343,30 @@ impl PlayerActionSystem {
 
     fn try_next_level(data: &mut PlayerActionSystemData) -> Option<()> {
         let player_entity = Self::player_entity(data);
-        let player_position = data.position.get(player_entity)?;
+        let player_position = data.positions.get(player_entity)?;
         if data.map[&player_position] != TileType::DownStairs {
-            data.gamelog
+            data.game_log
                 .entries
                 .push("There is no way down from here.".to_string());
             None
         } else {
             Some(())
+        }
+    }
+
+    fn skip_turn(data: &mut PlayerActionSystemData) {
+        let player_entity = Self::player_entity(data);
+        let viewshed = data.viewsheds.get(player_entity).unwrap();
+        // Can heal if there are no visible monsters
+        let can_heal: bool = !viewshed
+            .visible_tiles
+            .iter()
+            .flat_map(|pos| data.map.get_tile_contents(*pos))
+            .flatten()
+            .any(|entity| data.monsters.get(*entity).is_some());
+        if can_heal {
+            let stats = data.combat_statses.get_mut(player_entity).unwrap();
+            stats.hp = i32::min(stats.max_hp, stats.hp + 1);
         }
     }
 }
