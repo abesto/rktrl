@@ -31,8 +31,13 @@ impl<'a> System<'a> for MapgenSystem {
             .single_write(SpawnRequest::Player(rooms[0].center().into()));
 
         // Request monster spawns
-        data.spawn_requests
-            .iter_write(rooms.iter().skip(1).map(|&rect| SpawnRequest::Room(rect)));
+        let depth = data.map.depth;
+        data.spawn_requests.iter_write(
+            rooms
+                .iter()
+                .skip(1)
+                .map(|&rect| SpawnRequest::Room { rect, depth }),
+        );
     }
 }
 

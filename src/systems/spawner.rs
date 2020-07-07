@@ -27,7 +27,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SpawnRequest {
     Player(Position),
-    Room(Rect),
+    Room { rect: Rect, depth: i32 },
 }
 
 #[derive(SystemData)]
@@ -88,7 +88,7 @@ impl<'a> System<'a> for SpawnerSystem {
         for request in requests.iter() {
             match request {
                 SpawnRequest::Player(position) => self.player(&mut data, *position),
-                SpawnRequest::Room(rect) => self.room(&mut data, rect),
+                SpawnRequest::Room { rect, depth } => self.room(&mut data, rect, *depth),
             }
         }
     }
@@ -228,16 +228,16 @@ impl SpawnerSystem {
         positions
     }
 
-    fn room(&self, data: &mut SpawnerSystemData, room: &Rect) {
+    fn room(&self, data: &mut SpawnerSystemData, room: &Rect, depth: i32) {
         use Spawnable::*;
         let room_table = RandomTable::new()
             .add(Goblin, 10)
-            .add(Orc, 1)
+            .add(Orc, 1 + depth)
             .add(HealthPotion, 7)
-            .add(FireballScroll, 2)
-            .add(ConfusionScroll, 2)
+            .add(FireballScroll, 2 + depth)
+            .add(ConfusionScroll, 2 + depth)
             .add(MagicMissileScroll, 4);
-        let spawnable_count = data.rng.range(-2, 5);
+        let spawnable_count = data.rng.range(-2, 4 + depth);
         for position in self.random_positions_in_room(data, room, spawnable_count) {
             if let Some(spawnable) = room_table.roll(&mut data.rng) {
                 let spawner = match spawnable {
