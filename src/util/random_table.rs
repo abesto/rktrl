@@ -2,12 +2,12 @@ use bracket_lib::prelude::RandomNumberGenerator;
 
 pub struct RandomEntry<T> {
     item: T,
-    weight: i32,
+    limit: i32,
 }
 
 impl<T> RandomEntry<T> {
-    pub fn new(item: T, weight: i32) -> RandomEntry<T> {
-        RandomEntry { item, weight }
+    pub fn new(item: T, limit: i32) -> RandomEntry<T> {
+        RandomEntry { item, limit }
     }
 }
 
@@ -29,8 +29,10 @@ where
     }
 
     pub fn add(mut self, item: T, weight: i32) -> RandomTable<T> {
+        assert!(weight > 0);
+        self.entries
+            .push(RandomEntry::new(item, weight + self.total_weight));
         self.total_weight += weight;
-        self.entries.push(RandomEntry::new(item, weight));
         self
     }
 
@@ -38,18 +40,10 @@ where
         if self.total_weight == 0 {
             return None;
         }
-        let mut roll = rng.roll_dice(1, self.total_weight) - 1;
-        let mut index: usize = 0;
-
-        while roll > 0 {
-            if roll < self.entries[index].weight {
-                return Some(self.entries[index].item);
-            }
-
-            roll -= self.entries[index].weight;
-            index += 1;
-        }
-
-        None
+        let roll = rng.range(0, self.total_weight);
+        self.entries
+            .iter()
+            .find(|entry| entry.limit >= roll)
+            .map(|entry| entry.item)
     }
 }
