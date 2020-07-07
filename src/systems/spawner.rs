@@ -21,11 +21,8 @@ use crate::{
         serialize_me::SerializeMe,
         viewshed::Viewshed,
     },
-    util::rect_ext::RectExt,
+    util::{random_table::RandomTable, rect_ext::RectExt},
 };
-
-const MAX_MONSTERS: i32 = 4;
-const MAX_ITEMS: i32 = 2;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SpawnRequest {
@@ -60,6 +57,16 @@ pub struct SpawnerSystemData<'a> {
 
     serialize_me: WriteStorage<'a, SimpleMarker<SerializeMe>>,
     serialize_me_alloc: Write<'a, SimpleMarkerAllocator<SerializeMe>>,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Spawnable {
+    Goblin,
+    Orc,
+    HealthPotion,
+    FireballScroll,
+    ConfusionScroll,
+    MagicMissileScroll,
 }
 
 #[derive(Default)]
@@ -159,7 +166,7 @@ impl SpawnerSystem {
         position: Position,
         letter: char,
         name: S,
-    ) {
+    ) -> Entity {
         data.entity
             .build_entity()
             .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
@@ -185,26 +192,15 @@ impl SpawnerSystem {
                 },
                 &mut data.combat_stats,
             )
-            .build();
+            .build()
     }
 
-    fn orc(&self, data: &mut SpawnerSystemData, position: Position) {
+    fn orc(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         self.monster(data, position, 'o', "Orc")
     }
 
-    fn goblin(&self, data: &mut SpawnerSystemData, position: Position) {
+    fn goblin(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
         self.monster(data, position, 'g', "Goblin")
-    }
-
-    fn random_monster(&self, data: &mut SpawnerSystemData, position: Position) {
-        let roll: i32;
-        {
-            roll = data.rng.roll_dice(1, 2);
-        }
-        match roll {
-            1 => self.orc(data, position),
-            _ => self.goblin(data, position),
-        }
     }
 
     fn random_positions_in_room(
@@ -233,14 +229,27 @@ impl SpawnerSystem {
     }
 
     fn room(&self, data: &mut SpawnerSystemData, room: &Rect) {
-        let num_monsters = data.rng.range(0, MAX_MONSTERS + 1);
-        for position in self.random_positions_in_room(data, room, num_monsters) {
-            self.random_monster(data, position);
-        }
-
-        let num_potions = data.rng.range(0, MAX_ITEMS + 1);
-        for position in self.random_positions_in_room(data, room, num_potions) {
-            self.random_item(data, position);
+        use Spawnable::*;
+        let room_table = RandomTable::new()
+            .add(Goblin, 10)
+            .add(Orc, 1)
+            .add(HealthPotion, 7)
+            .add(FireballScroll, 2)
+            .add(ConfusionScroll, 2)
+            .add(MagicMissileScroll, 4);
+        let spawnable_count = data.rng.range(-2, 5);
+        for position in self.random_positions_in_room(data, room, spawnable_count) {
+            if let Some(spawnable) = room_table.roll(&mut data.rng) {
+                let spawner = match spawnable {
+                    Goblin => Self::goblin,
+                    Orc => Self::orc,
+                    HealthPotion => Self::health_potion,
+                    FireballScroll => Self::fireball_scroll,
+                    ConfusionScroll => Self::confusion_scroll,
+                    MagicMissileScroll => Self::magic_missile_scroll,
+                };
+                spawner(self, data, position);
+            }
         }
     }
 
@@ -329,18 +338,5 @@ impl SpawnerSystem {
             .with(Ranged { range: 6 }, &mut data.ranged)
             .with(Confusion { turns: 4 }, &mut data.confusion)
             .build()
-    }
-
-    fn random_item(&self, data: &mut SpawnerSystemData, position: Position) -> Entity {
-        let roll: i32;
-        {
-            roll = data.rng.roll_dice(1, 4);
-        }
-        match roll {
-            1 => self.health_potion(data, position),
-            2 => self.fireball_scroll(data, position),
-            3 => self.confusion_scroll(data, position),
-            _ => self.magic_missile_scroll(data, position),
-        }
     }
 }
