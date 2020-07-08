@@ -1,6 +1,7 @@
 pub mod blocks_tile;
 pub mod combat_stats;
 pub mod effects;
+pub mod equipment;
 pub mod in_backpack;
 pub mod intents;
 pub mod item;
@@ -16,6 +17,7 @@ pub mod viewshed;
 pub use blocks_tile::*;
 pub use combat_stats::*;
 pub use effects::*;
+pub use equipment::*;
 pub use in_backpack::*;
 pub use intents::*;
 pub use item::*;

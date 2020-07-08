@@ -21,23 +21,26 @@ pub enum SpawnRequest {
 systemdata!(SpawnerSystemData(
     entities,
     write_storage(
-        Position,
-        Renderable,
-        Player,
-        Viewshed,
-        Monster,
-        Name,
+        (serialize_me: SimpleMarker<SerializeMe>),
+        AreaOfEffect,
         BlocksTile,
         CombatStats,
-        Item,
-        InBackpack,
+        Confusion,
         Consumable,
+        DefenseBonus,
+        Equippable,
+        InBackpack,
+        InflictsDamage,
+        Item,
+        MeleePowerBonus,
+        Monster,
+        Name,
+        Player,
+        Position,
         ProvidesHealing,
         Ranged,
-        InflictsDamage,
-        AreaOfEffect,
-        Confusion,
-        (serialize_me: SimpleMarker<SerializeMe>)
+        Renderable,
+        Viewshed,
     ),
     write((serialize_me_alloc: SimpleMarkerAllocator<SerializeMe>)),
     write_expect((rng: RandomNumberGenerator)),
@@ -122,6 +125,8 @@ impl SpawnerSystem {
                 Self::magic_missile_scroll(data),
                 Self::fireball_scroll(data),
                 Self::confusion_scroll(data),
+                Self::dagger(data),
+                Self::shield(data),
             ];
             for wizard_item in wizard_items {
                 data.in_backpacks
@@ -143,7 +148,9 @@ impl SpawnerSystem {
             .add(Self::health_potion, 7)
             .add(Self::fireball_scroll, 2 + depth)
             .add(Self::confusion_scroll, 2 + depth)
-            .add(Self::confusion_scroll, 4);
+            .add(Self::confusion_scroll, 4)
+            .add(Self::dagger, 3)
+            .add(Self::shield, 3);
         let spawnable_count = data.rng.range(-2, 4 + depth);
         for position in self.random_positions_in_room(data, room, spawnable_count) {
             if let Some(spawner) = room_table.roll(&mut data.rng) {
@@ -318,6 +325,30 @@ impl SpawnerSystem {
             )
             .with(Name::from("Dagger".to_string()), &mut data.names)
             .with(Item, &mut data.items)
+            .with(Equippable::new(EquipmentSlot::Melee), &mut data.equippables)
+            .with(MeleePowerBonus::new(2), &mut data.melee_power_bonuses)
+            .build()
+    }
+
+    fn shield(data: &mut SpawnerSystemData) -> Entity {
+        data.entities
+            .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
+            .with(
+                Renderable {
+                    glyph: to_cp437('('),
+                    color: ColorPair::new(RGB::named(CYAN), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderables,
+            )
+            .with(Name::from("Shield".to_string()), &mut data.names)
+            .with(Item, &mut data.items)
+            .with(
+                Equippable::new(EquipmentSlot::Shield),
+                &mut data.equippables,
+            )
+            .with(DefenseBonus::new(1), &mut data.defense_bonuses)
             .build()
     }
 }

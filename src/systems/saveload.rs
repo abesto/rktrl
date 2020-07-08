@@ -15,15 +15,7 @@ use specs::saveload::{
 };
 use specs_derive::{Component, ConvertSaveload};
 
-use crate::{
-    components::{
-        blocks_tile::BlocksTile, combat_stats::CombatStats, effects::*, in_backpack::InBackpack,
-        intents::*, item::Item, monster::Monster, name::Name, player::Player, position::Position,
-        renderable::Renderable, serialize_me::SerializeMe, suffer_damage::SufferDamage,
-        viewshed::Viewshed,
-    },
-    resources::{gamelog::GameLog, map::Map},
-};
+use crate::{components::*, resources::*};
 
 #[cfg(not(target_arch = "wasm32"))]
 const SAVEGAME: &str = "./savegame.ron.gz";
@@ -39,26 +31,31 @@ pub struct SerializationHelper {
 saveload_system_data!(
     components(
         SerializationHelper,
+        // -- Sort below this -- //
+        AreaOfEffect,
         BlocksTile,
         CombatStats,
-        Consumable,
-        ProvidesHealing,
-        Ranged,
-        InflictsDamage,
-        AreaOfEffect,
         Confusion,
-        InBackpack,
-        MeleeIntent,
-        PickupIntent,
+        Consumable,
+        DefenseBonus,
         DropIntent,
-        UseIntent,
+        Equippable,
+        Equipped,
+        InBackpack,
+        InflictsDamage,
         Item,
+        MeleeIntent,
+        MeleePowerBonus,
         Monster,
         Name,
+        PickupIntent,
         Player,
         Position,
+        ProvidesHealing,
+        Ranged,
         Renderable,
         SufferDamage,
+        UseIntent,
         Viewshed,
     )
     resources(Map, GameLog)

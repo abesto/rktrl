@@ -7,16 +7,25 @@ use rktrl_macros::systemdata;
 systemdata!(ItemUseSystemData(
     entities,
     read_storage(
+        AreaOfEffect,
+        Equippable,
+        InflictsDamage,
+        Monster,
         Name,
         Player,
-        ProvidesHealing,
-        InflictsDamage,
-        Ranged,
         Position,
-        AreaOfEffect,
-        Monster
+        ProvidesHealing,
+        Ranged,
     ),
-    write_storage(UseIntent, CombatStats, Consumable, SufferDamage, Confusion),
+    write_storage(
+        CombatStats,
+        Confusion,
+        Consumable,
+        Equipped,
+        InBackpack,
+        SufferDamage,
+        UseIntent,
+    ),
     read_expect(Map),
     write_expect(GameLog),
 ));
@@ -148,6 +157,54 @@ impl<'a> System<'a> for ItemUseSystem {
                         }
                         true
                     }
+                }
+            };
+
+            used_item |= match { data.equippables.get(to_use.item).cloned() } {
+                None => false,
+                Some(equippable) => {
+                    let target_slot = equippable.slot;
+                    let target = targets[0];
+
+                    // Remove any items the target has in the item's slot
+                    let mut to_unequip: Vec<Entity> = Vec::new();
+                    for (item_entity, already_equipped, name) in
+                        (&data.entities, &data.equippeds, &data.names).join()
+                    {
+                        if already_equipped.owner == target && already_equipped.slot == target_slot
+                        {
+                            to_unequip.push(item_entity);
+                            if data.players.get(target).is_some() {
+                                data.game_log.entries.push(format!("You unequip {}.", name));
+                            }
+                        }
+                    }
+                    for item in to_unequip.iter() {
+                        data.equippeds.remove(*item);
+                        data.in_backpacks
+                            .insert(*item, InBackpack::new(target))
+                            .expect("Unable to insert backpack entry");
+                    }
+
+                    // Wield the item
+                    data.equippeds
+                        .insert(
+                            to_use.item,
+                            Equipped {
+                                owner: target,
+                                slot: target_slot,
+                            },
+                        )
+                        .expect("Unable to insert equipped component");
+                    data.in_backpacks.remove(to_use.item);
+                    if data.players.get(target).is_some() {
+                        data.game_log.entries.push(format!(
+                            "You equip {}.",
+                            data.names.get(to_use.item).unwrap()
+                        ));
+                    }
+
+                    true
                 }
             };
 
