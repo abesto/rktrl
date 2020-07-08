@@ -30,7 +30,7 @@ base64 = "0.12.3"
 
 [patch.crates-io]
 # Needed until https://github.com/thebracket/bracket-lib/pull/130 (Fix modifier keys) is released
-bracket-terminal = { git = "https://github.com/thebracket/bracket-lib/", rev = "1496e3c894ae065d15af3bcfde778d8ba9bc5b86" }
+bracket-terminal = { git = "https://github.com/abesto/bracket-lib/", rev = "abad58f65127bd735573323cd96139ebdb479863" }
 
 [[bin]]
 name = "rktrl"

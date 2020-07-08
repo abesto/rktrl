@@ -193,7 +193,7 @@ dependencies = [
 [[package]]
 name = "bracket-terminal"
 version = "0.8.1"
-source = "git+https://github.com/thebracket/bracket-lib/?rev=1496e3c894ae065d15af3bcfde778d8ba9bc5b86#1496e3c894ae065d15af3bcfde778d8ba9bc5b86"
+source = "git+https://github.com/abesto/bracket-lib/?rev=abad58f65127bd735573323cd96139ebdb479863#abad58f65127bd735573323cd96139ebdb479863"
 dependencies = [
  "bracket-color",
  "bracket-geometry",
