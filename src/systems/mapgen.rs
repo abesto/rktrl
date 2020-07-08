@@ -1,22 +1,17 @@
 use std::cmp::{max, min};
 
 use bracket_lib::prelude::*;
-use shred_derive::SystemData;
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::{
-    components::position::Position,
-    resources::map::{Map, TileType},
-    systems::spawner::SpawnRequest,
-};
+use crate::{components::*, resources::*, systems::spawner::SpawnRequest};
+use rktrl_macros::systemdata;
 
-#[derive(SystemData)]
-pub struct MapgenSystemData<'a> {
-    rng: WriteExpect<'a, RandomNumberGenerator>,
-    map: WriteExpect<'a, Map>,
-    spawn_requests: WriteExpect<'a, EventChannel<SpawnRequest>>,
-}
+systemdata!(MapgenSystemData(write_expect(
+    Map,
+    (rng: RandomNumberGenerator),
+    (spawn_requests: EventChannel<SpawnRequest>),
+)));
 
 pub struct MapgenSystem;
 

@@ -1,17 +1,24 @@
 use bracket_lib::prelude::field_of_view;
-use rktrl_macros::systemdata;
 use specs::prelude::*;
 
-use crate::components::UseTarget;
+use crate::{components::*, resources::*};
+use rktrl_macros::systemdata;
 
 systemdata!(ItemUseSystemData(
-    entities
+    entities,
     read_storage(
-        Name, Player, ProvidesHealing, InflictsDamage, Ranged, Position, AreaOfEffect, Monster
-    )
-    write_storage(UseIntent, CombatStats, Consumable, SufferDamage, Confusion)
-    read_expect(Map)
-    write_expect(GameLog)
+        Name,
+        Player,
+        ProvidesHealing,
+        InflictsDamage,
+        Ranged,
+        Position,
+        AreaOfEffect,
+        Monster
+    ),
+    write_storage(UseIntent, CombatStats, Consumable, SufferDamage, Confusion),
+    read_expect(Map),
+    write_expect(GameLog),
 ));
 
 pub struct ItemUseSystem;

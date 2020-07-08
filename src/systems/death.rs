@@ -1,11 +1,13 @@
-use rktrl_macros::systemdata;
 use specs::prelude::*;
 
+use crate::{components::*, resources::*};
+use rktrl_macros::systemdata;
+
 systemdata!(DeathSystemData(
-    entities
-    read_storage(Player, Name)
-    write_storage(CombatStats)
-    write(GameLog)
+    entities,
+    read_storage(Player, Name),
+    write_storage(CombatStats),
+    write(GameLog),
 ));
 
 pub struct DeathSystem;

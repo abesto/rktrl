@@ -1,21 +1,27 @@
 use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
-use rktrl_macros::systemdata;
 use specs::prelude::*;
 
-use crate::components::UseTarget;
-use crate::resources::{MainMenuSelection, TileType};
-use crate::util::vector::{Heading, Vector};
+use crate::{components::*, resources::*, util::vector::*};
+use rktrl_macros::systemdata;
 
 systemdata!(PlayerActionSystemData(
-    entities
+    entities,
     read_storage(Player, Monster),
     write_storage(
-        CombatStats, Position, Viewshed, MeleeIntent, PickupIntent, UseIntent, DropIntent,
-        Item, InBackpack, Ranged
-    )
-    read(ShownInventory, RunState)
-    read_expect(Input)
-    write(RunStateQueue, GameLog)
+        CombatStats,
+        Position,
+        Viewshed,
+        MeleeIntent,
+        PickupIntent,
+        UseIntent,
+        DropIntent,
+        Item,
+        InBackpack,
+        Ranged
+    ),
+    read(ShownInventory, RunState),
+    read_expect(Input),
+    write(RunStateQueue, GameLog),
     write_expect(Map)
 ));
 

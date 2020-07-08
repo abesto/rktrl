@@ -1,12 +1,13 @@
 use specs::prelude::*;
 
+use crate::{components::*, resources::*};
 use rktrl_macros::systemdata;
 
 systemdata!(ItemDropSystemData(
-    entities
-    write_storage(DropIntent, Position, InBackpack)
-    read_storage(Name, Player)
-    write_expect(GameLog, RunState)
+    entities,
+    write_storage(DropIntent, Position, InBackpack),
+    read_storage(Name, Player),
+    write_expect(GameLog, RunState),
 ));
 
 pub struct ItemDropSystem;

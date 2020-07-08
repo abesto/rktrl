@@ -1,10 +1,12 @@
 use rktrl_macros::systemdata;
 use specs::prelude::*;
 
+use crate::{components::*, resources::*};
+
 systemdata!(ItemCollectionSystemData(
-    entities
-    read_storage(Name, Player)
-    write_storage(PickupIntent, Position, InBackpack)
+    entities,
+    read_storage(Name, Player),
+    write_storage(PickupIntent, Position, InBackpack),
     write_expect(GameLog)
 ));
 

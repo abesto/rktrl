@@ -1,15 +1,16 @@
 /// Clean up entities when moving to the next level
 use specs::prelude::*;
 
+use crate::{components::*, resources::*};
 use rktrl_macros::systemdata;
 
 systemdata!(NextLevelSystemData(
-    entities
-    read(RunState)
-    read_storage(Player, InBackpack)
-    write_storage(Viewshed, CombatStats)
-    read_expect(Layout)
-    write_expect(Map, GameLog)
+    entities,
+    read(RunState),
+    read_storage(Player, InBackpack),
+    write_storage(Viewshed, CombatStats),
+    read_expect(Layout),
+    write_expect(Map, GameLog),
 ));
 
 pub struct NextLevelSystem;

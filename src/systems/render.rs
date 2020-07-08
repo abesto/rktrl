@@ -7,44 +7,29 @@ use shred_derive::SystemData;
 use specs::prelude::*;
 use strum::IntoEnumIterator;
 
-use crate::resources::runstate::MainMenuSelection;
 use crate::{
-    components::{
-        combat_stats::CombatStats, effects::AreaOfEffect, in_backpack::InBackpack, name::Name,
-        player::Player, position::Position, renderable::Renderable, viewshed::Viewshed,
-    },
-    resources::{
-        gamelog::GameLog,
-        input::Input,
-        layout::Layout,
-        map::{Map, TileType},
-        runstate::RunState,
-        shown_inventory::ShownInventory,
-    },
+    components::*,
+    resources::{Input, *},
     util::{rect_ext::RectExt, vector::Vector},
 };
+use rktrl_macros::systemdata;
 
-#[derive(SystemData)]
-pub struct RenderSystemData<'a> {
-    entity: Entities<'a>,
-
-    position: ReadStorage<'a, Position>,
-    renderable: ReadStorage<'a, Renderable>,
-    player: ReadStorage<'a, Player>,
-    viewshed: ReadStorage<'a, Viewshed>,
-    combat_stats: ReadStorage<'a, CombatStats>,
-    name: ReadStorage<'a, Name>,
-    backpack: ReadStorage<'a, InBackpack>,
-    area_of_effect: ReadStorage<'a, AreaOfEffect>,
-
-    gamelog: Read<'a, GameLog>,
-    layout: ReadExpect<'a, Layout>,
-    map: ReadExpect<'a, Map>,
-    runstate: Read<'a, RunState>,
-    input: ReadExpect<'a, Input>,
-
-    shown_inventory: Write<'a, ShownInventory>,
-}
+systemdata!(RenderSystemData(
+    entities,
+    read_storage(
+        Position,
+        Renderable,
+        Player,
+        Viewshed,
+        CombatStats,
+        Name,
+        InBackpack,
+        AreaOfEffect
+    ),
+    read(GameLog, RunState),
+    read_expect(Layout, Map, Input),
+    write(ShownInventory)
+));
 
 pub struct RenderSystem;
 
@@ -54,7 +39,7 @@ impl<'a> System<'a> for RenderSystem {
     fn run(&mut self, mut data: Self::SystemData) {
         let draw_batch = &mut DrawBatch::new();
         draw_batch.cls();
-        match *data.runstate {
+        match *data.run_state {
             RunState::MainMenu { .. } => self.render_main_menu(&mut data, draw_batch),
             _ => {
                 self.render_map(&mut data, draw_batch);
@@ -71,14 +56,14 @@ impl<'a> System<'a> for RenderSystem {
 
 impl<'a> RenderSystem {
     fn player_visible_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
-        (&data.player, &data.viewshed)
+        (&data.players, &data.viewsheds)
             .join()
             .flat_map(|t| t.1.visible_tiles.clone())
             .collect()
     }
 
     fn player_revealed_tiles(&mut self, data: &mut RenderSystemData) -> HashSet<Position> {
-        (&data.player, &data.viewshed)
+        (&data.players, &data.viewsheds)
             .join()
             .flat_map(|t| t.1.revealed_tiles.clone())
             .collect()
@@ -86,7 +71,7 @@ impl<'a> RenderSystem {
 
     fn render_entities(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
         let visible = self.player_visible_tiles(data);
-        let mut data = (&data.position, &data.renderable)
+        let mut data = (&data.positions, &data.renderables)
             .join()
             .collect::<Vec<_>>();
         data.sort_unstable_by_key(|r| &r.1.render_order);
@@ -148,7 +133,11 @@ impl<'a> RenderSystem {
         let max_hp_str_len: i32 = 16;
         let hp_bar_offset = hp_offset + max_hp_str_len;
 
-        let stats = (&data.combat_stats, &data.player).join().next().unwrap().0;
+        let stats = (&data.combat_statses, &data.players)
+            .join()
+            .next()
+            .unwrap()
+            .0;
         let mut health = format!(" HP: {} / {} ", stats.hp, stats.max_hp);
         health.truncate(max_hp_str_len.try_into().unwrap());
 
@@ -167,7 +156,7 @@ impl<'a> RenderSystem {
             );
 
         // Render game log
-        data.gamelog
+        data.game_log
             .entries
             .iter()
             .rev()
@@ -192,7 +181,7 @@ impl<'a> RenderSystem {
             return;
         }
 
-        let player_viewshed = (&data.viewshed, &data.player).join().next().unwrap().0;
+        let player_viewshed = (&data.viewsheds, &data.players).join().next().unwrap().0;
         if !player_viewshed
             .visible_tiles
             .contains(&data.input.mouse_pos.into())
@@ -208,7 +197,7 @@ impl<'a> RenderSystem {
         let names: Vec<&Name> = tile_contents
             .unwrap()
             .iter()
-            .filter_map(|&entity| match data.name.get(entity) {
+            .filter_map(|&entity| match data.names.get(entity) {
                 Some(name) => Some(name),
                 None => None,
             })
@@ -259,19 +248,19 @@ impl<'a> RenderSystem {
     }
 
     fn show_inventory(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        if !data.runstate.show_inventory() {
+        if !data.run_state.show_inventory() {
             return;
         }
 
-        let title = match *data.runstate {
+        let title = match *data.run_state {
             RunState::ShowDropItem => "Drop Which Item?",
             RunState::ShowInventory => "Inventory",
             _ => panic!(),
         };
 
-        let player_entity = (&data.player, &data.entity).join().next().unwrap().1;
+        let player_entity = (&data.players, &data.entities).join().next().unwrap().1;
         let inventory: Vec<(&InBackpack, &Name, Entity)> =
-            (&data.backpack, &data.name, &data.entity)
+            (&data.in_backpacks, &data.names, &data.entities)
                 .join()
                 .filter(|item| item.0.owner == player_entity)
                 .collect();
@@ -325,7 +314,7 @@ impl<'a> RenderSystem {
     }
 
     fn targeting_overlay(&mut self, data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
-        if let RunState::ShowTargeting { range, item } = *data.runstate {
+        if let RunState::ShowTargeting { range, item } = *data.run_state {
             draw_batch.print_color(
                 Point::new(5, 0),
                 "Select Target:",
@@ -333,7 +322,7 @@ impl<'a> RenderSystem {
             );
 
             // Highlight available target cells
-            let (_, viewshed, &player_pos) = (&data.player, &data.viewshed, &data.position)
+            let (_, viewshed, &player_pos) = (&data.players, &data.viewsheds, &data.positions)
                 .join()
                 .next()
                 .unwrap();
@@ -356,7 +345,7 @@ impl<'a> RenderSystem {
 
             // Highlight AoE, if applicable
             if valid_aim {
-                if let Some(aoe) = data.area_of_effect.get(item) {
+                if let Some(aoe) = data.area_of_effects.get(item) {
                     let affected_cells =
                         field_of_view(data.input.mouse_pos, aoe.radius, &*data.map)
                             .iter()
@@ -385,7 +374,7 @@ impl<'a> RenderSystem {
         if let RunState::MainMenu {
             selection,
             load_enabled,
-        } = *data.runstate
+        } = *data.run_state
         {
             draw_batch.print_color_centered(
                 15,

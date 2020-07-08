@@ -1,14 +1,16 @@
 use bracket_lib::prelude::{a_star_search, DistanceAlg};
-use rktrl_macros::systemdata;
 use specs::prelude::*;
 
+use crate::{components::*, resources::*};
+use rktrl_macros::systemdata;
+
 systemdata!(AISystemData(
-    entities
-    read_storage(Monster, Player, Name)
-    write_storage(Viewshed, Position, MeleeIntent, Confusion)
-    write_expect(GameLog)
-    read(RunState)
-    read_expect(Map)
+    entities,
+    read_storage(Monster, Player, Name),
+    write_storage(Viewshed, Position, MeleeIntent, Confusion),
+    write_expect(GameLog),
+    read(RunState),
+    read_expect(Map),
 ));
 
 pub struct AISystem;

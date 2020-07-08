@@ -1,20 +1,13 @@
-use shred_derive::SystemData;
 use specs::prelude::*;
 
-use crate::{
-    components::{blocks_tile::BlocksTile, player::Player, position::Position},
-    resources::map::Map,
-};
+use crate::{components::*, resources::*};
+use rktrl_macros::systemdata;
 
-#[derive(SystemData)]
-pub struct MapIndexingSystemData<'a> {
-    entities: Entities<'a>,
-    position: ReadStorage<'a, Position>,
-    blocks_tile: ReadStorage<'a, BlocksTile>,
-    player: ReadStorage<'a, Player>,
-
-    map: WriteExpect<'a, Map>,
-}
+systemdata!(MapIndexingSystemData(
+    entities,
+    read_storage(Position, BlocksTile, Player),
+    write_expect(Map)
+));
 
 pub struct MapIndexingSystem;
 
@@ -27,9 +20,9 @@ impl<'a> System<'a> for MapIndexingSystem {
 
         for (entity, position, player, blocks) in (
             &data.entities,
-            &data.position,
-            data.player.maybe(),
-            data.blocks_tile.maybe(),
+            &data.positions,
+            data.players.maybe(),
+            data.blocks_tiles.maybe(),
         )
             .join()
         {

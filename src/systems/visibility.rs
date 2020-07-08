@@ -2,18 +2,14 @@ use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
-use crate::{
-    components::{position::Position, viewshed::Viewshed},
-    resources::map::Map,
-};
+use crate::{components::*, resources::*};
+use rktrl_macros::systemdata;
 
-#[derive(SystemData)]
-pub struct VisibilitySystemData<'a> {
-    viewshed: WriteStorage<'a, Viewshed>,
-    position: ReadStorage<'a, Position>,
-
-    map: ReadExpect<'a, Map>,
-}
+systemdata!(VisibilitySystemData(
+    write_storage(Viewshed),
+    read_storage(Position),
+    read_expect(Map)
+));
 
 pub struct VisibilitySystem;
 
@@ -22,7 +18,7 @@ impl<'a> System<'a> for VisibilitySystem {
 
     fn run(&mut self, mut data: Self::SystemData) {
         let map = &*data.map;
-        for (viewshed, pos) in (&mut data.viewshed, &data.position).join() {
+        for (viewshed, pos) in (&mut data.viewsheds, &data.positions).join() {
             if !viewshed.dirty {
                 continue;
             }
