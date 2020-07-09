@@ -29,10 +29,11 @@ where
     }
 
     pub fn add(mut self, item: T, weight: i32) -> RandomTable<T> {
-        assert!(weight > 0);
-        self.entries
-            .push(RandomEntry::new(item, weight + self.total_weight));
-        self.total_weight += weight;
+        if weight > 0 {
+            self.entries
+                .push(RandomEntry::new(item, weight + self.total_weight));
+            self.total_weight += weight;
+        }
         self
     }
 

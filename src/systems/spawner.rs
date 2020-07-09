@@ -150,7 +150,9 @@ impl SpawnerSystem {
             .add(Self::confusion_scroll, 2 + depth)
             .add(Self::confusion_scroll, 4)
             .add(Self::dagger, 3)
-            .add(Self::shield, 3);
+            .add(Self::long_sword, depth - 1)
+            .add(Self::shield, 3)
+            .add(Self::tower_shield, depth - 1);
         let spawnable_count = data.rng.range(-2, 4 + depth);
         for position in self.random_positions_in_room(data, room, spawnable_count) {
             if let Some(spawner) = room_table.roll(&mut data.rng) {
@@ -330,6 +332,25 @@ impl SpawnerSystem {
             .build()
     }
 
+    fn long_sword(data: &mut SpawnerSystemData) -> Entity {
+        data.entities
+            .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
+            .with(
+                Renderable {
+                    glyph: to_cp437('/'),
+                    color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderables,
+            )
+            .with(Name::from("Long Sword".to_string()), &mut data.names)
+            .with(Item, &mut data.items)
+            .with(Equippable::new(EquipmentSlot::Melee), &mut data.equippables)
+            .with(MeleePowerBonus::new(4), &mut data.melee_power_bonuses)
+            .build()
+    }
+
     fn shield(data: &mut SpawnerSystemData) -> Entity {
         data.entities
             .build_entity()
@@ -349,6 +370,28 @@ impl SpawnerSystem {
                 &mut data.equippables,
             )
             .with(DefenseBonus::new(1), &mut data.defense_bonuses)
+            .build()
+    }
+
+    fn tower_shield(data: &mut SpawnerSystemData) -> Entity {
+        data.entities
+            .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
+            .with(
+                Renderable {
+                    glyph: to_cp437('('),
+                    color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderables,
+            )
+            .with(Name::from("Tower Shield".to_string()), &mut data.names)
+            .with(Item, &mut data.items)
+            .with(
+                Equippable::new(EquipmentSlot::Shield),
+                &mut data.equippables,
+            )
+            .with(DefenseBonus::new(3), &mut data.defense_bonuses)
             .build()
     }
 }
