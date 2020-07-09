@@ -62,6 +62,7 @@ pub enum RunState {
     MonsterTurn,
     ShowInventory,
     ShowDropItem,
+    ShowRemoveItem,
     ShowTargeting {
         range: i32,
         item: Entity,
@@ -78,7 +79,9 @@ pub enum RunState {
 impl RunState {
     #[must_use]
     pub fn show_inventory(self) -> bool {
-        self == RunState::ShowDropItem || self == RunState::ShowInventory
+        self == RunState::ShowDropItem
+            || self == RunState::ShowInventory
+            || self == RunState::ShowRemoveItem
     }
 
     pub fn main_menu_item_enabled(&self, item: MainMenuSelection) -> bool {

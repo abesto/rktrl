@@ -3,6 +3,7 @@ pub mod damage_system;
 pub mod death;
 pub mod item_collection;
 pub mod item_drop;
+pub mod item_remove;
 pub mod item_use;
 pub mod map_indexing;
 pub mod mapgen;

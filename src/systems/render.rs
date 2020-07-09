@@ -17,14 +17,15 @@ use rktrl_macros::systemdata;
 systemdata!(RenderSystemData(
     entities,
     read_storage(
+        AreaOfEffect,
+        CombatStats,
+        Equipped,
+        InBackpack,
+        Name,
+        Player,
         Position,
         Renderable,
-        Player,
         Viewshed,
-        CombatStats,
-        Name,
-        InBackpack,
-        AreaOfEffect
     ),
     read(GameLog, RunState),
     read_expect(Layout, Map, Input),
@@ -255,17 +256,26 @@ impl<'a> RenderSystem {
         let title = match *data.run_state {
             RunState::ShowDropItem => "Drop Which Item?",
             RunState::ShowInventory => "Inventory",
+            RunState::ShowRemoveItem => "Remove Which Item?",
             _ => panic!(),
         };
 
         let player_entity = (&data.players, &data.entities).join().next().unwrap().1;
-        let inventory: Vec<(&InBackpack, &Name, Entity)> =
+        let inventory: Vec<(&Name, Entity)> = if *data.run_state == RunState::ShowRemoveItem {
+            (&data.equippeds, &data.names, &data.entities)
+                .join()
+                .filter(|item| item.0.owner == player_entity)
+                .map(|(_, name, entity)| (name, entity))
+                .collect()
+        } else {
             (&data.in_backpacks, &data.names, &data.entities)
                 .join()
                 .filter(|item| item.0.owner == player_entity)
-                .collect();
+                .map(|(_, name, entity)| (name, entity))
+                .collect()
+        };
         let count = inventory.len();
-        let max_len = inventory.iter().map(|x| x.1.len()).max().unwrap_or(0);
+        let max_len = inventory.iter().map(|x| x.0.len()).max().unwrap_or(0);
 
         let inventory_rect = data.layout.inventory(count, max_len);
         draw_batch
@@ -286,7 +296,7 @@ impl<'a> RenderSystem {
 
         if count > 0 {
             let mut text_builder = TextBuilder::empty();
-            for (j, (_, name, _)) in inventory.iter().enumerate() {
+            for (j, (name, _)) in inventory.iter().enumerate() {
                 text_builder
                     .fg(RGB::named(WHITE))
                     .bg(RGB::named(BLACK))
@@ -309,7 +319,7 @@ impl<'a> RenderSystem {
             text_block.render_to_draw_batch(draw_batch);
         }
 
-        let shown_entities: Vec<Entity> = inventory.iter().map(|x| x.2).collect();
+        let shown_entities: Vec<Entity> = inventory.iter().map(|x| x.1).collect();
         *data.shown_inventory = shown_entities.into();
     }
 

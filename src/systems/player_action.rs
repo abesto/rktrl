@@ -9,15 +9,17 @@ systemdata!(PlayerActionSystemData(
     read_storage(Player, Monster),
     write_storage(
         CombatStats,
-        Position,
-        Viewshed,
+        DropIntent,
+        Equipped,
+        InBackpack,
+        Item,
         MeleeIntent,
         PickupIntent,
+        RemoveIntent,
+        Position,
+        Ranged,
         UseIntent,
-        DropIntent,
-        Item,
-        InBackpack,
-        Ranged
+        Viewshed,
     ),
     read(ShownInventory, RunState),
     read_expect(Input),
@@ -33,6 +35,7 @@ enum Action {
     DownStairs,
 
     PickUp,
+    ShowRemoveItem,
     ShowInventory,
     ShowDropItem,
 
@@ -40,6 +43,7 @@ enum Action {
     Use { choice: i32 },
     UseOnTarget { item: Entity, target: Position },
     Drop { choice: i32 },
+    Remove { choice: i32 },
     CancelTargeting,
 
     MainMenuSelect { selection: MainMenuSelection },
@@ -76,20 +80,11 @@ impl<'a> System<'a> for PlayerActionSystem {
                 RunState::PlayerTurn
             }
             Some(Action::ShowInventory) => RunState::ShowInventory,
-            Some(Action::ShowDropItem) => RunState::ShowDropItem,
-            Some(Action::Drop { choice }) => {
-                if Self::try_drop(&mut data, choice).is_some() {
-                    RunState::PlayerTurn
-                } else {
-                    RunState::ShowDropItem
-                }
-            }
             Some(Action::CloseInventory) => {
                 assert!(data.run_state.show_inventory());
                 RunState::AwaitingInput
             }
 
-            Some(Action::CancelTargeting) => RunState::AwaitingInput,
             Some(Action::Use { choice }) => {
                 Self::try_use(&mut data, choice).unwrap_or(RunState::ShowInventory)
             }
@@ -98,6 +93,25 @@ impl<'a> System<'a> for PlayerActionSystem {
                     RunState::PlayerTurn
                 } else {
                     RunState::AwaitingInput
+                }
+            }
+
+            Some(Action::CancelTargeting) => RunState::AwaitingInput,
+            Some(Action::ShowDropItem) => RunState::ShowDropItem,
+            Some(Action::Drop { choice }) => {
+                if Self::try_drop(&mut data, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowDropItem
+                }
+            }
+
+            Some(Action::ShowRemoveItem) => RunState::ShowRemoveItem,
+            Some(Action::Remove { choice }) => {
+                if Self::try_remove(&mut data, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowRemoveItem
                 }
             }
 
@@ -146,6 +160,7 @@ impl PlayerActionSystem {
                 _ => None,
             },
 
+            // TODO factor out "inventory choice" match arm bodies
             RunState::ShowInventory => match input.key? {
                 VirtualKeyCode::Escape => Some(Action::CloseInventory),
                 key => Some(Action::Use {
@@ -158,6 +173,13 @@ impl PlayerActionSystem {
                     choice: letter_to_option(key),
                 }),
             },
+            RunState::ShowRemoveItem => match input.key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Remove {
+                    choice: letter_to_option(key),
+                }),
+            },
+
             RunState::ShowTargeting { item, .. } => {
                 if input.key == Some(VirtualKeyCode::Escape) {
                     Some(Action::CancelTargeting)
@@ -213,6 +235,7 @@ impl PlayerActionSystem {
                 VirtualKeyCode::G => Some(Action::PickUp),
                 VirtualKeyCode::I => Some(Action::ShowInventory),
                 VirtualKeyCode::D => Some(Action::ShowDropItem),
+                VirtualKeyCode::R => Some(Action::ShowRemoveItem),
 
                 // Save and exit to main menu
                 VirtualKeyCode::Escape => Some(Action::SaveGame),
@@ -286,14 +309,33 @@ impl PlayerActionSystem {
         (&data.players, &data.entities).join().next().unwrap().1
     }
 
+    fn choice_to_entity(data: &mut PlayerActionSystemData, choice: i32) -> Option<Entity> {
+        let &item = data.shown_inventory.get(choice as usize)?;
+        Some(item)
+    }
+
     fn choice_to_entity_from_player_backpack(
         data: &mut PlayerActionSystemData,
         choice: i32,
     ) -> Option<Entity> {
-        let player_entity = Self::player_entity(data);
-        let &item = data.shown_inventory.get(choice as usize)?;
-        assert_eq!(data.in_backpacks.get(item)?.owner, player_entity);
-        Some(item)
+        let maybe_item = Self::choice_to_entity(data, choice);
+        if let Some(item) = maybe_item {
+            let player_entity = Self::player_entity(data);
+            assert_eq!(data.in_backpacks.get(item)?.owner, player_entity);
+        }
+        maybe_item
+    }
+
+    fn choice_to_entity_from_player_equipment(
+        data: &mut PlayerActionSystemData,
+        choice: i32,
+    ) -> Option<Entity> {
+        let maybe_item = Self::choice_to_entity(data, choice);
+        if let Some(item) = maybe_item {
+            let player_entity = Self::player_entity(data);
+            assert_eq!(data.equippeds.get(item)?.owner, player_entity);
+        }
+        maybe_item
     }
 
     fn try_use(data: &mut PlayerActionSystemData, choice: i32) -> Option<RunState> {
@@ -344,6 +386,15 @@ impl PlayerActionSystem {
         data.drop_intents
             .insert(player_entity, DropIntent { item })
             .expect("Failed to insert DropIntent");
+        Some(())
+    }
+
+    fn try_remove(data: &mut PlayerActionSystemData, choice: i32) -> Option<()> {
+        let player_entity = Self::player_entity(data);
+        let item = Self::choice_to_entity_from_player_equipment(data, choice)?;
+        data.remove_intents
+            .insert(player_entity, RemoveIntent { item })
+            .expect("Failed to insert RemoveIntent");
         Some(())
     }
 

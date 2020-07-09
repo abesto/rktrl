@@ -18,6 +18,7 @@ use crate::{
         death::DeathSystem,
         item_collection::ItemCollectionSystem,
         item_drop::ItemDropSystem,
+        item_remove::ItemRemoveSystem,
         item_use::ItemUseSystem,
         map_indexing::MapIndexingSystem,
         mapgen::MapgenSystem,
@@ -89,6 +90,7 @@ impl GameState for State {
             RunState::AwaitingInput
             | RunState::ShowInventory
             | RunState::ShowDropItem
+            | RunState::ShowRemoveItem
             | RunState::MainMenu { .. }
             | RunState::ShowTargeting { .. } => {
                 self.dispatchers.player_action.dispatch(&self.world);
@@ -145,6 +147,7 @@ pub fn main() -> BError {
                 .with(ItemCollectionSystem, "item_collection", &["ai"])
                 .with(ItemDropSystem, "item_drop", &["ai"])
                 .with(ItemUseSystem, "item_use", &["ai"])
+                .with(ItemRemoveSystem, "item_remove", &["ai"])
                 .with(MeleeCombatSystem, "melee", &["ai"])
                 .with(DamageSystem, "damage", &["melee"])
                 .with(DeathSystem, "death", &["damage"])
