@@ -42,6 +42,7 @@ impl<'a> System<'a> for RenderSystem {
         draw_batch.cls();
         match *data.run_state {
             RunState::MainMenu { .. } => self.render_main_menu(&mut data, draw_batch),
+            RunState::GameOver => self.render_game_over(&mut data, draw_batch),
             _ => {
                 self.render_map(&mut data, draw_batch);
                 self.render_entities(&mut data, draw_batch);
@@ -409,5 +410,29 @@ impl<'a> RenderSystem {
                 );
             }
         }
+    }
+
+    fn render_game_over(&mut self, _data: &mut RenderSystemData, draw_batch: &mut DrawBatch) {
+        draw_batch.print_color_centered(
+            15,
+            "Your journey has ended!",
+            ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+        );
+        draw_batch.print_color_centered(
+            17,
+            "One day, we'll tell you all about how you did.",
+            ColorPair::new(RGB::named(WHITE), RGB::named(BLACK)),
+        );
+        draw_batch.print_color_centered(
+            18,
+            "That day, sadly, is not in this chapter...",
+            ColorPair::new(RGB::named(WHITE), RGB::named(BLACK)),
+        );
+
+        draw_batch.print_color_centered(
+            20,
+            "Press any key to return to the menu.",
+            ColorPair::new(RGB::named(MAGENTA), RGB::named(BLACK)),
+        );
     }
 }

@@ -7,7 +7,7 @@ systemdata!(DeathSystemData(
     entities,
     read_storage(Player, Name),
     write_storage(CombatStats),
-    write(GameLog),
+    write(RunStateQueue, GameLog, RunState),
 ));
 
 pub struct DeathSystem;
@@ -31,7 +31,7 @@ impl<'a> System<'a> for DeathSystem {
                 data.game_log.entries.push(format!("{} is dead", name));
                 data.entities.delete(entity).unwrap();
             } else {
-                data.game_log.entries.push("You are dead".to_string());
+                data.run_state_queue.push_back(RunState::GameOver);
             }
         }
     }

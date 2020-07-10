@@ -51,6 +51,7 @@ enum Action {
     LoadGame,
     SaveGame,
     Quit,
+    Restart,
 }
 
 impl<'a> System<'a> for PlayerActionSystem {
@@ -125,6 +126,8 @@ impl<'a> System<'a> for PlayerActionSystem {
                 ::std::process::exit(0);
             }
 
+            Some(Action::Restart) => RunState::default(),
+
             None => old_runstate,
         };
 
@@ -159,6 +162,14 @@ impl PlayerActionSystem {
                 },
                 _ => None,
             },
+
+            RunState::GameOver => {
+                if input.key.is_some() {
+                    Some(Action::Restart)
+                } else {
+                    None
+                }
+            }
 
             // TODO factor out "inventory choice" match arm bodies
             RunState::ShowInventory => match input.key? {

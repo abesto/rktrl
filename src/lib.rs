@@ -114,6 +114,10 @@ impl GameState for State {
                 self.dispatchers.load.dispatch(&self.world);
                 Some(RunState::AwaitingInput)
             }
+            RunState::GameOver => {
+                self.dispatchers.player_action.dispatch(&self.world);
+                None
+            }
         };
 
         if let Some(newrunstate) = maybe_newrunstate {
