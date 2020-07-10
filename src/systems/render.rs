@@ -89,12 +89,12 @@ impl<'a> RenderSystem {
         let visible = self.player_visible_tiles(data);
         let revealed = self.player_revealed_tiles(data);
 
-        for position in revealed {
+        for position in &revealed {
             let tile = data.map[&position];
-            let (fg_candidate, c) = match tile {
-                TileType::Floor => (RGB::named(GRAY50), '.'),
-                TileType::Wall => (RGB::named(GREEN), '#'),
-                TileType::DownStairs => (RGB::named(CYAN), '>'),
+            let (fg_candidate, glyph) = match tile {
+                TileType::Floor => (RGB::named(GRAY50), to_cp437('.')),
+                TileType::Wall => (RGB::named(GREEN), data.map.wall_glyph(*position, &revealed)),
+                TileType::DownStairs => (RGB::named(CYAN), to_cp437('>')),
             };
             let bg = RGB::named(BLACK);
             let fg = if visible.contains(&position) {
@@ -102,7 +102,7 @@ impl<'a> RenderSystem {
             } else {
                 fg_candidate.to_greyscale()
             };
-            draw_batch.set(*position, ColorPair::new(fg, bg), to_cp437(c));
+            draw_batch.set(**position, ColorPair::new(fg, bg), glyph);
         }
     }
 
