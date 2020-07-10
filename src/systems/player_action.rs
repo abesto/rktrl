@@ -158,6 +158,7 @@ impl PlayerActionSystem {
                 VirtualKeyCode::Return => match state.main_menu_selection() {
                     MainMenuSelection::NewGame => Some(Action::NewGame),
                     MainMenuSelection::LoadGame => Some(Action::LoadGame),
+                    #[cfg(not(target_arch = "wasm32"))]
                     MainMenuSelection::Quit => Some(Action::Quit),
                 },
                 _ => None,

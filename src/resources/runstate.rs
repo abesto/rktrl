@@ -13,6 +13,7 @@ use crate::systems::saveload::LoadSystem;
 pub enum MainMenuSelection {
     NewGame,
     LoadGame,
+    #[cfg(not(target_arch = "wasm32"))]
     Quit,
 }
 
@@ -48,6 +49,7 @@ impl fmt::Display for MainMenuSelection {
             match self {
                 NewGame => "Begin New Game",
                 LoadGame => "Load Game",
+                #[cfg(not(target_arch = "wasm32"))]
                 Quit => "Quit",
             }
         )
