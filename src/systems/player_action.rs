@@ -40,16 +40,28 @@ enum Action {
     ShowDropItem,
 
     CloseInventory,
-    Use { choice: i32 },
-    UseOnTarget { item: Entity, target: Position },
-    Drop { choice: i32 },
-    Remove { choice: i32 },
+    Use {
+        choice: i32,
+    },
+    UseOnTarget {
+        item: Entity,
+        target: Position,
+    },
+    Drop {
+        choice: i32,
+    },
+    Remove {
+        choice: i32,
+    },
     CancelTargeting,
 
-    MainMenuSelect { selection: MainMenuSelection },
+    MainMenuSelect {
+        selection: MainMenuSelection,
+    },
     NewGame,
     LoadGame,
     SaveGame,
+    #[cfg(not(target_arch = "wasm32"))]
     Quit,
     Restart,
 }
@@ -122,6 +134,7 @@ impl<'a> System<'a> for PlayerActionSystem {
             Some(Action::NewGame) => RunState::PreRun,
             Some(Action::SaveGame) => RunState::SaveGame,
             Some(Action::LoadGame) => RunState::LoadGame,
+            #[cfg(not(target_arch = "wasm32"))]
             Some(Action::Quit) => {
                 ::std::process::exit(0);
             }
