@@ -31,6 +31,7 @@ pub struct Map {
     pub depth: i32,
     tiles: Vec<TileType>,
     blocked: HashSet<Position>,
+    bloodstains: HashSet<Position>,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -46,6 +47,7 @@ impl Map {
             depth,
             tiles: vec![TileType::Wall; (width * height).try_into().unwrap()],
             blocked: HashSet::new(),
+            bloodstains: HashSet::new(),
             tile_content: HashMap::new(),
         }
     }
@@ -185,6 +187,14 @@ impl Map {
             15 => 206, // ╬ Wall on all sides
             _ => 35,   // We missed one?
         }
+    }
+
+    pub fn add_bloodstain(&mut self, position: Position) {
+        self.bloodstains.insert(position);
+    }
+
+    pub fn has_bloodstain(&self, position: Position) -> bool {
+        self.bloodstains.contains(&position)
     }
 }
 

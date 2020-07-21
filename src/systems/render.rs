@@ -96,11 +96,17 @@ impl<'a> RenderSystem {
                 TileType::Wall => (RGB::named(GREEN), data.map.wall_glyph(*position, &revealed)),
                 TileType::DownStairs => (RGB::named(CYAN), to_cp437('>')),
             };
-            let bg = RGB::named(BLACK);
-            let fg = if visible.contains(&position) {
-                fg_candidate
+            let (fg, bg) = if visible.contains(&position) {
+                (
+                    fg_candidate,
+                    if data.map.has_bloodstain(*position) {
+                        RGB::from_f32(0.75, 0., 0.)
+                    } else {
+                        RGB::named(BLACK)
+                    },
+                )
             } else {
-                fg_candidate.to_greyscale()
+                (fg_candidate.to_greyscale(), RGB::named(BLACK))
             };
             draw_batch.set(**position, ColorPair::new(fg, bg), glyph);
         }
