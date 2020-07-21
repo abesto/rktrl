@@ -1,7 +1,7 @@
-use bracket_lib::prelude::field_of_view;
+use bracket_lib::prelude::*;
 use specs::prelude::*;
 
-use crate::{components::*, resources::*};
+use crate::{components::*, resources::*, systems::particle::ParticleRequests};
 use rktrl_macros::systemdata;
 
 systemdata!(ItemUseSystemData(
@@ -28,6 +28,7 @@ systemdata!(ItemUseSystemData(
     ),
     read_expect(Map),
     write_expect(GameLog),
+    write(ParticleRequests)
 ));
 
 pub struct ItemUseSystem;
@@ -66,14 +67,32 @@ impl<'a> System<'a> for ItemUseSystem {
                                 .get_tile_contents(target_position)
                                 .map(|x| x.to_vec())
                                 .unwrap_or_default(),
-                            Some(aoe) => field_of_view(*target_position, aoe.radius, &*data.map)
-                                .iter()
-                                .map(|p| Position::from(*p))
-                                .filter(|p| data.map.contains(*p))
-                                .flat_map(|p| data.map.get_tile_contents(p))
-                                .flatten()
-                                .cloned()
-                                .collect(),
+                            Some(aoe) => {
+                                let positions: Vec<Position> =
+                                    field_of_view(*target_position, aoe.radius, &*data.map)
+                                        .iter()
+                                        .map(|p| Position::from(*p))
+                                        .filter(|p| data.map.contains(*p))
+                                        .collect();
+
+                                for position in &positions {
+                                    data.particle_requests.request(
+                                        position.x,
+                                        position.y,
+                                        RGB::named(ORANGE),
+                                        RGB::named(BLACK),
+                                        to_cp437('░'),
+                                        200.0,
+                                    );
+                                }
+
+                                positions
+                                    .iter()
+                                    .flat_map(|p| data.map.get_tile_contents(*p))
+                                    .flatten()
+                                    .cloned()
+                                    .collect()
+                            }
                         }
                     }
                 }
@@ -89,6 +108,7 @@ impl<'a> System<'a> for ItemUseSystem {
                     let new_hp = i32::min(stats.max_hp, stats.hp + healing.heal_amount);
                     let heal_amount = new_hp - stats.hp;
                     stats.hp = new_hp;
+
                     if player.is_some() {
                         data.game_log.entries.push(format!(
                             "You use the {}, healing {} hp.",
@@ -96,6 +116,18 @@ impl<'a> System<'a> for ItemUseSystem {
                             heal_amount
                         ));
                     }
+
+                    if let Some(pos) = data.positions.get(actor_entity) {
+                        data.particle_requests.request(
+                            pos.x,
+                            pos.y,
+                            RGB::named(GREEN),
+                            RGB::named(BLACK),
+                            to_cp437('♥'),
+                            200.0,
+                        );
+                    }
+
                     true
                 }
             };
@@ -117,12 +149,24 @@ impl<'a> System<'a> for ItemUseSystem {
                                 *target,
                                 damage.damage,
                             );
+
                             if player.is_some() {
                                 let mob_name = data.names.get(*target).unwrap();
                                 data.game_log.entries.push(format!(
                                     "You use {} on {}, inflicting {} hp.",
                                     item_name, mob_name, damage.damage
                                 ));
+                            }
+
+                            if let Some(pos) = data.positions.get(*target) {
+                                data.particle_requests.request(
+                                    pos.x,
+                                    pos.y,
+                                    RGB::named(RED),
+                                    RGB::named(BLACK),
+                                    to_cp437('‼'),
+                                    200.0,
+                                );
                             }
                         }
                         true
@@ -154,6 +198,17 @@ impl<'a> System<'a> for ItemUseSystem {
                                 "You use {} on {}, confusing them for {} turns.",
                                 item_name, target_name, confusion.turns
                             ));
+
+                            if let Some(pos) = data.positions.get(target) {
+                                data.particle_requests.request(
+                                    pos.x,
+                                    pos.y,
+                                    RGB::named(MAGENTA),
+                                    RGB::named(BLACK),
+                                    to_cp437('?'),
+                                    200.0,
+                                );
+                            }
                         }
                         true
                     }

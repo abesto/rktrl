@@ -5,13 +5,7 @@ use bracket_lib::prelude::*;
 use specs::prelude::*;
 
 use crate::{
-    resources::{
-        gamelog::GameLog,
-        input::Input,
-        layout::Layout,
-        map::Map,
-        runstate::{RunState, RunStateQueue},
-    },
+    resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue},
     systems::{
         ai::AISystem,
         damage_system::DamageSystem,
@@ -24,6 +18,7 @@ use crate::{
         mapgen::MapgenSystem,
         melee_combat::MeleeCombatSystem,
         next_level::NextLevelSystem,
+        particle::ParticleSystem,
         player_action::PlayerActionSystem,
         render::RenderSystem,
         saveload::{LoadSystem, SaveSystem},
@@ -70,6 +65,7 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, mut term: &mut BTerm) {
         self.world.insert(Input::from(&*term));
+        self.world.insert(FrameData::from(&*term));
 
         let maybe_new_runstate = self.world.fetch_mut::<RunStateQueue>().pop_front();
         if let Some(new_runstate) = maybe_new_runstate {
@@ -161,11 +157,13 @@ pub fn main() -> BError {
                     &["death", "item_collection"],
                 )
                 .with_barrier()
-                .with(RenderSystem, "render", &[])
+                .with(ParticleSystem, "particles", &[])
+                .with(RenderSystem, "render", &["particles"])
                 .build(),
             player_action: DispatcherBuilder::new()
                 .with(PlayerActionSystem, "player_action", &[])
-                .with(RenderSystem, "render", &["player_action"])
+                .with(ParticleSystem, "particles", &["player_action"])
+                .with(RenderSystem, "render", &["player_action", "particles"])
                 .build(),
             mapgen: DispatcherBuilder::new()
                 .with(NextLevelSystem, "cleanup", &[])

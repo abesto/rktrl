@@ -1,14 +1,22 @@
+use bracket_lib::prelude::*;
 use shred_derive::SystemData;
 use specs::prelude::*;
 
-use crate::{components::*, resources::*};
+use crate::{components::*, resources::*, systems::particle::ParticleRequests};
 use rktrl_macros::systemdata;
 
 systemdata!(MeleeCombatSystemData(
     entities,
     write_storage(MeleeIntent, SufferDamage),
-    read_storage(Name, CombatStats, Equipped, MeleePowerBonus, DefenseBonus),
-    write(GameLog)
+    read_storage(
+        Name,
+        CombatStats,
+        Equipped,
+        MeleePowerBonus,
+        DefenseBonus,
+        Position
+    ),
+    write(GameLog, ParticleRequests)
 ));
 
 pub struct MeleeCombatSystem;
@@ -61,6 +69,17 @@ impl<'a> System<'a> for MeleeCombatSystem {
                             melee_intent.target,
                             damage,
                         );
+                    }
+
+                    if let Some(position) = data.positions.get(melee_intent.target) {
+                        data.particle_requests.request(
+                            position.x,
+                            position.y,
+                            RGB::named(ORANGE),
+                            RGB::named(BLACK),
+                            to_cp437('‼'),
+                            200.0,
+                        )
                     }
                 }
             }

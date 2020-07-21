@@ -1,13 +1,14 @@
-use bracket_lib::prelude::{a_star_search, DistanceAlg};
+use bracket_lib::prelude::*;
 use specs::prelude::*;
 
-use crate::{components::*, resources::*};
+use crate::{components::*, resources::*, systems::particle::ParticleRequests};
 use rktrl_macros::systemdata;
 
 systemdata!(AISystemData(
     entities,
     read_storage(Monster, Player, Name),
     write_storage(Viewshed, Position, MeleeIntent, Confusion),
+    write(ParticleRequests),
     write_expect(GameLog),
     read(RunState),
     read_expect(Map),
@@ -52,6 +53,14 @@ impl<'a> System<'a> for AISystem {
             };
 
             if !can_act {
+                data.particle_requests.request(
+                    pos.x,
+                    pos.y,
+                    RGB::named(MAGENTA),
+                    RGB::named(BLACK),
+                    to_cp437('?'),
+                    200.0,
+                );
                 continue;
             }
 

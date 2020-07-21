@@ -12,6 +12,7 @@ pub enum RenderOrder {
     Items,
     Monsters,
     Player,
+    Particle,
 }
 
 #[derive(Component, Clone, ConvertSaveload)]
