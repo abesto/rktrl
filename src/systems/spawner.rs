@@ -29,6 +29,7 @@ systemdata!(SpawnerSystemData(
         Consumable,
         DefenseBonus,
         Equippable,
+        HungerClock,
         InBackpack,
         InflictsDamage,
         Item,
@@ -38,6 +39,7 @@ systemdata!(SpawnerSystemData(
         Player,
         Position,
         ProvidesHealing,
+        ProvidesFood,
         Ranged,
         Renderable,
         Viewshed,
@@ -117,6 +119,7 @@ impl SpawnerSystem {
                     },
                     &mut data.combat_statses,
                 )
+                .with(HungerClock::default(), &mut data.hunger_clocks)
                 .build();
 
             // Wizard mode!
@@ -127,6 +130,7 @@ impl SpawnerSystem {
                 Self::confusion_scroll(data),
                 Self::dagger(data),
                 Self::shield(data),
+                Self::ration(data),
             ];
             for wizard_item in wizard_items {
                 data.in_backpacks
@@ -152,7 +156,8 @@ impl SpawnerSystem {
             .add(Self::dagger, 3)
             .add(Self::long_sword, depth - 1)
             .add(Self::shield, 3)
-            .add(Self::tower_shield, depth - 1);
+            .add(Self::tower_shield, depth - 1)
+            .add(Self::ration, 10);
         let spawnable_count = data.rng.range(-2, 4 + depth);
         for position in self.random_positions_in_room(data, room, spawnable_count) {
             if let Some(spawner) = room_table.roll(&mut data.rng) {
@@ -392,6 +397,25 @@ impl SpawnerSystem {
                 &mut data.equippables,
             )
             .with(DefenseBonus::new(3), &mut data.defense_bonuses)
+            .build()
+    }
+
+    fn ration(data: &mut SpawnerSystemData) -> Entity {
+        data.entities
+            .build_entity()
+            .marked(&mut data.serialize_me, &mut data.serialize_me_alloc)
+            .with(
+                Renderable {
+                    glyph: to_cp437('%'),
+                    color: ColorPair::new(RGB::named(GREEN), RGB::named(BLACK)),
+                    render_order: RenderOrder::Items,
+                },
+                &mut data.renderables,
+            )
+            .with(Name::from("Rations".to_string()), &mut data.names)
+            .with(Item, &mut data.items)
+            .with(ProvidesFood, &mut data.provides_foods)
+            .with(Consumable, &mut data.consumables)
             .build()
     }
 }

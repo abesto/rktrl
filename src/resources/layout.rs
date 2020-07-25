@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 use std::convert::TryInto;
 
-use bracket_lib::prelude::Rect;
+use bracket_lib::prelude::{Point, Rect};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Layout {
@@ -41,5 +41,9 @@ impl Layout {
             width,
             height,
         )
+    }
+
+    pub fn hunger_status(&self, length: i32) -> Point {
+        Point::new(self.width - length - 1, self.panel().y1 - 1)
     }
 }

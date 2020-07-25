@@ -26,6 +26,7 @@ systemdata!(RenderSystemData(
         Position,
         Renderable,
         Viewshed,
+        HungerClock,
     ),
     read(GameLog, RunState),
     read_expect(Layout, Map, Input),
@@ -179,6 +180,22 @@ impl<'a> RenderSystem {
                     message,
                 );
             });
+
+        // Hunger status
+        if let Some((_, clock)) = (&data.players, &data.hunger_clocks).join().next() {
+            if let Some((fg, text)) = match clock.state {
+                HungerState::WellFed => Some((GREEN, "Well Fed")),
+                HungerState::Normal => None,
+                HungerState::Hungry => Some((ORANGE, "Hungry")),
+                HungerState::Starving => Some((RED, "Starving")),
+            } {
+                draw_batch.print_color(
+                    data.layout.hunger_status(text.len() as i32),
+                    text,
+                    ColorPair::new(RGB::named(fg), RGB::named(BLACK)),
+                );
+            }
+        }
 
         // Draw mouse cursor
         draw_batch.set_bg(data.input.mouse_pos, RGB::named(MAGENTA));

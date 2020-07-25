@@ -16,6 +16,7 @@ systemdata!(ItemUseSystemData(
         Position,
         ProvidesHealing,
         Ranged,
+        ProvidesFood,
     ),
     write_storage(
         CombatStats,
@@ -23,6 +24,7 @@ systemdata!(ItemUseSystemData(
         Consumable,
         Equipped,
         InBackpack,
+        HungerClock,
         SufferDamage,
         UseIntent,
     ),
@@ -262,6 +264,25 @@ impl<'a> System<'a> for ItemUseSystem {
                     true
                 }
             };
+
+            used_item |= match { data.provides_foods.get(to_use.item).cloned() } {
+                None => None,
+                Some(food) => {
+                    let target = targets[0];
+                    if let Some(hc) = data.hunger_clocks.get_mut(target) {
+                        hc.state = HungerState::WellFed;
+                        hc.duration = 20;
+                        data.game_log.entries.push(format!(
+                            "You eat the {}.",
+                            data.names.get(to_use.item).unwrap()
+                        ));
+                        Some(food)
+                    } else {
+                        None
+                    }
+                }
+            }
+            .is_some();
 
             if used_item {
                 if data.consumables.get(to_use.item).is_some() {

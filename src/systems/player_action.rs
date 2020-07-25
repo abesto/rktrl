@@ -6,7 +6,7 @@ use rktrl_macros::systemdata;
 
 systemdata!(PlayerActionSystemData(
     entities,
-    read_storage(Player, Monster),
+    read_storage(Player, Monster, HungerClock),
     write_storage(
         CombatStats,
         DropIntent,
@@ -438,14 +438,24 @@ impl PlayerActionSystem {
 
     fn skip_turn(data: &mut PlayerActionSystemData) {
         let player_entity = Self::player_entity(data);
-        let viewshed = data.viewsheds.get(player_entity).unwrap();
-        // Can heal if there are no visible monsters
-        let can_heal: bool = !viewshed
+
+        let monsters_visible: bool = data
+            .viewsheds
+            .get(player_entity)
+            .unwrap()
             .visible_tiles
             .iter()
             .flat_map(|pos| data.map.get_tile_contents(*pos))
             .flatten()
             .any(|entity| data.monsters.get(*entity).is_some());
+
+        let hungry: bool = match data.hunger_clocks.get(player_entity).unwrap().state {
+            HungerState::Hungry | HungerState::Starving => true,
+            _ => false,
+        };
+
+        let can_heal = !monsters_visible && !hungry;
+
         if can_heal {
             let stats = data.combat_statses.get_mut(player_entity).unwrap();
             stats.hp = i32::min(stats.max_hp, stats.hp + 1);

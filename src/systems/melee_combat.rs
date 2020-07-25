@@ -12,6 +12,7 @@ systemdata!(MeleeCombatSystemData(
         Name,
         CombatStats,
         Equipped,
+        HungerClock,
         MeleePowerBonus,
         DefenseBonus,
         Position
@@ -25,11 +26,12 @@ impl<'a> System<'a> for MeleeCombatSystem {
     type SystemData = MeleeCombatSystemData<'a>;
 
     fn run(&mut self, mut data: Self::SystemData) {
-        for (attacker, melee_intent, name, attacker_stats) in (
+        for (attacker, melee_intent, name, attacker_stats, maybe_attacker_hunger_clock) in (
             &data.entities,
             &data.melee_intents,
             &data.names,
             &data.combat_statses,
+            data.hunger_clocks.maybe(),
         )
             .join()
         {
@@ -38,6 +40,16 @@ impl<'a> System<'a> for MeleeCombatSystem {
                 if target_stats.hp > 0 {
                     let target_name = data.names.get(melee_intent.target).unwrap();
 
+                    let hunger_attack_power_bonus = maybe_attacker_hunger_clock
+                        .map(|clock| {
+                            if clock.state == HungerState::WellFed {
+                                1
+                            } else {
+                                0
+                            }
+                        })
+                        .unwrap_or(0);
+
                     let power: i32 = {
                         (&data.equippeds, &data.melee_power_bonuses)
                             .join()
@@ -45,6 +57,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                             .map(|(_, bonus)| bonus.power)
                             .sum::<i32>()
                             + attacker_stats.power
+                            + hunger_attack_power_bonus
                     };
                     let defense: i32 = {
                         (&data.equippeds, &data.defense_bonuses)

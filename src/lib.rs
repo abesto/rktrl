@@ -10,6 +10,7 @@ use crate::{
         ai::AISystem,
         damage_system::DamageSystem,
         death::DeathSystem,
+        hunger::HungerSystem,
         item_collection::ItemCollectionSystem,
         item_drop::ItemDropSystem,
         item_remove::ItemRemoveSystem,
@@ -149,7 +150,8 @@ pub fn main() -> BError {
                 .with(ItemUseSystem, "item_use", &["ai"])
                 .with(ItemRemoveSystem, "item_remove", &["ai"])
                 .with(MeleeCombatSystem, "melee", &["ai"])
-                .with(DamageSystem, "damage", &["melee"])
+                .with(HungerSystem, "hunger", &["ai", "item_use"])
+                .with(DamageSystem, "damage", &["melee", "hunger"])
                 .with(DeathSystem, "death", &["damage"])
                 .with(
                     MapIndexingSystem,
