@@ -1,12 +1,6 @@
-use serde::{Deserialize, Serialize};
-use specs::{
-    error::NoError,
-    prelude::*,
-    saveload::{ConvertSaveload, Marker},
-};
-use specs_derive::{Component, ConvertSaveload};
+use legion::Entity;
 
-#[derive(PartialEq, Component, Debug, Clone, ConvertSaveload)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct InBackpack {
     pub owner: Entity,
 }

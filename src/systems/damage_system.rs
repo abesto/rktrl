@@ -1,32 +1,21 @@
-use specs::prelude::*;
+use legion::{system, systems::CommandBuffer, Entity};
 
 use crate::components::*;
 use crate::resources::*;
-use rktrl_macros::systemdata;
 
-systemdata!(DamageSystemData(
-    write_storage(CombatStats, SufferDamage),
-    read_storage(Position),
-    write_expect(Map)
-));
-
-pub struct DamageSystem;
-
-impl<'a> System<'a> for DamageSystem {
-    type SystemData = DamageSystemData<'a>;
-
-    fn run(&mut self, mut data: Self::SystemData) {
-        for (mut stats, damage, position) in (
-            &mut data.combat_statses,
-            &data.suffer_damages,
-            &data.positions,
-        )
-            .join()
-        {
-            stats.hp -= damage.amount.iter().sum::<i32>();
-            data.map.add_bloodstain(*position);
-        }
-
-        data.suffer_damages.clear();
-    }
+#[system(for_each)]
+pub fn damage(
+    entity: &Entity,
+    stats: &mut CombatStats,
+    damage: &SufferDamage,
+    position: &Position,
+    #[resource] map: &mut Map,
+    commands: &mut CommandBuffer,
+) {
+    stats.hp -= damage.amount.iter().sum::<i32>();
+    map.add_bloodstain(*position);
+    // TODO maybe there's a more efficient way of flushing all components of a type
+    //      or maybe a component is not the right way to model this
+    //      (but instead some signal / queue or w/e)
+    commands.remove_component::<SufferDamage>(*entity);
 }

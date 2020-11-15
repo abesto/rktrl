@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 use std::fmt;
 
+use legion::Entity;
 use macro_attr::*;
 use newtype_derive::*;
-use specs::prelude::Entity;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use crate::systems::saveload::LoadSystem;
+//use crate::systems::saveload::LoadSystem;
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter)]
 pub enum MainMenuSelection {
@@ -144,7 +144,7 @@ impl RunState {
 
 impl Default for RunState {
     fn default() -> Self {
-        let savegame_exists = LoadSystem::savegame_exists();
+        let savegame_exists = false; //LoadSystem::savegame_exists();
         RunState::MainMenu {
             selection: if savegame_exists {
                 MainMenuSelection::LoadGame

@@ -1,6 +1,6 @@
+use legion::Entity;
 use macro_attr::*;
 use newtype_derive::*;
-use specs::prelude::*;
 
 macro_attr! {
     #[derive(Clone, PartialEq, Eq, Hash,

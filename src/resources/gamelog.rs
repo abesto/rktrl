@@ -1,10 +1,4 @@
-use serde::{Deserialize, Serialize};
-use specs::error::NoError;
-use specs::prelude::*;
-use specs::saveload::{ConvertSaveload, Marker};
-use specs_derive::ConvertSaveload;
-
-#[derive(Clone, ConvertSaveload)]
+#[derive(Clone)]
 pub struct GameLog {
     pub entries: Vec<String>,
 }
@@ -12,5 +6,11 @@ pub struct GameLog {
 impl Default for GameLog {
     fn default() -> Self {
         GameLog { entries: vec![] }
+    }
+}
+
+impl GameLog {
+    pub fn push<S: ToString>(&mut self, msg: S) {
+        self.entries.push(msg.to_string());
     }
 }

@@ -7,9 +7,9 @@ use std::{
 };
 
 use bracket_lib::prelude::*;
+use legion::Entity;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
-use specs::prelude::Entity;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -61,7 +61,7 @@ impl Map {
     }
 
     fn static_pos_idx(width: i32, pos: Position) -> usize {
-        Map::static_xy_idx(width, pos.x.try_into().unwrap(), pos.y.try_into().unwrap())
+        Map::static_xy_idx(width, pos.x, pos.y)
     }
 
     pub fn pos_idx(&self, pos: Position) -> usize {

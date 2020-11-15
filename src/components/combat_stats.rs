@@ -1,12 +1,4 @@
-use serde::{Deserialize, Serialize};
-use specs::{
-    error::NoError,
-    prelude::*,
-    saveload::{ConvertSaveload, Marker},
-};
-use specs_derive::{Component, ConvertSaveload};
-
-#[derive(Component, Debug, ConvertSaveload)]
+#[derive(Debug, Clone)]
 pub struct CombatStats {
     pub max_hp: i32,
     pub hp: i32,
@@ -14,7 +6,15 @@ pub struct CombatStats {
     pub power: i32,
 }
 
-#[derive(Component, ConvertSaveload, Clone)]
+impl CombatStats {
+    pub fn with_hp(&self, new_hp: i32) -> CombatStats {
+        let mut new = self.clone();
+        new.hp = new_hp;
+        new
+    }
+}
+
+#[derive(Clone)]
 pub struct MeleePowerBonus {
     pub power: i32,
 }
@@ -26,7 +26,7 @@ impl MeleePowerBonus {
     }
 }
 
-#[derive(Component, ConvertSaveload, Clone)]
+#[derive(Clone)]
 pub struct DefenseBonus {
     pub defense: i32,
 }

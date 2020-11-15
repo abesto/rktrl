@@ -1,36 +1,29 @@
 use serde::{Deserialize, Serialize};
-use specs::{
-    error::NoError,
-    prelude::*,
-    saveload::{ConvertSaveload, Marker},
-};
-use specs_derive::{Component, ConvertSaveload};
 
-#[derive(Default, Clone, Component, Debug, Serialize, Deserialize)]
-#[storage(NullStorage)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct Consumable;
 
-#[derive(Component, Clone, Debug, ConvertSaveload)]
+#[derive(Clone, Debug)]
 pub struct ProvidesHealing {
     pub heal_amount: i32,
 }
 
-#[derive(Clone, Copy, Component, Debug, ConvertSaveload)]
+#[derive(Clone, Copy, Debug)]
 pub struct Ranged {
     pub range: i32,
 }
 
-#[derive(Component, Clone, Debug, ConvertSaveload)]
+#[derive(Clone, Debug)]
 pub struct InflictsDamage {
     pub damage: i32,
 }
 
-#[derive(Component, Clone, Debug, ConvertSaveload)]
+#[derive(Clone, Debug)]
 pub struct AreaOfEffect {
     pub radius: i32,
 }
 
-#[derive(Clone, Copy, Component, Debug, ConvertSaveload)]
+#[derive(Clone, Copy, Debug)]
 pub struct Confusion {
     pub turns: i32,
 }

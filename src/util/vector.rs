@@ -24,8 +24,8 @@ impl Vector {
     #[inline]
     #[must_use]
     pub fn new<T>(x: T, y: T) -> Vector
-        where
-            T: TryInto<i32>,
+    where
+        T: TryInto<i32>,
     {
         Point::new(x, y).into()
     }

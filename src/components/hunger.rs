@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
-use specs::prelude::*;
-use specs_derive::Component;
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Debug)]
 pub enum HungerState {
@@ -10,7 +8,7 @@ pub enum HungerState {
     Starving,
 }
 
-#[derive(Component, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HungerClock {
     pub state: HungerState,
     pub duration: i32,
@@ -29,5 +27,5 @@ impl Default for HungerClock {
     }
 }
 
-#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProvidesFood;

@@ -2,31 +2,33 @@ use core::convert::TryInto;
 use std::panic;
 
 use bracket_lib::prelude::*;
-use specs::prelude::*;
+use legion::{Resources, Schedule, World};
 
+use crate::systems::spawner::SpawnerSystemState;
 use crate::{
-    resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue},
+    resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
-        ai::AISystem,
-        damage_system::DamageSystem,
-        death::DeathSystem,
-        hunger::HungerSystem,
-        item_collection::ItemCollectionSystem,
-        item_drop::ItemDropSystem,
-        item_remove::ItemRemoveSystem,
-        item_use::ItemUseSystem,
-        map_indexing::MapIndexingSystem,
-        mapgen::MapgenSystem,
-        melee_combat::MeleeCombatSystem,
-        next_level::NextLevelSystem,
-        particle::ParticleSystem,
-        player_action::PlayerActionSystem,
-        render::RenderSystem,
-        saveload::{LoadSystem, SaveSystem},
-        spawner::SpawnerSystem,
-        visibility::VisibilitySystem,
+        ai::ai_system,
+        damage_system::damage_system,
+        death::death_system,
+        hunger::hunger_system,
+        item_collection::item_collection_system,
+        item_drop::item_drop_system,
+        item_remove::item_remove_system,
+        item_use::item_use_system,
+        map_indexing::map_indexing_system,
+        mapgen::mapgen_system,
+        melee_combat::melee_combat_system,
+        next_level::next_level_system,
+        particle::{particle_system, ParticleRequests},
+        player_action::player_action_system,
+        render::render_system,
+        //saveload::{LoadSystem, SaveSystem},
+        spawner::spawner_system,
+        visibility::visibility_system,
     },
 };
+use wasm_bindgen::__rt::std::collections::HashMap;
 
 bracket_terminal::add_wasm_support!();
 
@@ -35,53 +37,73 @@ mod resources;
 mod systems;
 mod util;
 
-struct Dispatchers {
-    main: Dispatcher<'static, 'static>,
-    player_action: Dispatcher<'static, 'static>,
-    mapgen: Dispatcher<'static, 'static>,
-    save: Dispatcher<'static, 'static>,
-    load: Dispatcher<'static, 'static>,
+#[derive(Eq, PartialEq, Hash, Clone)]
+enum ScheduleType {
+    Main,
+    PlayerAction,
+    Mapgen,
+    Save,
+    Load,
 }
+
+type Schedules = HashMap<ScheduleType, Schedule>;
 
 struct State {
     world: World,
-    dispatchers: Dispatchers,
+    resources: Resources,
+    schedules: Schedules,
 }
 
 impl State {
     fn reset(&mut self) {
-        // Probably this would be cleaner as a system, but whatevs
-        self.world.delete_all();
-        self.world.fetch_mut::<GameLog>().entries.clear();
-        self.world.insert({
-            let map_rect = self.world.fetch::<Layout>().map();
+        // Probably this would be cleaner as a system, but whatever
+        self.world.clear();
+        // TODO verify: probably don't need this as we create a new GameLog below
+        self.resources
+            .get_mut_or_default::<GameLog>()
+            .entries
+            .clear();
+        self.resources.insert({
+            let map_rect = self.resources.get::<Layout>().unwrap().map();
             Map::new(map_rect.width(), map_rect.height(), 1)
         });
-        self.world.insert(GameLog {
+        self.resources.insert(GameLog {
             entries: vec!["Welcome to Rusty Roguelike".to_string()],
         });
+        self.resources.insert(ShownInventory::default());
+        self.resources.insert(ParticleRequests::default());
+    }
+
+    fn execute(&mut self, schedule_type: ScheduleType) {
+        self.schedules
+            .get_mut(&schedule_type)
+            .unwrap()
+            .execute(&mut self.world, &mut self.resources);
     }
 }
 
 impl GameState for State {
     fn tick(&mut self, mut term: &mut BTerm) {
-        self.world.insert(Input::from(&*term));
-        self.world.insert(FrameData::from(&*term));
+        self.resources.insert(Input::from(&*term));
+        self.resources.insert(FrameData::from(&*term));
 
-        let maybe_new_runstate = self.world.fetch_mut::<RunStateQueue>().pop_front();
+        let maybe_new_runstate = self
+            .resources
+            .get_mut_or_default::<RunStateQueue>()
+            .pop_front();
         if let Some(new_runstate) = maybe_new_runstate {
-            self.world.insert(new_runstate);
+            self.resources.insert(new_runstate);
         }
 
-        let runstate = *self.world.fetch::<RunState>();
+        let runstate = *self.resources.get_or_default::<RunState>();
         let maybe_newrunstate = match runstate {
             RunState::PreRun => {
                 self.reset();
-                self.dispatchers.mapgen.dispatch(&self.world);
+                self.execute(ScheduleType::Mapgen);
                 Some(RunState::AwaitingInput)
             }
             RunState::NextLevel => {
-                self.dispatchers.mapgen.dispatch(&self.world);
+                self.execute(ScheduleType::Mapgen);
                 Some(RunState::AwaitingInput)
             }
             RunState::AwaitingInput
@@ -90,39 +112,38 @@ impl GameState for State {
             | RunState::ShowRemoveItem
             | RunState::MainMenu { .. }
             | RunState::ShowTargeting { .. } => {
-                self.dispatchers.player_action.dispatch(&self.world);
+                self.execute(ScheduleType::PlayerAction);
                 None
             }
             RunState::PlayerTurn => {
-                self.dispatchers.main.dispatch(&self.world);
+                self.execute(ScheduleType::Main);
                 Some(RunState::MonsterTurn)
             }
             RunState::MonsterTurn => {
-                self.dispatchers.main.dispatch(&self.world);
+                self.execute(ScheduleType::Main);
                 Some(RunState::AwaitingInput)
             }
             RunState::SaveGame => {
-                SaveSystem::prepare(&mut self.world);
-                self.dispatchers.save.dispatch(&self.world);
+                //SaveSystem::prepare(&mut self.world);
+                self.execute(ScheduleType::Save);
                 Some(RunState::default())
             }
             RunState::LoadGame => {
                 self.reset();
-                self.dispatchers.load.dispatch(&self.world);
+                self.execute(ScheduleType::Load);
                 Some(RunState::AwaitingInput)
             }
             RunState::GameOver => {
-                self.dispatchers.player_action.dispatch(&self.world);
+                self.execute(ScheduleType::PlayerAction);
                 None
             }
         };
 
         if let Some(newrunstate) = maybe_newrunstate {
-            self.world.insert(newrunstate);
+            self.resources.insert(newrunstate);
         }
 
         render_draw_buffer(&mut term).unwrap();
-        self.world.maintain();
     }
 }
 
@@ -138,56 +159,75 @@ pub fn main() -> BError {
         term
     };
 
-    // Initialize specs
-    let mut gs = State {
-        world: World::new(),
-        dispatchers: Dispatchers {
-            main: DispatcherBuilder::new()
-                .with(AISystem, "ai", &[])
-                .with(VisibilitySystem, "visibility", &["ai"])
-                .with(ItemCollectionSystem, "item_collection", &["ai"])
-                .with(ItemDropSystem, "item_drop", &["ai"])
-                .with(ItemUseSystem, "item_use", &["ai"])
-                .with(ItemRemoveSystem, "item_remove", &["ai"])
-                .with(MeleeCombatSystem, "melee", &["ai"])
-                .with(HungerSystem, "hunger", &["ai", "item_use"])
-                .with(DamageSystem, "damage", &["melee", "hunger"])
-                .with(DeathSystem, "death", &["damage"])
-                .with(
-                    MapIndexingSystem,
-                    "map_indexing",
-                    &["death", "item_collection"],
-                )
-                .with_barrier()
-                .with(ParticleSystem, "particles", &[])
-                .with(RenderSystem, "render", &["particles"])
-                .build(),
-            player_action: DispatcherBuilder::new()
-                .with(PlayerActionSystem, "player_action", &[])
-                .with(ParticleSystem, "particles", &["player_action"])
-                .with(RenderSystem, "render", &["player_action", "particles"])
-                .build(),
-            mapgen: DispatcherBuilder::new()
-                .with(NextLevelSystem, "cleanup", &[])
-                .with(MapgenSystem, "mapgen", &[])
-                .with(SpawnerSystem::default(), "spawner", &["mapgen", "cleanup"])
-                .with(VisibilitySystem, "visibility", &["spawner"])
-                .build(),
-            save: DispatcherBuilder::new()
-                .with(SaveSystem, "save", &[])
-                .build(),
-            load: DispatcherBuilder::new()
-                .with(LoadSystem, "load", &[])
-                .with(MapIndexingSystem, "map_indexing", &["load"])
-                .build(),
-        },
-    };
+    // Initialize Legion ECS
 
-    gs.dispatchers.main.setup(&mut gs.world);
-    gs.dispatchers.player_action.setup(&mut gs.world);
-    gs.dispatchers.mapgen.setup(&mut gs.world);
-    gs.dispatchers.save.setup(&mut gs.world);
-    gs.dispatchers.load.setup(&mut gs.world);
+    let mut resources = Resources::default();
+    let mut schedules = HashMap::new();
+    schedules.insert(
+        ScheduleType::Main,
+        Schedule::builder()
+            .add_system(ai_system())
+            .flush()
+            .add_system(visibility_system())
+            .add_system(item_collection_system())
+            .add_system(item_drop_system())
+            .add_system(item_use_system())
+            .add_system(item_remove_system())
+            .add_system(melee_combat_system())
+            .flush()
+            .add_system(hunger_system())
+            .flush()
+            .add_system(damage_system())
+            .flush()
+            .add_system(death_system())
+            .flush()
+            .add_system(map_indexing_system())
+            .add_system(particle_system())
+            .flush()
+            .add_system(render_system())
+            .build(),
+    );
+    schedules.insert(
+        ScheduleType::PlayerAction,
+        Schedule::builder()
+            .add_system(player_action_system())
+            .flush()
+            .add_system(particle_system())
+            .flush()
+            .add_system(render_system())
+            .build(),
+    );
+    schedules.insert(
+        ScheduleType::Mapgen,
+        Schedule::builder()
+            .add_system(next_level_system())
+            .add_system(mapgen_system())
+            .flush()
+            .add_system(spawner_system(SpawnerSystemState::new(&mut resources)))
+            .flush()
+            .add_system(visibility_system())
+            .add_system(map_indexing_system())
+            .build(),
+    );
+    schedules.insert(
+        ScheduleType::Save,
+        Schedule::builder()
+            //.add_system(save_system())
+            .build(),
+    );
+    schedules.insert(
+        ScheduleType::Load,
+        Schedule::builder()
+            //.add_system(load_system())
+            .flush()
+            .add_system(map_indexing_system())
+            .build(),
+    );
+    let mut gs = State {
+        world: World::default(),
+        resources,
+        schedules,
+    };
 
     // Create UI layout
     let layout = {
@@ -198,13 +238,12 @@ pub fn main() -> BError {
             panel_height: 7,
         }
     };
-    gs.world.insert(layout);
+    gs.resources.insert(layout);
 
     // Invoke RNG
-    gs.world.insert(RandomNumberGenerator::new());
+    gs.resources.insert(RandomNumberGenerator::new());
 
     // And go!
     gs.reset();
-    gs.world.maintain();
     main_loop(term, gs)
 }

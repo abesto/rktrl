@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-use specs::{Component, NullStorage};
-use specs_derive::Component;
 
-#[derive(PartialEq, Default, Component, Debug, Clone, Serialize, Deserialize)]
-#[storage(NullStorage)]
+#[derive(PartialEq, Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Item;

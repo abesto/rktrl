@@ -1,18 +1,13 @@
+use legion::Entity;
 use serde::{Deserialize, Serialize};
-use specs::{
-    error::NoError,
-    prelude::*,
-    saveload::{ConvertSaveload, Marker},
-};
-use specs_derive::{Component, ConvertSaveload};
 
-#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize, Debug)]
 pub enum EquipmentSlot {
     Melee,
     Shield,
 }
 
-#[derive(Component, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Equippable {
     pub slot: EquipmentSlot,
 }
@@ -24,7 +19,7 @@ impl Equippable {
     }
 }
 
-#[derive(Component, ConvertSaveload, Clone)]
+#[derive(Clone)]
 pub struct Equipped {
     pub owner: Entity,
     pub slot: EquipmentSlot,

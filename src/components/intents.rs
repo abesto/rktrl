@@ -1,14 +1,12 @@
-use specs::prelude::*;
-use specs_derive::Component;
-
 use crate::components::position::Position;
+use legion::Entity;
 
-#[derive(Component, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct MeleeIntent {
     pub target: Entity,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct PickupIntent {
     pub item: Entity,
 }
@@ -19,18 +17,18 @@ pub enum UseTarget {
     Position(Position),
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct UseIntent {
     pub item: Entity,
     pub target: UseTarget,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DropIntent {
     pub item: Entity,
 }
 
-#[derive(Component, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct RemoveIntent {
     pub item: Entity,
 }

@@ -1,7 +1,4 @@
-use specs::prelude::*;
-use specs_derive::Component;
-
-#[derive(Component, Clone)]
+#[derive(Clone)]
 pub struct ParticleLifetime {
     lifetime_ms: f32,
 }

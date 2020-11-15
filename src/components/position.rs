@@ -7,14 +7,12 @@ use newtype_derive::*;
 use rand::distributions::uniform::{SampleBorrow, SampleUniform, UniformSampler};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use specs::prelude::*;
-use specs_derive::Component;
 
 use crate::util::vector::Vector;
 
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
-             Component, Serialize, Deserialize,
+             Serialize, Deserialize,
              NewtypeDebug!, NewtypeDeref!, NewtypeFrom!)]
     pub struct Position(Point);
 }
@@ -22,8 +20,8 @@ macro_attr! {
 impl Position {
     #[must_use]
     pub fn new<T>(x: T, y: T) -> Position
-        where
-            T: TryInto<i32>,
+    where
+        T: TryInto<i32>,
     {
         Point::new(x, y).into()
     }
@@ -52,9 +50,9 @@ impl UniformSampler for PositionSampler {
     type X = Position;
 
     fn new<B1, B2>(low: B1, high: B2) -> Self
-        where
-            B1: SampleBorrow<Self::X> + Sized,
-            B2: SampleBorrow<Self::X> + Sized,
+    where
+        B1: SampleBorrow<Self::X> + Sized,
+        B2: SampleBorrow<Self::X> + Sized,
     {
         let lo = low.borrow();
         let hi = high.borrow();
@@ -64,9 +62,9 @@ impl UniformSampler for PositionSampler {
     }
 
     fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
-        where
-            B1: SampleBorrow<Self::X> + Sized,
-            B2: SampleBorrow<Self::X> + Sized,
+    where
+        B1: SampleBorrow<Self::X> + Sized,
+        B2: SampleBorrow<Self::X> + Sized,
     {
         let lo = low.borrow();
         let hi = high.borrow();

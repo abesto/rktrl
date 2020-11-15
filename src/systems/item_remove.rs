@@ -1,32 +1,30 @@
-use specs::prelude::*;
-
 use crate::{components::*, resources::*};
-use rktrl_macros::systemdata;
+use legion::{
+    system,
+    systems::CommandBuffer,
+    world::{EntityStore, SubWorld},
+    Entity,
+};
 
-systemdata!(ItemRemoveSystemData(
-    entities,
-    write_storage(RemoveIntent, Equipped, InBackpack),
-    read_storage(Name),
-    write_expect(GameLog)
-));
+#[system(for_each)]
+#[read_component(Name)]
+pub fn item_remove(
+    actor: &Entity,
+    to_remove: &RemoveIntent,
+    #[resource] game_log: &mut GameLog,
+    commands: &mut CommandBuffer,
+    world: &SubWorld,
+) {
+    commands.remove_component::<Equipped>(to_remove.item);
+    commands.add_component(to_remove.item, InBackpack { owner: *actor });
+    game_log.entries.push(format!(
+        "You unequip {}.",
+        world
+            .entry_ref(to_remove.item)
+            .unwrap()
+            .get_component::<Name>()
+            .unwrap()
+    ));
 
-pub struct ItemRemoveSystem;
-
-impl<'a> System<'a> for ItemRemoveSystem {
-    type SystemData = ItemRemoveSystemData<'a>;
-
-    fn run(&mut self, mut data: Self::SystemData) {
-        for (entity, to_remove) in (&data.entities, &data.remove_intents).join() {
-            data.equippeds.remove(to_remove.item);
-            data.in_backpacks
-                .insert(to_remove.item, InBackpack { owner: entity })
-                .expect("Unable to insert backpack");
-            data.game_log.entries.push(format!(
-                "You unequip {}.",
-                data.names.get(to_remove.item).unwrap()
-            ));
-        }
-
-        data.remove_intents.clear();
-    }
+    commands.remove_component::<RemoveIntent>(*actor);
 }

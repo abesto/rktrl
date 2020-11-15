@@ -1,11 +1,5 @@
 use bracket_lib::prelude::*;
 use serde::{Deserialize, Serialize};
-use specs::{
-    error::NoError,
-    prelude::*,
-    saveload::{ConvertSaveload, Marker},
-};
-use specs_derive::{Component, ConvertSaveload};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
 pub enum RenderOrder {
@@ -15,7 +9,7 @@ pub enum RenderOrder {
     Particle,
 }
 
-#[derive(Component, Clone, ConvertSaveload)]
+#[derive(Clone)]
 pub struct Renderable {
     pub color: ColorPair,
     pub glyph: u16,
