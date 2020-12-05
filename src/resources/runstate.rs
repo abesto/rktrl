@@ -98,8 +98,8 @@ impl RunState {
     }
 
     fn main_menu_next_enabled<F>(&self, next_fn: F) -> MainMenuSelection
-    where
-        F: Fn(MainMenuSelection) -> MainMenuSelection,
+        where
+            F: Fn(MainMenuSelection) -> MainMenuSelection,
     {
         match self {
             RunState::MainMenu { selection, .. } => {

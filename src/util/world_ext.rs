@@ -1,5 +1,6 @@
+use legion::{component, Entity, EntityStore, IntoQuery, storage::Component, world::SubWorld};
+
 use crate::components::Player;
-use legion::{component, storage::Component, world::SubWorld, Entity, EntityStore, IntoQuery};
 
 pub trait WorldExt {
     fn has_component<T: Component>(&self, entity: Entity) -> bool;
@@ -27,7 +28,7 @@ impl<'a> WorldExt for SubWorld<'a> {
     }
 
     fn player_entity(&self) -> &Entity {
-        let entities: Vec<_> = <(Entity,)>::query()
+        let entities: Vec<_> = <(Entity, )>::query()
             .filter(component::<Player>())
             .iter(self)
             .collect();

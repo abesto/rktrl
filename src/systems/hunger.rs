@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, Entity};
+use legion::{Entity, system, systems::CommandBuffer};
 
 use crate::{components::*, resources::*};
 

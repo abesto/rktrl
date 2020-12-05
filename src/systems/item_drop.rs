@@ -1,8 +1,8 @@
 use legion::{
+    Entity,
     system,
     systems::CommandBuffer,
     world::{EntityStore, SubWorld},
-    Entity,
 };
 
 use crate::{components::*, resources::*};

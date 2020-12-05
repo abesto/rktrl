@@ -1,6 +1,6 @@
 use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
 use legion::{
-    component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, IntoQuery,
+    component, Entity, EntityStore, IntoQuery, system, systems::CommandBuffer, world::SubWorld,
 };
 
 use crate::{

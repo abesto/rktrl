@@ -25,8 +25,8 @@ impl Layout {
     }
 
     pub fn inventory<T>(&self, item_count: T, max_item_len: T) -> Rect
-    where
-        T: TryInto<i32>,
+        where
+            T: TryInto<i32>,
     {
         let item_count_i32: i32 = item_count.try_into().ok().unwrap();
         let max_item_len_i32: i32 = max_item_len.try_into().ok().unwrap();

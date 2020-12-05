@@ -18,8 +18,8 @@ pub struct RandomTable<T> {
 }
 
 impl<T> RandomTable<T>
-where
-    T: Copy,
+    where
+        T: Copy,
 {
     pub fn new() -> RandomTable<T> {
         RandomTable {

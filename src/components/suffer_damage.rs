@@ -1,4 +1,4 @@
-use legion::{systems::CommandBuffer, Entity};
+use legion::{Entity, systems::CommandBuffer};
 use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;

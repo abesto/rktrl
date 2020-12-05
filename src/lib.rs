@@ -3,6 +3,7 @@ use std::panic;
 
 use bracket_lib::prelude::*;
 use legion::{Resources, Schedule, World};
+use wasm_bindgen::__rt::std::collections::HashMap;
 
 use crate::systems::spawner::SpawnerSystemState;
 use crate::{
@@ -29,7 +30,6 @@ use crate::{
     },
     util::saveload,
 };
-use wasm_bindgen::__rt::std::collections::HashMap;
 
 bracket_terminal::add_wasm_support!();
 

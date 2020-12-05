@@ -1,10 +1,11 @@
-use crate::{components::*, resources::*};
 use legion::{
+    Entity,
     system,
     systems::CommandBuffer,
     world::{EntityStore, SubWorld},
-    Entity,
 };
+
+use crate::{components::*, resources::*};
 
 #[system(for_each)]
 #[read_component(Name)]

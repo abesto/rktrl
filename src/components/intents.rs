@@ -1,9 +1,9 @@
-use crate::components::position::Position;
 use legion::Entity;
-
 use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
+
+use crate::components::position::Position;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypeUuid)]
 #[uuid = "2730588d-3760-484c-8f0c-1ac4f5428006"]

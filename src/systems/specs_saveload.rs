@@ -1,19 +1,18 @@
+use rktrl_macros::saveload_system_data;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use specs::error::NoError;
+use specs::prelude::{*, Write as SpecsWrite};
+use specs::saveload::{
+    ConvertSaveload, DeserializeComponents, MarkedBuilder, Marker, SerializeComponents,
+    SimpleMarker, SimpleMarkerAllocator,
+};
+use specs_derive::{Component, ConvertSaveload};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
 #[cfg(target_arch = "wasm32")]
 use std::io::{Cursor, Error, ErrorKind, Read, Result as IOResult, Write};
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Write};
-
-use rktrl_macros::saveload_system_data;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use specs::error::NoError;
-use specs::prelude::{Write as SpecsWrite, *};
-use specs::saveload::{
-    ConvertSaveload, DeserializeComponents, MarkedBuilder, Marker, SerializeComponents,
-    SimpleMarker, SimpleMarkerAllocator,
-};
-use specs_derive::{Component, ConvertSaveload};
 
 use crate::{components::*, resources::*};
 
@@ -128,7 +127,7 @@ impl<'a> System<'a> for SaveSystem {
 
     fn run(&mut self, data: Self::SystemData) {
         let serialization_helper = &(data.components.0).0;
-        assert_eq!((serialization_helper,).join().count(), 1);
+        assert_eq!((serialization_helper, ).join().count(), 1);
 
         let mut writer = Self::writer();
         let encoder = flate2::write::GzEncoder::new(&mut writer, flate2::Compression::fast());
@@ -202,8 +201,8 @@ impl<'a> System<'a> for LoadSystem {
 
         // Load resources from the serialization helper
         let serialization_helper = &(data.components.0).0;
-        assert_eq!((serialization_helper,).join().count(), 1);
-        let resources: &SerializationHelper = (serialization_helper,).join().next().unwrap().0;
+        assert_eq!((serialization_helper, ).join().count(), 1);
+        let resources: &SerializationHelper = (serialization_helper, ).join().next().unwrap().0;
         *data.map = resources.map.clone();
         *data.game_log = resources.game_log.clone();
 

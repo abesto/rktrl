@@ -1,4 +1,4 @@
-use legion::{system, world::SubWorld, Entity, IntoQuery};
+use legion::{Entity, IntoQuery, system, world::SubWorld};
 
 use crate::{components::*, resources::*};
 

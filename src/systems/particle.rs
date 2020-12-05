@@ -1,5 +1,5 @@
 use bracket_lib::prelude::*;
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery};
+use legion::{Entity, IntoQuery, system, systems::CommandBuffer, world::SubWorld};
 
 use crate::{components::*, resources::*};
 

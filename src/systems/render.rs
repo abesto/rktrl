@@ -3,15 +3,15 @@ use std::convert::TryFrom;
 use std::convert::TryInto;
 
 use bracket_lib::prelude::*;
-use legion::{component, system, world::SubWorld, Entity, EntityStore, IntoQuery};
+use legion::{component, Entity, EntityStore, IntoQuery, system, world::SubWorld};
 use strum::IntoEnumIterator;
 
-use crate::util::world_ext::WorldExt;
 use crate::{
     components::*,
-    resources::{Input, *},
+    resources::{*, Input},
     util::{rect_ext::RectExt, vector::Vector},
 };
+use crate::util::world_ext::WorldExt;
 
 #[system]
 #[read_component(Entity)]
@@ -52,18 +52,18 @@ pub fn render(
 }
 
 fn player_visible_tiles(world: &SubWorld) -> HashSet<Position> {
-    <(&Viewshed,)>::query()
+    <(&Viewshed, )>::query()
         .filter(component::<Player>())
         .iter(world)
-        .flat_map(|(viewshed,)| viewshed.visible_tiles.clone())
+        .flat_map(|(viewshed, )| viewshed.visible_tiles.clone())
         .collect()
 }
 
 fn player_revealed_tiles(world: &SubWorld) -> HashSet<Position> {
-    <(&Viewshed,)>::query()
+    <(&Viewshed, )>::query()
         .filter(component::<Player>())
         .iter(world)
-        .flat_map(|(viewshed,)| viewshed.revealed_tiles.clone())
+        .flat_map(|(viewshed, )| viewshed.revealed_tiles.clone())
         .collect()
 }
 
@@ -144,7 +144,7 @@ fn render_gui(
     let max_hp_str_len: i32 = 16;
     let hp_bar_offset = hp_offset + max_hp_str_len;
 
-    let (stats,) = <(&CombatStats,)>::query()
+    let (stats, ) = <(&CombatStats, )>::query()
         .filter(component::<Player>())
         .iter(world)
         .next()
@@ -184,7 +184,7 @@ fn render_gui(
         });
 
     // Hunger status
-    if let Some((clock,)) = <(&HungerClock,)>::query()
+    if let Some((clock, )) = <(&HungerClock, )>::query()
         .filter(component::<Player>())
         .iter(world)
         .next()

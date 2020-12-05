@@ -1,5 +1,4 @@
 use legion::Entity;
-
 use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
