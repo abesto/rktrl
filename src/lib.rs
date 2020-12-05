@@ -27,6 +27,7 @@ use crate::{
         spawner::spawner_system,
         visibility::visibility_system,
     },
+    util::saveload,
 };
 use wasm_bindgen::__rt::std::collections::HashMap;
 
@@ -42,7 +43,6 @@ enum ScheduleType {
     Main,
     PlayerAction,
     Mapgen,
-    Save,
     Load,
 }
 
@@ -58,7 +58,6 @@ impl State {
     fn reset(&mut self) {
         // Probably this would be cleaner as a system, but whatever
         self.world.clear();
-        // TODO verify: probably don't need this as we create a new GameLog below
         self.resources
             .get_mut_or_default::<GameLog>()
             .entries
@@ -66,9 +65,6 @@ impl State {
         self.resources.insert({
             let map_rect = self.resources.get::<Layout>().unwrap().map();
             Map::new(map_rect.width(), map_rect.height(), 1)
-        });
-        self.resources.insert(GameLog {
-            entries: vec!["Welcome to Rusty Roguelike".to_string()],
         });
         self.resources.insert(ShownInventory::default());
         self.resources.insert(ParticleRequests::default());
@@ -99,6 +95,9 @@ impl GameState for State {
         let maybe_newrunstate = match runstate {
             RunState::PreRun => {
                 self.reset();
+                self.resources.insert(GameLog {
+                    entries: vec!["Welcome to Rusty Roguelike".to_string()],
+                });
                 self.execute(ScheduleType::Mapgen);
                 Some(RunState::AwaitingInput)
             }
@@ -124,12 +123,12 @@ impl GameState for State {
                 Some(RunState::AwaitingInput)
             }
             RunState::SaveGame => {
-                //SaveSystem::prepare(&mut self.world);
-                self.execute(ScheduleType::Save);
+                saveload::save(&mut self.world, &self.resources);
                 Some(RunState::default())
             }
             RunState::LoadGame => {
                 self.reset();
+                saveload::load(&mut self.world, &mut self.resources);
                 self.execute(ScheduleType::Load);
                 Some(RunState::AwaitingInput)
             }
@@ -207,12 +206,6 @@ pub fn main() -> BError {
             .flush()
             .add_system(visibility_system())
             .add_system(map_indexing_system())
-            .build(),
-    );
-    schedules.insert(
-        ScheduleType::Save,
-        Schedule::builder()
-            //.add_system(save_system())
             .build(),
     );
     schedules.insert(

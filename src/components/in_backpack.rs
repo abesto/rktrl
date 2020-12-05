@@ -1,9 +1,15 @@
 use legion::Entity;
 
-#[derive(PartialEq, Debug, Clone)]
+use legion_typeuuid::register_serialize;
+use serde::{Deserialize, Serialize};
+use type_uuid::TypeUuid;
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, TypeUuid)]
+#[uuid = "a7418e38-6ec8-4c6a-a4da-99b31589bafb"]
 pub struct InBackpack {
     pub owner: Entity,
 }
+register_serialize!(InBackpack);
 
 impl InBackpack {
     #[must_use]

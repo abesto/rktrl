@@ -1,9 +1,14 @@
 use legion::{systems::CommandBuffer, Entity};
+use legion_typeuuid::register_serialize;
+use serde::{Deserialize, Serialize};
+use type_uuid::TypeUuid;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, TypeUuid)]
+#[uuid = "46fbedf3-f32b-485e-9422-b83bbc8b8c84"]
 pub struct SufferDamage {
     pub amount: Vec<i32>,
 }
+register_serialize!(SufferDamage);
 
 impl SufferDamage {
     pub fn new_damage(commands: &mut CommandBuffer, entity: Entity, amount: i32) {

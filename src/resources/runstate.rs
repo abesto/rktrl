@@ -7,7 +7,7 @@ use newtype_derive::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-//use crate::systems::saveload::LoadSystem;
+use crate::util::saveload;
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter)]
 pub enum MainMenuSelection {
@@ -144,7 +144,7 @@ impl RunState {
 
 impl Default for RunState {
     fn default() -> Self {
-        let savegame_exists = false; //LoadSystem::savegame_exists();
+        let savegame_exists = saveload::savegame_exists();
         RunState::MainMenu {
             selection: if savegame_exists {
                 MainMenuSelection::LoadGame

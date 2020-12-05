@@ -101,6 +101,7 @@ fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
             },
             HungerClock::default(),
         ));
+        commands.add_component(player_entity, SerializeMe);
 
         // Wizard mode!
         let wizard_items = vec![
@@ -162,6 +163,7 @@ fn monster<S: ToString>(commands: &mut CommandBuffer, letter: char, name: S) -> 
             defense: 1,
             power: 4,
         },
+        SerializeMe,
     ))
 }
 
@@ -208,6 +210,7 @@ fn health_potion(commands: &mut CommandBuffer) -> Entity {
         Item,
         ProvidesHealing { heal_amount: 8 },
         Consumable,
+        SerializeMe,
     ))
 }
 
@@ -223,6 +226,7 @@ fn magic_missile_scroll(commands: &mut CommandBuffer) -> Entity {
         Consumable,
         Ranged { range: 6 },
         InflictsDamage { damage: 8 },
+        SerializeMe,
     ))
 }
 
@@ -239,6 +243,7 @@ fn fireball_scroll(commands: &mut CommandBuffer) -> Entity {
         Ranged { range: 6 },
         InflictsDamage { damage: 20 },
         AreaOfEffect { radius: 3 },
+        SerializeMe,
     ))
 }
 
@@ -254,6 +259,7 @@ fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
         Consumable,
         Ranged { range: 6 },
         Confusion { turns: 4 },
+        SerializeMe,
     ))
 }
 
@@ -268,6 +274,7 @@ fn dagger(commands: &mut CommandBuffer) -> Entity {
         Item,
         Equippable::new(EquipmentSlot::Melee),
         MeleePowerBonus::new(2),
+        SerializeMe,
     ))
 }
 
@@ -282,6 +289,7 @@ fn long_sword(commands: &mut CommandBuffer) -> Entity {
         Item,
         Equippable::new(EquipmentSlot::Melee),
         MeleePowerBonus::new(4),
+        SerializeMe,
     ))
 }
 
@@ -296,6 +304,7 @@ fn shield(commands: &mut CommandBuffer) -> Entity {
         Item,
         Equippable::new(EquipmentSlot::Shield),
         DefenseBonus::new(1),
+        SerializeMe,
     ))
 }
 
@@ -310,6 +319,7 @@ fn tower_shield(commands: &mut CommandBuffer) -> Entity {
         Item,
         Equippable::new(EquipmentSlot::Shield),
         DefenseBonus::new(3),
+        SerializeMe,
     ))
 }
 
@@ -324,5 +334,6 @@ fn ration(commands: &mut CommandBuffer) -> Entity {
         Item,
         ProvidesFood,
         Consumable,
+        SerializeMe,
     ))
 }

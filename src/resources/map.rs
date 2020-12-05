@@ -8,9 +8,11 @@ use std::{
 
 use bracket_lib::prelude::*;
 use legion::Entity;
+use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use strum::IntoEnumIterator;
+use type_uuid::TypeUuid;
 
 use crate::{
     components::position::Position,
@@ -24,7 +26,8 @@ pub enum TileType {
     DownStairs,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, TypeUuid)]
+#[uuid = "a8e9e9cf-6c68-4d18-a3a6-5ce925baa0fb"]
 pub struct Map {
     pub width: i32,
     pub height: i32,
@@ -37,6 +40,7 @@ pub struct Map {
     #[serde(skip_deserializing)]
     tile_content: HashMap<Position, Vec<Entity>>,
 }
+register_serialize!(Map);
 
 impl Map {
     #[must_use]

@@ -1,7 +1,11 @@
+use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
+use type_uuid::TypeUuid;
 
-#[derive(PartialEq, Clone, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Debug, Serialize, Deserialize, TypeUuid)]
+#[uuid = "ccadcaae-e8cc-4e75-b7bc-26cea7a6c286"]
 pub struct BlocksTile;
+register_serialize!(BlocksTile);
 
 impl BlocksTile {
     #[must_use]

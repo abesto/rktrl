@@ -2,20 +2,24 @@ use std::convert::TryInto;
 
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 use bracket_lib::prelude::{Point, Rect};
+use legion_typeuuid::register_serialize;
 use macro_attr::*;
 use newtype_derive::*;
 use rand::distributions::uniform::{SampleBorrow, SampleUniform, UniformSampler};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use type_uuid::TypeUuid;
 
 use crate::util::vector::Vector;
 
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
-             Serialize, Deserialize,
+             Serialize, Deserialize, TypeUuid,
              NewtypeDebug!, NewtypeDeref!, NewtypeFrom!)]
+    #[uuid = "230413cb-9c33-4922-8559-c4aa4c144916"]
     pub struct Position(Point);
 }
+register_serialize!(Position);
 
 impl Position {
     #[must_use]

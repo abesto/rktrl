@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 bracket-lib = { version = "0.8.1", features = ["serde"] }
 serde = { version = "1.0.117", features = ["derive"] }
-serde_json = "1.0.59"
 auto_ops = "0.1.0"
 newtype_derive = "0.1.6"
 macro-attr = "0.2.0"
@@ -19,15 +18,24 @@ bracket-terminal = "0.8.1"
 wasm-bindgen = "0.2.68"
 console_error_panic_hook = "0.1.6"
 flate2 = "1.0.19"
-ron = "0.6.2"
 stdweb = "0.4.20"
 base64 = "0.13.0"
 legion = "0.3.1"
 shrev = "1.1.1"
+legion_typeuuid = { git = "https://github.com/TomGillen/legion_typeuuid" }
+type-uuid = "0.1.2"
+inventory = "0.1.9"
+bincode = "1.3.1"
+ron = "0.6.2"
+lazy_static = "1.4.0"
 
 [patch.crates-io]
 # Needed until https://github.com/thebracket/bracket-lib/pull/130 (Fix modifier keys) is released
 bracket-terminal = { git = "https://github.com/abesto/bracket-lib/", rev = "abad58f65127bd735573323cd96139ebdb479863" }
+
+# https://github.com/TomGillen/legion_typeuuid/issues/2
+[patch."https://github.com/TomGillen/legion"]
+legion = "0.3.1"
 
 [[bin]]
 name = "rktrl"
