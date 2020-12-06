@@ -21,13 +21,13 @@ flate2 = "1.0.19"
 stdweb = "0.4.20"
 base64 = "0.13.0"
 legion = "0.3.1"
-shrev = "1.1.1"
 legion_typeuuid = { git = "https://github.com/TomGillen/legion_typeuuid" }
 type-uuid = "0.1.2"
 inventory = "0.1.9"
 bincode = "1.3.1"
 ron = "0.6.2"
 lazy_static = "1.4.0"
+crossbeam-queue = "0.3.1"
 
 [patch.crates-io]
 # Needed until https://github.com/thebracket/bracket-lib/pull/130 (Fix modifier keys) is released

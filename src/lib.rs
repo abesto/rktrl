@@ -2,10 +2,10 @@ use core::convert::TryInto;
 use std::panic;
 
 use bracket_lib::prelude::*;
+use crossbeam_queue::SegQueue;
 use legion::{Resources, Schedule, World};
 use wasm_bindgen::__rt::std::collections::HashMap;
 
-use crate::systems::spawner::SpawnerSystemState;
 use crate::{
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
@@ -24,8 +24,7 @@ use crate::{
         particle::{particle_system, ParticleRequests},
         player_action::player_action_system,
         render::render_system,
-        //saveload::{LoadSystem, SaveSystem},
-        spawner::spawner_system,
+        spawner::{spawner_system, SpawnRequest},
         visibility::visibility_system,
     },
     util::saveload,
@@ -54,20 +53,29 @@ struct State {
     schedules: Schedules,
 }
 
+macro_rules! insert_default_resources {
+    ($resources:expr, [$($types:ty),* $(,)?]) => {
+        $(
+            $resources.insert(<$types>::default());
+        )*
+    }
+}
+
 impl State {
     fn reset(&mut self) {
         // Probably this would be cleaner as a system, but whatever
         self.world.clear();
-        self.resources
-            .get_mut_or_default::<GameLog>()
-            .entries
-            .clear();
+        // TODO check if inserting the same type of resource over and over again leads to memleak
         self.resources.insert({
             let map_rect = self.resources.get::<Layout>().unwrap().map();
             Map::new(map_rect.width(), map_rect.height(), 1)
         });
-        self.resources.insert(ShownInventory::default());
-        self.resources.insert(ParticleRequests::default());
+        insert_default_resources!(self.resources, [
+            GameLog,
+            ShownInventory,
+            ParticleRequests,
+            SegQueue<SpawnRequest>,
+        ]);
     }
 
     fn execute(&mut self, schedule_type: ScheduleType) {
@@ -160,7 +168,7 @@ pub fn main() -> BError {
 
     // Initialize Legion ECS
 
-    let mut resources = Resources::default();
+    let resources = Resources::default();
     let mut schedules = HashMap::new();
     schedules.insert(
         ScheduleType::Main,
@@ -202,7 +210,7 @@ pub fn main() -> BError {
             .add_system(next_level_system())
             .add_system(mapgen_system())
             .flush()
-            .add_system(spawner_system(SpawnerSystemState::new(&mut resources)))
+            .add_system(spawner_system())
             .flush()
             .add_system(visibility_system())
             .add_system(map_indexing_system())

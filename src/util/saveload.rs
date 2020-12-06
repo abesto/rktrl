@@ -70,7 +70,7 @@ trait DeserializeResource<'de> {
 }
 
 impl<'de, R: bincode::BincodeRead<'de>, O: bincode::Options> DeserializeResource<'de>
-for bincode::Deserializer<R, O>
+    for bincode::Deserializer<R, O>
 {
     fn deserialize_resource<T: 'static + Deserialize<'de>>(&mut self, resources: &mut Resources) {
         resources.remove::<T>();

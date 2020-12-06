@@ -1,8 +1,8 @@
 use std::cmp::{max, min};
 
 use bracket_lib::prelude::*;
+use crossbeam_queue::SegQueue;
 use legion::system;
-use shrev::EventChannel;
 
 use crate::{components::*, resources::*, systems::spawner::SpawnRequest};
 
@@ -10,21 +10,20 @@ use crate::{components::*, resources::*, systems::spawner::SpawnRequest};
 pub fn mapgen(
     #[resource] map: &mut Map,
     #[resource] rng: &mut RandomNumberGenerator,
-    #[resource] spawn_requests: &mut EventChannel<SpawnRequest>,
+    #[resource] spawn_requests: &mut SegQueue<SpawnRequest>,
 ) {
     let rooms = gen_map(map, rng);
 
     // Request player spawn
-    spawn_requests.single_write(SpawnRequest::Player(rooms[0].center().into()));
+    spawn_requests.push(SpawnRequest::Player(rooms[0].center().into()));
 
     // Request monster spawns
     let depth = map.depth;
-    spawn_requests.iter_write(
-        rooms
-            .iter()
-            .skip(1)
-            .map(|&rect| SpawnRequest::Room { rect, depth }),
-    );
+    rooms
+        .iter()
+        .skip(1)
+        .map(|&rect| SpawnRequest::Room { rect, depth })
+        .for_each(|req| spawn_requests.push(req));
 }
 
 fn gen_map(map: &mut Map, rng: &mut RandomNumberGenerator) -> Vec<Rect> {

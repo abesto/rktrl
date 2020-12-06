@@ -1,10 +1,8 @@
 use std::collections::HashSet;
 
 use bracket_lib::prelude::*;
-use legion::{
-    component, system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery, Resources,
-};
-use shrev::{EventChannel, ReaderId};
+use crossbeam_queue::SegQueue;
+use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery};
 
 use crate::{
     components::*,
@@ -15,23 +13,6 @@ use crate::{
 pub enum SpawnRequest {
     Player(Position),
     Room { rect: Rect, depth: i32 },
-}
-
-pub struct SpawnerSystemState {
-    spawn_requests_reader: ReaderId<SpawnRequest>,
-}
-
-impl SpawnerSystemState {
-    pub fn new(resources: &mut Resources) -> SpawnerSystemState {
-        let channel = EventChannel::<SpawnRequest>::new();
-        resources.insert(channel);
-        SpawnerSystemState {
-            spawn_requests_reader: resources
-                .get_mut::<EventChannel<SpawnRequest>>()
-                .unwrap()
-                .register_reader(),
-        }
-    }
 }
 
 #[system]
@@ -59,15 +40,14 @@ impl SpawnerSystemState {
 #[write_component(Viewshed)]
 pub fn spawner(
     world: &mut SubWorld,
-    #[state] state: &mut SpawnerSystemState,
     #[resource] rng: &mut RandomNumberGenerator,
-    #[resource] spawn_requests: &EventChannel<SpawnRequest>,
+    #[resource] spawn_requests: &mut SegQueue<SpawnRequest>,
     commands: &mut CommandBuffer,
 ) {
-    for request in spawn_requests.read(&mut state.spawn_requests_reader) {
+    while let Some(request) = spawn_requests.pop() {
         match request {
-            SpawnRequest::Player(position) => player(world, *position, commands),
-            SpawnRequest::Room { rect, depth } => room(rng, rect, *depth, commands),
+            SpawnRequest::Player(position) => player(world, position, commands),
+            SpawnRequest::Room { rect, depth } => room(rng, &rect, depth, commands),
         }
     }
 }
