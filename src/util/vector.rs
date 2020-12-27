@@ -6,7 +6,7 @@ use macro_attr::*;
 use newtype_derive::*;
 use strum_macros::EnumIter;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy, EnumIter)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, EnumIter, Debug)]
 pub enum Heading {
     North,
     East,
@@ -24,8 +24,8 @@ impl Vector {
     #[inline]
     #[must_use]
     pub fn new<T>(x: T, y: T) -> Vector
-        where
-            T: TryInto<i32>,
+    where
+        T: TryInto<i32>,
     {
         Point::new(x, y).into()
     }

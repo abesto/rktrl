@@ -1,11 +1,12 @@
 use core::convert::TryInto;
+use std::collections::HashMap;
 use std::panic;
 
 use bracket_lib::prelude::*;
 use crossbeam_queue::SegQueue;
 use legion::{Resources, Schedule, World};
-use wasm_bindgen::__rt::std::collections::HashMap;
 
+use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect};
 use crate::{
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
@@ -20,11 +21,13 @@ use crate::{
         map_indexing::map_indexing_system,
         mapgen::mapgen_system,
         melee_combat::melee_combat_system,
+        movement::movement_system,
         next_level::next_level_system,
         particle::{particle_system, ParticleRequests},
         player_action::player_action_system,
         render::render_system,
         spawner::{spawner_system, SpawnRequest},
+        turn::turn_system,
         visibility::visibility_system,
     },
     util::saveload,
@@ -32,6 +35,7 @@ use crate::{
 
 bracket_terminal::add_wasm_support!();
 
+mod cause_and_effect;
 mod components;
 mod resources;
 mod systems;
@@ -75,6 +79,7 @@ impl State {
             ShownInventory,
             ParticleRequests,
             SegQueue<SpawnRequest>,
+            CauseAndEffect
         ]);
     }
 
@@ -132,6 +137,7 @@ impl GameState for State {
             }
             RunState::SaveGame => {
                 saveload::save(&mut self.world, &self.resources);
+                self.reset();
                 Some(RunState::default())
             }
             RunState::LoadGame => {
@@ -173,8 +179,10 @@ pub fn main() -> BError {
     schedules.insert(
         ScheduleType::Main,
         Schedule::builder()
+            .add_system(turn_system())
             .add_system(ai_system())
             .flush()
+            .add_system(movement_system())
             .add_system(visibility_system())
             .add_system(item_collection_system())
             .add_system(item_drop_system())
@@ -192,11 +200,15 @@ pub fn main() -> BError {
             .add_system(particle_system())
             .flush()
             .add_system(render_system())
+            .add_system(cae_debug_system())
+            .add_system(cae_clear_system())
             .build(),
     );
     schedules.insert(
         ScheduleType::PlayerAction,
         Schedule::builder()
+            .add_system(cae_clear_system())
+            .add_system(turn_system())
             .add_system(player_action_system())
             .flush()
             .add_system(particle_system())

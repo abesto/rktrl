@@ -1,9 +1,10 @@
 use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
 use legion::{
-    component, Entity, EntityStore, IntoQuery, system, systems::CommandBuffer, world::SubWorld,
+    component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, IntoQuery,
 };
 
 use crate::{
+    cause_and_effect::{CauseAndEffect, Label, Link},
     components::*,
     resources::*,
     util::{vector::*, world_ext::WorldExt},
@@ -70,241 +71,252 @@ pub fn player_action(
     #[resource] shown_inventory: &ShownInventory,
     #[resource] game_log: &mut GameLog,
     #[resource] run_state_queue: &mut RunStateQueue,
+    #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    let old_runstate = *run_state;
-    let new_runstate = match resolve_action(old_runstate, input) {
-        Some(Action::Move(vector)) => {
-            try_move_player(world, commands, map, vector);
-            RunState::PlayerTurn
-        }
-        Some(Action::DownStairs) => {
-            if try_next_level(world, map, game_log).is_some() {
-                RunState::NextLevel
-            } else {
-                old_runstate
-            }
-        }
-        Some(Action::SkipTurn) => {
-            skip_turn(world, commands, map);
-            RunState::PlayerTurn
-        }
+    if let Some(cause) = if let Some(player_entity) = world.maybe_player_entity() {
+        cae.find_first_link(|link| match link.label {
+            Label::Turn { entity } => entity == *player_entity,
+            _ => false,
+        })
+    } else {
+        cae.find_first_link(|link| link.label == Label::Root)
+    } {
+        let input_link = cae.add_effect(&cause, Label::Input { input: *input });
 
-        Some(Action::PickUp) => {
-            try_pickup(world, commands, game_log);
-            RunState::PlayerTurn
-        }
-        Some(Action::ShowInventory) => RunState::ShowInventory,
-        Some(Action::CloseInventory) => {
-            assert!(run_state.show_inventory());
-            RunState::AwaitingInput
-        }
-
-        Some(Action::Use { choice }) => {
-            try_use(world, commands, shown_inventory, choice).unwrap_or(RunState::ShowInventory)
-        }
-        Some(Action::UseOnTarget { item, target }) => {
-            if try_use_on_target(world, commands, item, target).is_some() {
+        let old_runstate = *run_state;
+        let new_runstate = match resolve_action(old_runstate, input) {
+            Some(Action::Move(vector)) => {
+                try_move_player(world, cae, &input_link, map, vector);
                 RunState::PlayerTurn
-            } else {
+            }
+            Some(Action::DownStairs) => {
+                if try_next_level(world, map, game_log).is_some() {
+                    RunState::NextLevel
+                } else {
+                    old_runstate
+                }
+            }
+            Some(Action::SkipTurn) => {
+                skip_turn(world, commands, map);
+                RunState::PlayerTurn
+            }
+
+            Some(Action::PickUp) => {
+                try_pickup(world, commands, game_log);
+                RunState::PlayerTurn
+            }
+            Some(Action::ShowInventory) => RunState::ShowInventory,
+            Some(Action::CloseInventory) => {
+                assert!(run_state.show_inventory());
                 RunState::AwaitingInput
             }
-        }
 
-        Some(Action::CancelTargeting) => RunState::AwaitingInput,
-        Some(Action::ShowDropItem) => RunState::ShowDropItem,
-        Some(Action::Drop { choice }) => {
-            if try_drop(world, commands, shown_inventory, choice).is_some() {
-                RunState::PlayerTurn
-            } else {
-                RunState::ShowDropItem
+            Some(Action::Use { choice }) => {
+                try_use(world, commands, shown_inventory, choice).unwrap_or(RunState::ShowInventory)
             }
-        }
-
-        Some(Action::ShowRemoveItem) => RunState::ShowRemoveItem,
-        Some(Action::Remove { choice }) => {
-            if try_remove(world, commands, shown_inventory, choice).is_some() {
-                RunState::PlayerTurn
-            } else {
-                RunState::ShowRemoveItem
-            }
-        }
-
-        Some(Action::MainMenuSelect { selection }) => {
-            old_runstate.with_main_menu_selection(selection)
-        }
-        Some(Action::NewGame) => RunState::PreRun,
-        Some(Action::SaveGame) => RunState::SaveGame,
-        Some(Action::LoadGame) => RunState::LoadGame,
-        #[cfg(not(target_arch = "wasm32"))]
-        Some(Action::Quit) => {
-            ::std::process::exit(0);
-        }
-
-        Some(Action::Restart) => RunState::default(),
-
-        None => old_runstate,
-    };
-
-    if new_runstate != old_runstate {
-        run_state_queue.push_back(new_runstate);
-    }
-}
-
-fn resolve_action(runstate: RunState, input: &Input) -> Option<Action> {
-    // TODO deduplicate patterns like Down|J|Numpad2
-    // (maybe only when we do a proper keymap)
-    match runstate {
-        state @ RunState::MainMenu { .. } => match input.key? {
-            VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
-                Some(Action::MainMenuSelect {
-                    selection: state.main_menu_down(),
-                })
-            }
-            VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
-                Some(Action::MainMenuSelect {
-                    selection: state.main_menu_up(),
-                })
-            }
-            // Need .main_menu_selection() trickery due to
-            // #![feature(bindings_after_at)] being unstable
-            VirtualKeyCode::Return => match state.main_menu_selection() {
-                MainMenuSelection::NewGame => Some(Action::NewGame),
-                MainMenuSelection::LoadGame => Some(Action::LoadGame),
-                #[cfg(not(target_arch = "wasm32"))]
-                MainMenuSelection::Quit => Some(Action::Quit),
-            },
-            _ => None,
-        },
-
-        RunState::GameOver => {
-            if input.key.is_some() {
-                Some(Action::Restart)
-            } else {
-                None
-            }
-        }
-
-        // TODO factor out "inventory choice" match arm bodies
-        RunState::ShowInventory => match input.key? {
-            VirtualKeyCode::Escape => Some(Action::CloseInventory),
-            key => Some(Action::Use {
-                choice: letter_to_option(key),
-            }),
-        },
-        RunState::ShowDropItem => match input.key? {
-            VirtualKeyCode::Escape => Some(Action::CloseInventory),
-            key => Some(Action::Drop {
-                choice: letter_to_option(key),
-            }),
-        },
-        RunState::ShowRemoveItem => match input.key? {
-            VirtualKeyCode::Escape => Some(Action::CloseInventory),
-            key => Some(Action::Remove {
-                choice: letter_to_option(key),
-            }),
-        },
-
-        RunState::ShowTargeting { item, .. } => {
-            if input.key == Some(VirtualKeyCode::Escape) {
-                Some(Action::CancelTargeting)
-            } else if input.left_click {
-                Some(Action::UseOnTarget {
-                    item,
-                    target: input.mouse_pos.into(),
-                })
-            } else {
-                None
-            }
-        }
-
-        RunState::AwaitingInput => match input.key? {
-            // Cardinal directions
-            VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
-                Some(Action::Move(Heading::North.into()))
-            }
-
-            VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
-                Some(Action::Move(Heading::East.into()))
-            }
-
-            VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
-                Some(Action::Move(Heading::South.into()))
-            }
-
-            VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
-                Some(Action::Move(Heading::West.into()))
-            }
-
-            // Stairs
-            VirtualKeyCode::Period if input.shift => Some(Action::DownStairs),
-
-            // Skip turn
-            VirtualKeyCode::Period | VirtualKeyCode::Numpad5 => Some(Action::SkipTurn),
-
-            // Diagonals
-            VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
-                Some(Action::Move(Heading::North + Heading::East))
-            }
-            VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
-                Some(Action::Move(Heading::North + Heading::West))
-            }
-            VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
-                Some(Action::Move(Heading::South + Heading::East))
-            }
-            VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
-                Some(Action::Move(Heading::South + Heading::West))
-            }
-
-            // Inventory things
-            VirtualKeyCode::G => Some(Action::PickUp),
-            VirtualKeyCode::I => Some(Action::ShowInventory),
-            VirtualKeyCode::D => Some(Action::ShowDropItem),
-            VirtualKeyCode::R => Some(Action::ShowRemoveItem),
-
-            // Save and exit to main menu
-            VirtualKeyCode::Escape => Some(Action::SaveGame),
-
-            // We don't know any other keys
-            _ => None,
-        },
-        // We don't care about key presses during other runstates
-        _ => None,
-    }
-}
-
-fn try_move_player(world: &mut SubWorld, commands: &mut CommandBuffer, map: &Map, vector: Vector) {
-    <(Entity, &Position)>::query()
-        .filter(component::<Player>())
-        .for_each(world, |(&player_entity, position)| {
-            let new_position = map.clamp(*position + vector);
-
-            if let Some(contents) = map.get_tile_contents(new_position) {
-                for potential_target in contents.iter() {
-                    if world.has_component::<CombatStats>(*potential_target) {
-                        commands.add_component(
-                            player_entity,
-                            MeleeIntent {
-                                target: *potential_target,
-                            },
-                        );
-                        return;
-                    }
+            Some(Action::UseOnTarget { item, target }) => {
+                if try_use_on_target(world, commands, item, target).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::AwaitingInput
                 }
             }
 
-            if !map.is_blocked(new_position) {
-                commands.add_component(player_entity, new_position);
-                commands.exec_mut(move |w| {
-                    w.entry_mut(player_entity)
-                        .unwrap()
-                        .get_component_mut::<Viewshed>()
-                        .unwrap()
-                        .dirty = true
-                });
+            Some(Action::CancelTargeting) => RunState::AwaitingInput,
+            Some(Action::ShowDropItem) => RunState::ShowDropItem,
+            Some(Action::Drop { choice }) => {
+                if try_drop(world, commands, shown_inventory, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowDropItem
+                }
             }
-        });
+
+            Some(Action::ShowRemoveItem) => RunState::ShowRemoveItem,
+            Some(Action::Remove { choice }) => {
+                if try_remove(world, commands, shown_inventory, choice).is_some() {
+                    RunState::PlayerTurn
+                } else {
+                    RunState::ShowRemoveItem
+                }
+            }
+
+            Some(Action::MainMenuSelect { selection }) => {
+                old_runstate.with_main_menu_selection(selection)
+            }
+            Some(Action::NewGame) => RunState::PreRun,
+            Some(Action::SaveGame) => RunState::SaveGame,
+            Some(Action::LoadGame) => RunState::LoadGame,
+            #[cfg(not(target_arch = "wasm32"))]
+            Some(Action::Quit) => {
+                ::std::process::exit(0);
+            }
+
+            Some(Action::Restart) => RunState::default(),
+
+            None => old_runstate,
+        };
+
+        if new_runstate != old_runstate {
+            run_state_queue.push_back(new_runstate);
+        }
+    }
+
+    fn resolve_action(runstate: RunState, input: &Input) -> Option<Action> {
+        // TODO deduplicate patterns like Down|J|Numpad2
+        // (maybe only when we do a proper keymap)
+        match runstate {
+            state @ RunState::MainMenu { .. } => match input.key? {
+                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                    Some(Action::MainMenuSelect {
+                        selection: state.main_menu_down(),
+                    })
+                }
+                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                    Some(Action::MainMenuSelect {
+                        selection: state.main_menu_up(),
+                    })
+                }
+                // Need .main_menu_selection() trickery due to
+                // #![feature(bindings_after_at)] being unstable
+                VirtualKeyCode::Return => match state.main_menu_selection() {
+                    MainMenuSelection::NewGame => Some(Action::NewGame),
+                    MainMenuSelection::LoadGame => Some(Action::LoadGame),
+                    #[cfg(not(target_arch = "wasm32"))]
+                    MainMenuSelection::Quit => Some(Action::Quit),
+                },
+                _ => None,
+            },
+
+            RunState::GameOver => {
+                if input.key.is_some() {
+                    Some(Action::Restart)
+                } else {
+                    None
+                }
+            }
+
+            // TODO factor out "inventory choice" match arm bodies
+            RunState::ShowInventory => match input.key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Use {
+                    choice: letter_to_option(key),
+                }),
+            },
+            RunState::ShowDropItem => match input.key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Drop {
+                    choice: letter_to_option(key),
+                }),
+            },
+            RunState::ShowRemoveItem => match input.key? {
+                VirtualKeyCode::Escape => Some(Action::CloseInventory),
+                key => Some(Action::Remove {
+                    choice: letter_to_option(key),
+                }),
+            },
+
+            RunState::ShowTargeting { item, .. } => {
+                if input.key == Some(VirtualKeyCode::Escape) {
+                    Some(Action::CancelTargeting)
+                } else if input.left_click {
+                    Some(Action::UseOnTarget {
+                        item,
+                        target: input.mouse_pos.into(),
+                    })
+                } else {
+                    None
+                }
+            }
+
+            RunState::AwaitingInput => match input.key? {
+                // Cardinal directions
+                VirtualKeyCode::Up | VirtualKeyCode::K | VirtualKeyCode::Numpad8 => {
+                    Some(Action::Move(Heading::North.into()))
+                }
+
+                VirtualKeyCode::Right | VirtualKeyCode::L | VirtualKeyCode::Numpad6 => {
+                    Some(Action::Move(Heading::East.into()))
+                }
+
+                VirtualKeyCode::Down | VirtualKeyCode::J | VirtualKeyCode::Numpad2 => {
+                    Some(Action::Move(Heading::South.into()))
+                }
+
+                VirtualKeyCode::Left | VirtualKeyCode::H | VirtualKeyCode::Numpad4 => {
+                    Some(Action::Move(Heading::West.into()))
+                }
+
+                // Stairs
+                VirtualKeyCode::Period if input.shift => Some(Action::DownStairs),
+
+                // Skip turn
+                VirtualKeyCode::Period | VirtualKeyCode::Numpad5 => Some(Action::SkipTurn),
+
+                // Diagonals
+                VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
+                    Some(Action::Move(Heading::North + Heading::East))
+                }
+                VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
+                    Some(Action::Move(Heading::North + Heading::West))
+                }
+                VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
+                    Some(Action::Move(Heading::South + Heading::East))
+                }
+                VirtualKeyCode::Numpad1 | VirtualKeyCode::B => {
+                    Some(Action::Move(Heading::South + Heading::West))
+                }
+
+                // Inventory things
+                VirtualKeyCode::G => Some(Action::PickUp),
+                VirtualKeyCode::I => Some(Action::ShowInventory),
+                VirtualKeyCode::D => Some(Action::ShowDropItem),
+                VirtualKeyCode::R => Some(Action::ShowRemoveItem),
+
+                // Save and exit to main menu
+                VirtualKeyCode::Escape => Some(Action::SaveGame),
+
+                // We don't know any other keys
+                _ => None,
+            },
+            // We don't care about key presses during other runstates
+            _ => None,
+        }
+    }
+}
+
+fn try_move_player(
+    world: &mut SubWorld,
+    cae: &mut CauseAndEffect,
+    cause: &Link,
+    map: &Map,
+    vector: Vector,
+) {
+    let position = world.player_component::<Position>();
+    let new_position = map.clamp(position + vector);
+
+    if let Some(contents) = map.get_tile_contents(new_position) {
+        for potential_target in contents.iter() {
+            if world.has_component::<CombatStats>(*potential_target) {
+                cae.add_effect(
+                    &cause,
+                    Label::MeleeIntent {
+                        target: new_position,
+                    },
+                );
+                return;
+            }
+        }
+    }
+
+    cae.add_effect(
+        &cause,
+        Label::MoveIntent {
+            target: new_position,
+        },
+    );
 }
 
 fn try_pickup(world: &mut SubWorld, commands: &mut CommandBuffer, game_log: &mut GameLog) {

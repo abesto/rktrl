@@ -1,6 +1,6 @@
 use bracket_lib::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Input {
     pub key: Option<VirtualKeyCode>,
     pub shift: bool,

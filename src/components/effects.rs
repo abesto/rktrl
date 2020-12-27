@@ -41,3 +41,14 @@ pub struct Confusion {
     pub turns: i32,
 }
 register_serialize!(Confusion);
+
+impl Confusion {
+    pub fn tick(&self) -> Option<Confusion> {
+        if self.turns <= 0 {
+            return None;
+        }
+        Some(Confusion {
+            turns: self.turns - 1,
+        })
+    }
+}

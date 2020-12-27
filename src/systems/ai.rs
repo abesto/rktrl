@@ -1,59 +1,53 @@
 use bracket_lib::prelude::*;
-use legion::{
-    query::component, system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery,
-};
+use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery};
 
+use crate::cause_and_effect::{CauseAndEffect, Label};
+use crate::util::world_ext::WorldExt;
 use crate::{components::*, resources::*, systems::particle::ParticleRequests};
 
-// TODO This should be a for_each system, but cannot currently be due to
-// https://github.com/amethyst/legion/issues/199
 #[system]
-// for_each components
-#[read_component(Entity)]
 #[read_component(Name)]
 #[write_component(Viewshed)]
 #[write_component(Position)]
 #[write_component(Confusion)]
-#[filter(component::<Monster>())]
-// eof for_each components
-#[read_component(Player)]
 #[allow(clippy::too_many_arguments)]
 pub fn ai(
-    #[resource] run_state: &RunState,
     #[resource] game_log: &mut GameLog,
     #[resource] particle_requests: &mut ParticleRequests,
     #[resource] map: &Map,
+    #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    if *run_state != RunState::MonsterTurn {
-        return;
-    }
+    let mut causes = cae.scan();
+    while let Some(ref cause) = causes.next(cae) {
+        let entity = match cause.label {
+            Label::Turn { entity } => entity,
+            _ => continue,
+        };
 
-    let (&mut player_pos, &player_entity) = <(&mut Position, Entity)>::query()
-        .filter(component::<Player>())
-        .iter_mut(world)
-        .next()
-        .unwrap();
+        if !world.has_component::<Monster>(entity) {
+            continue;
+        }
 
-    <(
-        Entity,
-        &Name,
-        &mut Viewshed,
-        &mut Position,
-        Option<&mut Confusion>,
-    )>::query()
-    .filter(component::<Monster>())
-    .for_each_mut(world, |(entity, name, viewshed, pos, maybe_confusion)| {
+        let (name, pos, viewshed, maybe_confusion) =
+            <(&Name, &Position, &Viewshed, Option<&Confusion>)>::query()
+                .get(world, entity)
+                .unwrap();
+
         let can_act = {
             if let Some(confusion) = maybe_confusion {
-                confusion.turns -= 1;
-                if confusion.turns < 0 {
-                    commands.remove_component::<Confusion>(*entity);
+                if let Some(new_confusion) = confusion.tick() {
+                    commands.add_component(entity, new_confusion);
+                } else {
+                    commands.remove_component::<Confusion>(entity);
+                    cae.add_effect(cause, Label::ConfusionOver { entity });
+                    // TODO move game_log into an effect system
                     game_log
                         .entries
                         .push(format!("{} is no longer confused!", name));
                 }
+                cae.add_effect(cause, Label::SkipBecauseConfused);
                 false
             } else {
                 true
@@ -69,17 +63,13 @@ pub fn ai(
                 to_cp437('?'),
                 200.0,
             );
-            return;
+            continue;
         }
 
+        let player_pos = world.player_component::<Position>();
         let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
         if distance < 1.5 {
-            commands.add_component(
-                *entity,
-                MeleeIntent {
-                    target: player_entity,
-                },
-            );
+            cae.add_effect(cause, Label::MeleeIntent { target: player_pos });
         } else if viewshed.visible_tiles.contains(&player_pos) {
             let path = a_star_search(
                 map.pos_idx(*pos) as i32,
@@ -87,9 +77,15 @@ pub fn ai(
                 map,
             );
             if path.success && path.steps.len() > 1 {
-                *pos = map.idx_pos(path.steps[1]);
-                viewshed.dirty = true;
+                cae.add_effect(
+                    cause,
+                    Label::MoveIntent {
+                        target: map.idx_pos(path.steps[1]),
+                    },
+                );
             }
+        } else {
+            cae.add_effect(cause, Label::SkipBecauseHidden);
         }
-    });
+    }
 }
