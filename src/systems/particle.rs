@@ -1,52 +1,23 @@
 use bracket_lib::prelude::*;
-use legion::{Entity, IntoQuery, system, systems::CommandBuffer, world::SubWorld};
+use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery, Resources};
 
+use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
 use crate::{components::*, resources::*};
 
-struct ParticleRequest {
-    x: i32,
-    y: i32,
-    fg: RGB,
-    bg: RGB,
-    glyph: FontCharType,
-    lifetime: f32,
+pub struct ParticleSystemState {
+    subscription: CAESubscription,
 }
 
-pub struct ParticleRequests {
-    requests: Vec<ParticleRequest>,
-}
+impl ParticleSystemState {
+    fn subscription_filter(link: &Link) -> bool {
+        matches!(link.label, Label::ParticleRequest { .. })
+    }
 
-impl ParticleRequests {
-    #[must_use]
-    pub fn new() -> ParticleRequests {
-        ParticleRequests {
-            requests: Vec::new(),
+    pub fn new(resources: &Resources) -> ParticleSystemState {
+        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
+        ParticleSystemState {
+            subscription: cae.subscribe(ParticleSystemState::subscription_filter),
         }
-    }
-
-    pub fn request(
-        &mut self,
-        x: i32,
-        y: i32,
-        fg: RGB,
-        bg: RGB,
-        glyph: FontCharType,
-        lifetime: f32,
-    ) {
-        self.requests.push(ParticleRequest {
-            x,
-            y,
-            fg,
-            bg,
-            glyph,
-            lifetime,
-        });
-    }
-}
-
-impl Default for ParticleRequests {
-    fn default() -> Self {
-        ParticleRequests::new()
     }
 }
 
@@ -57,28 +28,41 @@ impl Default for ParticleRequests {
 #[write_component(Renderable)]
 pub fn particle(
     world: &mut SubWorld,
-    #[resource] particle_requests: &mut ParticleRequests,
+    #[state] state: &ParticleSystemState,
+    #[resource] cae: &mut CauseAndEffect,
     #[resource] frame_data: &FrameData,
     commands: &mut CommandBuffer,
 ) {
-    process_requests(commands, particle_requests);
+    process_requests(commands, state, cae);
     cull_dead_particles(world, commands, frame_data);
 }
 
-fn process_requests(commands: &mut CommandBuffer, particle_requests: &mut ParticleRequests) {
-    for new_particle in particle_requests.requests.iter() {
-        commands.push((
-            Position::new(new_particle.x, new_particle.y),
-            Renderable {
-                color: ColorPair::new(new_particle.fg, new_particle.bg),
-                glyph: new_particle.glyph,
-                render_order: RenderOrder::Particle,
-            },
-            ParticleLifetime::new(new_particle.lifetime),
-        ));
+fn process_requests(
+    commands: &mut CommandBuffer,
+    state: &ParticleSystemState,
+    cae: &mut CauseAndEffect,
+) {
+    for link in cae.get_queue(state.subscription) {
+        if let Label::ParticleRequest {
+            x,
+            y,
+            fg,
+            bg,
+            glyph,
+            lifetime,
+        } = link.label
+        {
+            commands.push((
+                Position::new(x, y),
+                Renderable {
+                    glyph,
+                    color: ColorPair::new(fg, bg),
+                    render_order: RenderOrder::Particle,
+                },
+                ParticleLifetime::new(lifetime),
+            ));
+        }
     }
-
-    particle_requests.requests.clear();
 }
 
 fn cull_dead_particles(world: &mut SubWorld, commands: &mut CommandBuffer, frame_data: &FrameData) {

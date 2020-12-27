@@ -21,9 +21,9 @@ use crate::{
         map_indexing::map_indexing_system,
         mapgen::mapgen_system,
         melee_combat::melee_combat_system,
-        movement::movement_system,
+        movement::{movement_system, MovementSystemState},
         next_level::next_level_system,
-        particle::{particle_system, ParticleRequests},
+        particle::{particle_system, ParticleSystemState},
         player_action::player_action_system,
         render::render_system,
         spawner::{spawner_system, SpawnRequest},
@@ -77,10 +77,12 @@ impl State {
         insert_default_resources!(self.resources, [
             GameLog,
             ShownInventory,
-            ParticleRequests,
             SegQueue<SpawnRequest>,
-            CauseAndEffect
         ]);
+        self.resources
+            .get_mut::<CauseAndEffect>()
+            .unwrap()
+            .new_turn();
     }
 
     fn execute(&mut self, schedule_type: ScheduleType) {
@@ -174,7 +176,8 @@ pub fn main() -> BError {
 
     // Initialize Legion ECS
 
-    let resources = Resources::default();
+    let mut resources = Resources::default();
+    resources.insert(CauseAndEffect::default());
     let mut schedules = HashMap::new();
     schedules.insert(
         ScheduleType::Main,
@@ -182,7 +185,7 @@ pub fn main() -> BError {
             .add_system(turn_system())
             .add_system(ai_system())
             .flush()
-            .add_system(movement_system())
+            .add_system(movement_system(MovementSystemState::new(&resources)))
             .add_system(visibility_system())
             .add_system(item_collection_system())
             .add_system(item_drop_system())
@@ -197,7 +200,7 @@ pub fn main() -> BError {
             .add_system(death_system())
             .flush()
             .add_system(map_indexing_system())
-            .add_system(particle_system())
+            .add_system(particle_system(ParticleSystemState::new(&resources)))
             .flush()
             .add_system(render_system())
             .add_system(cae_debug_system())
@@ -211,7 +214,7 @@ pub fn main() -> BError {
             .add_system(turn_system())
             .add_system(player_action_system())
             .flush()
-            .add_system(particle_system())
+            .add_system(particle_system(ParticleSystemState::new(&resources)))
             .flush()
             .add_system(render_system())
             .build(),

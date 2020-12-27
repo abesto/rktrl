@@ -3,7 +3,7 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery};
 
 use crate::cause_and_effect::{CauseAndEffect, Label};
 use crate::util::world_ext::WorldExt;
-use crate::{components::*, resources::*, systems::particle::ParticleRequests};
+use crate::{components::*, resources::*};
 
 #[system]
 #[read_component(Name)]
@@ -13,7 +13,6 @@ use crate::{components::*, resources::*, systems::particle::ParticleRequests};
 #[allow(clippy::too_many_arguments)]
 pub fn ai(
     #[resource] game_log: &mut GameLog,
-    #[resource] particle_requests: &mut ParticleRequests,
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
@@ -55,13 +54,16 @@ pub fn ai(
         };
 
         if !can_act {
-            particle_requests.request(
-                pos.x,
-                pos.y,
-                RGB::named(MAGENTA),
-                RGB::named(BLACK),
-                to_cp437('?'),
-                200.0,
+            cae.add_effect(
+                cause,
+                Label::ParticleRequest {
+                    x: pos.x,
+                    y: pos.y,
+                    fg: RGB::named(MAGENTA),
+                    bg: RGB::named(BLACK),
+                    glyph: to_cp437('?'),
+                    lifetime: 200.0,
+                },
             );
             continue;
         }

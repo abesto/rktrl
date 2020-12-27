@@ -22,7 +22,8 @@ pub fn turn(
                     cae.add_effect(&cae.get_root(), Label::Turn { entity: actor });
                 });
         }
-        RunState::AwaitingInput => {
+        RunState::MainMenu { .. } => (),
+        _ => {
             cae.add_effect(
                 &cae.get_root(),
                 Label::Turn {
@@ -30,6 +31,5 @@ pub fn turn(
                 },
             );
         }
-        _ => (),
     }
 }

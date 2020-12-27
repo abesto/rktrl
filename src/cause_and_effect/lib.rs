@@ -1,14 +1,17 @@
+use petgraph::dot::Dot;
 use petgraph::prelude::{Dfs, Direction, Graph};
 use petgraph::visit::{GraphBase, Visitable};
 
 use crate::cause_and_effect::Label;
-use petgraph::dot::Dot;
 
 type CAEGraph = Graph<Label, ()>;
 type CAENodeId = <CAEGraph as GraphBase>::NodeId;
 type CAEDfs = Dfs<CAENodeId, <CAEGraph as Visitable>::Map>;
+type CAEFilter = fn(&Link) -> bool;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub type CAESubscription = usize;
+
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Link {
     pub index: CAENodeId,
     pub label: Label,
@@ -28,10 +31,10 @@ impl CauseVisitor {
     }
 }
 
-#[derive(Debug)]
 pub struct CauseAndEffect {
     graph: CAEGraph,
     root: CAENodeId,
+    subscriptions: Vec<(CAEFilter, Vec<Link>)>,
 }
 
 impl CauseAndEffect {
@@ -39,21 +42,34 @@ impl CauseAndEffect {
     pub fn new() -> CauseAndEffect {
         let mut graph = CAEGraph::new();
         let root = graph.add_node(Label::Root);
-        CauseAndEffect { graph, root }
+        CauseAndEffect {
+            graph,
+            root,
+            subscriptions: vec![],
+        }
     }
 
     pub fn new_turn(&mut self) {
         self.graph.clear();
         self.root = self.graph.add_node(Label::Root);
+        for (_, queue) in self.subscriptions.iter_mut() {
+            queue.clear();
+        }
     }
 
     fn add_link(&mut self, cause: CAENodeId, effect: Label) -> Link {
         let u = self.graph.add_node(effect);
         self.graph.add_edge(cause, u, ());
-        Link {
+        let link = Link {
             index: u,
             label: effect,
+        };
+        for (filter, queue) in self.subscriptions.iter_mut() {
+            if filter(&link) {
+                queue.push(link);
+            }
         }
+        link
     }
 
     pub fn get_root(&self) -> Link {
@@ -112,6 +128,17 @@ impl CauseAndEffect {
 
     pub fn dot(&self) -> Dot<&CAEGraph> {
         petgraph::dot::Dot::with_config(&self.graph, &[petgraph::dot::Config::EdgeNoLabel])
+    }
+
+    pub fn subscribe(&mut self, filter: CAEFilter) -> CAESubscription {
+        self.subscriptions.push((filter, vec![]));
+        self.subscriptions.len() - 1
+    }
+
+    pub fn get_queue(&mut self, subscription: CAESubscription) -> Vec<Link> {
+        let (filter, queue) = self.subscriptions.remove(subscription);
+        self.subscriptions.insert(subscription, (filter, vec![]));
+        queue
     }
 }
 

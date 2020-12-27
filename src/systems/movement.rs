@@ -1,20 +1,37 @@
-use legion::{system, systems::CommandBuffer, EntityStore};
+use legion::{system, systems::CommandBuffer, EntityStore, Resources};
 
-use crate::cause_and_effect::{CauseAndEffect, Label};
+use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
 use crate::{components::*, resources::*};
+
+pub struct MovementSystemState {
+    subscription: CAESubscription,
+}
+
+impl MovementSystemState {
+    fn subscription_filter(link: &Link) -> bool {
+        matches!(link.label, Label::MoveIntent { .. })
+    }
+
+    pub fn new(resources: &Resources) -> MovementSystemState {
+        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
+        MovementSystemState {
+            subscription: cae.subscribe(MovementSystemState::subscription_filter),
+        }
+    }
+}
 
 #[system]
 #[read_component(Position)]
 pub fn movement(
+    #[state] state: &MovementSystemState,
     #[resource] cae: &mut CauseAndEffect,
     #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {
-    let mut causes = cae.scan();
-    while let Some(cause) = causes.next(cae) {
+    for cause in cae.get_queue(state.subscription) {
         let target = match cause.label {
             Label::MoveIntent { target } => target,
-            _ => continue,
+            _ => unreachable!(),
         };
 
         if map.is_blocked(target) {
