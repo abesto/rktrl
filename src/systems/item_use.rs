@@ -150,7 +150,14 @@ pub fn item_use(
                     false
                 } else {
                     for &target in combat_targets {
-                        SufferDamage::new_damage(commands, target, damage);
+                        // TODO update with correct cause during proper CAE migration of this system
+                        cae.add_effect(
+                            cause,
+                            Label::Damage {
+                                amount: damage,
+                                to: target,
+                            },
+                        );
 
                         if player.is_some() {
                             let mob_name = world.get_component::<Name>(target);

@@ -10,7 +10,6 @@ use crate::{components::*, resources::*};
 #[write_component(Viewshed)]
 #[write_component(Position)]
 #[write_component(Confusion)]
-#[allow(clippy::too_many_arguments)]
 pub fn ai(
     #[resource] game_log: &mut GameLog,
     #[resource] map: &Map,

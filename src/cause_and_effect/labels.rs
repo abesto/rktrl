@@ -21,7 +21,9 @@ pub enum Label {
         glyph: FontCharType,
         lifetime: f32,
     },
+
     // Intents
+    SkipBecauseInput,
     SkipBecauseHidden,
     SkipBecauseConfused,
     MoveIntent {
@@ -30,23 +32,41 @@ pub enum Label {
     MeleeIntent {
         target: Position,
     },
+
     // Actions (taken)
     MoveAction,
     MeleeAction {
         target: Entity,
     },
-    // Effects
+
+    //// Effects
+    // Effects - Movement
     MovementDone,
     MovementBlocked,
+
+    // Effects - Combat
     Hit,
+    AttackedEmptySpace,
+    AttackerIsAlreadyDead,
+    TargetIsAlreadyDead,
+
+    // Effects - Damage
     Damage {
         to: Entity,
-        amount: u32,
+        amount: i32,
     },
     Death {
         entity: Entity,
     },
+
+    // Effects - Misc
     ConfusionOver {
         entity: Entity,
     },
+
+    // Effects - Hunger
+    NoLongerWellFed,
+    Hungry,
+    Starving,
+    HungerPang,
 }

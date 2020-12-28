@@ -1,99 +1,154 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, IntoQuery};
+use bracket_lib::prelude::*;
+use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery, Resources};
 
+use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
 use crate::{components::*, resources::*, util::world_ext::WorldExt};
 
-// TODO convert to for_each system after https://github.com/amethyst/legion/issues/199 is fixed
+pub struct MeleeCombatSystemState {
+    subscription: CAESubscription,
+}
+
+impl MeleeCombatSystemState {
+    fn subscription_filter(link: &Link) -> bool {
+        matches!(link.label, Label::MeleeIntent { .. })
+    }
+
+    pub fn new(resources: &Resources) -> MeleeCombatSystemState {
+        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
+        MeleeCombatSystemState {
+            subscription: cae.subscribe(MeleeCombatSystemState::subscription_filter),
+        }
+    }
+}
+
 #[system]
-// for_each components
-#[read_component(Entity)]
-#[read_component(MeleeIntent)]
 #[read_component(Name)]
 #[read_component(CombatStats)]
 #[read_component(HungerClock)]
-// eof for_each components
 #[read_component(Equipped)]
 #[read_component(MeleePowerBonus)]
 #[read_component(DefenseBonus)]
 #[read_component(Position)]
-#[allow(clippy::too_many_arguments)]
 pub fn melee_combat(
+    #[state] state: &MeleeCombatSystemState,
     #[resource] game_log: &mut GameLog,
+    #[resource] cae: &mut CauseAndEffect,
+    #[resource] map: &Map,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    <(
-        Entity,
-        &MeleeIntent,
-        &Name,
-        &CombatStats,
-        Option<&HungerClock>,
-    )>::query()
-    .for_each(
-        world,
-        |(attacker, melee_intent, name, attacker_stats, maybe_attacker_hunger_clock)| {
-            commands.remove_component::<MeleeIntent>(*attacker);
-            let target_stats = world.get_component::<CombatStats>(melee_intent.target);
-            let target_name = world.get_component::<Name>(melee_intent.target);
-
-            if attacker_stats.hp <= 0 || target_stats.hp <= 0 {
-                return;
+    for ref melee_intent in cae.get_queue(state.subscription) {
+        // Where are we attacking?
+        let target_position = match melee_intent.label {
+            Label::MeleeIntent { target } => target,
+            _ => unreachable!(),
+        };
+        // What's there (if anything)?
+        let maybe_target = map.get_tile_contents(target_position).and_then(|targets| {
+            targets
+                .iter()
+                .find(|&&target| world.has_component::<CombatStats>(target))
+        });
+        let target = match maybe_target {
+            Some(&target) => target,
+            _ => {
+                cae.add_effect(melee_intent, Label::AttackedEmptySpace);
+                continue;
             }
+        };
 
-            let hunger_attack_power_bonus = maybe_attacker_hunger_clock
-                .map(|clock| {
-                    if clock.state == HungerState::WellFed {
-                        1
-                    } else {
-                        0
-                    }
-                })
-                .unwrap_or(0);
+        // Who's attacking?
+        let attacker = match cae
+            .find_first_ancestor(&melee_intent, |link| matches!(link.label, Label::Turn{..}))
+            .unwrap()
+            .label
+        {
+            Label::Turn { entity } => entity,
+            _ => unreachable!(),
+        };
 
-            let power: i32 = {
-                <(&Equipped, &MeleePowerBonus)>::query()
-                    .iter(world)
-                    .filter(|(equipped, _)| equipped.owner == *attacker)
-                    .map(|(_, bonus)| bonus.power)
-                    .sum::<i32>()
-                    + attacker_stats.power
-                    + hunger_attack_power_bonus
-            };
-            let defense: i32 = {
-                <(&Equipped, &DefenseBonus)>::query()
-                    .iter(world)
-                    .filter(|(equipped, _)| equipped.owner == melee_intent.target)
-                    .map(|(_, bonus)| bonus.defense)
-                    .sum::<i32>()
-                    + target_stats.defense
-            };
-            let damage = i32::max(0, power - defense);
+        // Details about the attacker
+        let (attacker_name, attacker_stats, maybe_attacker_hunger_clock) =
+            <(&Name, &CombatStats, Option<&HungerClock>)>::query()
+                .get(world, attacker)
+                .unwrap();
+        if attacker_stats.hp <= 0 {
+            cae.add_effect(melee_intent, Label::AttackerIsAlreadyDead);
+            continue;
+        }
 
-            if damage == 0 {
-                game_log
-                    .entries
-                    .push(format!("{} is unable to hurt {}", name, target_name));
-            } else {
-                game_log
-                    .entries
-                    .push(format!("{} hits {}, for {} hp.", name, target_name, damage));
-                SufferDamage::new_damage(commands, melee_intent.target, damage);
-            }
+        // Details about the target
+        let (target_stats, target_name) =
+            <(&CombatStats, &Name)>::query().get(world, target).unwrap();
+        if target_stats.hp <= 0 {
+            cae.add_effect(melee_intent, Label::TargetIsAlreadyDead);
+            continue;
+        }
 
-            if let Ok(position) = world
-                .entry_ref(melee_intent.target)
-                .unwrap()
-                .get_component::<Position>()
-            {
-                // TODO migrate to cause-and-effect
-                //particle_requests.request(
-                //    position.x,
-                //    position.y,
-                //    RGB::named(ORANGE),
-                //    RGB::named(BLACK),
-                //    to_cp437('‼'),
-                //    200.0,
-                //)
-            }
-        },
-    );
+        let melee_action = cae.add_effect(melee_intent, Label::MeleeAction { target });
+        // We don't currently have to-hit / accuracy, so an attack is always a hit
+        let hit = cae.add_effect(&melee_action, Label::Hit);
+
+        // Calculate attack power
+        let hunger_attack_power_bonus = maybe_attacker_hunger_clock
+            .map(|clock| match clock.state {
+                HungerState::WellFed => 1,
+                _ => 0,
+            })
+            .unwrap_or(0);
+
+        let equipment_attack_power_bonus = <(&Equipped, &MeleePowerBonus)>::query()
+            .iter(world)
+            .filter(|(equipped, _)| equipped.owner == attacker)
+            .map(|(_, bonus)| bonus.power)
+            .sum::<i32>();
+
+        let power: i32 =
+            equipment_attack_power_bonus + attacker_stats.power + hunger_attack_power_bonus;
+
+        // Calculate defense power
+        let defense: i32 = {
+            <(&Equipped, &DefenseBonus)>::query()
+                .iter(world)
+                .filter(|(equipped, _)| equipped.owner == target)
+                .map(|(_, bonus)| bonus.defense)
+                .sum::<i32>()
+                + target_stats.defense
+        };
+
+        // Calculate and deal damage
+        let damage = i32::max(0, power - defense);
+        cae.add_effect(
+            &hit,
+            Label::Damage {
+                to: target,
+                amount: damage,
+            },
+        );
+
+        // TODO this whole if-else can go away once GameLog and damage_system are migrated to CAE
+        if damage == 0 {
+            game_log.entries.push(format!(
+                "{} is unable to hurt {}",
+                attacker_name, target_name
+            ));
+        } else {
+            game_log.entries.push(format!(
+                "{} hits {}, for {} hp.",
+                attacker_name, target_name, damage
+            ));
+        }
+
+        cae.add_effect(
+            &hit,
+            Label::ParticleRequest {
+                x: target_position.x,
+                y: target_position.y,
+                fg: RGB::named(ORANGE),
+                bg: RGB::named(BLACK),
+                glyph: to_cp437('‼'),
+                lifetime: 200.0,
+            },
+        );
+    }
 }

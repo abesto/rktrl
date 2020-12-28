@@ -22,7 +22,9 @@ pub fn turn(
                     cae.add_effect(&cae.get_root(), Label::Turn { entity: actor });
                 });
         }
-        RunState::MainMenu { .. } => (),
+        // No taking turns on the main menu
+        // Also, on PlayerTurn, we already have a Label::Turn left over from RunState::AwaitingInput.
+        RunState::MainMenu { .. } | RunState::PlayerTurn => (),
         _ => {
             cae.add_effect(
                 &cae.get_root(),

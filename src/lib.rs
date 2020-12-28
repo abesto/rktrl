@@ -7,20 +7,21 @@ use crossbeam_queue::SegQueue;
 use legion::{Resources, Schedule, World};
 
 use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect};
+use crate::systems::damage::DamageSystemState;
 use crate::{
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
         ai::ai_system,
-        damage_system::damage_system,
+        damage::damage_system,
         death::death_system,
-        hunger::hunger_system,
+        hunger::{hunger_system, HungerSystemState},
         item_collection::item_collection_system,
         item_drop::item_drop_system,
         item_remove::item_remove_system,
         item_use::item_use_system,
         map_indexing::map_indexing_system,
         mapgen::mapgen_system,
-        melee_combat::melee_combat_system,
+        melee_combat::{melee_combat_system, MeleeCombatSystemState},
         movement::{movement_system, MovementSystemState},
         next_level::next_level_system,
         particle::{particle_system, ParticleSystemState},
@@ -191,11 +192,11 @@ pub fn main() -> BError {
             .add_system(item_drop_system())
             .add_system(item_use_system())
             .add_system(item_remove_system())
-            .add_system(melee_combat_system())
+            .add_system(melee_combat_system(MeleeCombatSystemState::new(&resources)))
             .flush()
-            .add_system(hunger_system())
+            .add_system(hunger_system(HungerSystemState::new(&resources)))
             .flush()
-            .add_system(damage_system())
+            .add_system(damage_system(DamageSystemState::new(&resources)))
             .flush()
             .add_system(death_system())
             .flush()

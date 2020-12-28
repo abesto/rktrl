@@ -1,5 +1,5 @@
 pub mod ai;
-pub mod damage_system;
+pub mod damage;
 pub mod death;
 pub mod hunger;
 pub mod item_collection;

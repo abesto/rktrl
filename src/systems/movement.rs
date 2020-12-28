@@ -28,19 +28,23 @@ pub fn movement(
     #[resource] map: &Map,
     commands: &mut CommandBuffer,
 ) {
-    for cause in cae.get_queue(state.subscription) {
-        let target = match cause.label {
+    for move_intent in cae.get_queue(state.subscription) {
+        let target = match move_intent.label {
             Label::MoveIntent { target } => target,
             _ => unreachable!(),
         };
 
         if map.is_blocked(target) {
-            cae.add_effect(&cause, Label::MovementBlocked);
+            cae.add_effect(&move_intent, Label::MovementBlocked);
             continue;
         }
+        let move_action = cae.add_effect(&move_intent, Label::MoveAction);
 
         let entity = match cae
-            .find_first_ancestor(&cause, |ancestor| matches!(ancestor.label, Label::Turn{..}))
+            .find_first_ancestor(
+                &move_intent,
+                |ancestor| matches!(ancestor.label, Label::Turn{..}),
+            )
             .unwrap()
             .label
         {
@@ -48,7 +52,7 @@ pub fn movement(
             _ => unreachable!(),
         };
         commands.add_component(entity, target);
-        cae.add_effect(&cause, Label::MovementDone);
+        cae.add_effect(&move_action, Label::MovementDone);
 
         commands.exec_mut(move |w| {
             if let Ok(viewshed) = w.entry_mut(entity).unwrap().get_component_mut::<Viewshed>() {

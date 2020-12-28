@@ -99,6 +99,7 @@ pub fn player_action(
                 }
             }
             Some(Action::SkipTurn) => {
+                cae.add_effect(&input_link, Label::SkipBecauseInput);
                 skip_turn(world, commands, map);
                 RunState::PlayerTurn
             }

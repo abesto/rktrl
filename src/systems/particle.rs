@@ -61,6 +61,8 @@ fn process_requests(
                 },
                 ParticleLifetime::new(lifetime),
             ));
+        } else {
+            unreachable!();
         }
     }
 }
