@@ -43,5 +43,9 @@ pub fn damage(
             .unwrap();
         stats.hp -= amount;
         map.add_bloodstain(*position);
+
+        if stats.hp <= 0 {
+            cae.add_effect(&damage, Label::Death { entity: target });
+        }
     }
 }

@@ -35,7 +35,6 @@ pub fn melee_combat(
     #[resource] cae: &mut CauseAndEffect,
     #[resource] map: &Map,
     world: &SubWorld,
-    commands: &mut CommandBuffer,
 ) {
     for ref melee_intent in cae.get_queue(state.subscription) {
         // Where are we attacking?

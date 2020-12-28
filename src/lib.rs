@@ -13,7 +13,7 @@ use crate::{
     systems::{
         ai::ai_system,
         damage::damage_system,
-        death::death_system,
+        death::{death_system, DeathSystemState},
         hunger::{hunger_system, HungerSystemState},
         item_collection::item_collection_system,
         item_drop::item_drop_system,
@@ -198,7 +198,7 @@ pub fn main() -> BError {
             .flush()
             .add_system(damage_system(DamageSystemState::new(&resources)))
             .flush()
-            .add_system(death_system())
+            .add_system(death_system(DeathSystemState::new(&resources)))
             .flush()
             .add_system(map_indexing_system())
             .add_system(particle_system(ParticleSystemState::new(&resources)))
