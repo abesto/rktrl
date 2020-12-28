@@ -156,6 +156,7 @@ pub fn item_use(
                             Label::Damage {
                                 amount: damage,
                                 to: target,
+                                bleeding: true,
                             },
                         );
 

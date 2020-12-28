@@ -1,5 +1,5 @@
 use bracket_lib::prelude::*;
-use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery, Resources};
+use legion::{system, world::SubWorld, IntoQuery, Resources};
 
 use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
 use crate::{components::*, resources::*, util::world_ext::WorldExt};
@@ -122,6 +122,7 @@ pub fn melee_combat(
             Label::Damage {
                 to: target,
                 amount: damage,
+                bleeding: true,
             },
         );
 

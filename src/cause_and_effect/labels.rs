@@ -54,6 +54,7 @@ pub enum Label {
     Damage {
         to: Entity,
         amount: i32,
+        bleeding: bool,
     },
     Death {
         entity: Entity,

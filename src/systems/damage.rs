@@ -33,16 +33,27 @@ pub fn damage(
     world: &mut SubWorld,
 ) {
     for damage in cae.get_queue(state.subscription) {
-        let (amount, target) = match damage.label {
-            Label::Damage { amount, to } => (amount, to),
+        let (amount, target, bleeding) = match damage.label {
+            Label::Damage {
+                amount,
+                to,
+                bleeding,
+            } => (amount, to, bleeding),
             _ => unreachable!(),
         };
+
+        if amount <= 0 {
+            continue;
+        }
 
         let (stats, position) = <(&mut CombatStats, &Position)>::query()
             .get_mut(world, target)
             .unwrap();
         stats.hp -= amount;
-        map.add_bloodstain(*position);
+
+        if bleeding {
+            map.add_bloodstain(*position);
+        }
 
         if stats.hp <= 0 {
             cae.add_effect(&damage, Label::Death { entity: target });

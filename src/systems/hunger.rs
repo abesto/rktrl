@@ -98,6 +98,7 @@ pub fn hunger(
                         Label::Damage {
                             amount: 1,
                             to: entity,
+                            bleeding: false,
                         },
                     );
                     game_log.entries.push(
