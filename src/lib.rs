@@ -15,7 +15,7 @@ use crate::{
         damage::damage_system,
         death::{death_system, DeathSystemState},
         hunger::{hunger_system, HungerSystemState},
-        item_collection::item_collection_system,
+        item_collection::{item_collection_system, ItemCollectionSystemState},
         item_drop::item_drop_system,
         item_remove::item_remove_system,
         item_use::item_use_system,
@@ -188,7 +188,9 @@ pub fn main() -> BError {
             .flush()
             .add_system(movement_system(MovementSystemState::new(&resources)))
             .add_system(visibility_system())
-            .add_system(item_collection_system())
+            .add_system(item_collection_system(ItemCollectionSystemState::new(
+                &resources,
+            )))
             .add_system(item_drop_system())
             .add_system(item_use_system())
             .add_system(item_remove_system())

@@ -111,7 +111,7 @@ impl CauseAndEffect {
         None
     }
 
-    pub fn find_first_ancestor<F>(&self, effect: &Link, filter: F) -> Option<Link>
+    pub fn find_nearest_ancestor<F>(&self, effect: &Link, filter: F) -> Option<Link>
     where
         F: Fn(Link) -> bool,
     {
@@ -119,6 +119,21 @@ impl CauseAndEffect {
         while let Some(v) = self.get_cause(&u) {
             if filter(v) {
                 return Some(v);
+            } else {
+                u = v;
+            }
+        }
+        None
+    }
+
+    pub fn extract_nearest_ancestor<F, T>(&self, effect: &Link, filter: F) -> Option<T>
+    where
+        F: Fn(Link) -> Option<T>,
+    {
+        let mut u = *effect;
+        while let Some(v) = self.get_cause(&u) {
+            if let Some(x) = filter(v) {
+                return Some(x);
             } else {
                 u = v;
             }

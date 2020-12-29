@@ -58,7 +58,7 @@ pub fn melee_combat(
 
         // Who's attacking?
         let attacker = match cae
-            .find_first_ancestor(&melee_intent, |link| matches!(link.label, Label::Turn{..}))
+            .find_nearest_ancestor(&melee_intent, |link| matches!(link.label, Label::Turn{..}))
             .unwrap()
             .label
         {

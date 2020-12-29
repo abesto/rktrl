@@ -32,10 +32,14 @@ pub enum Label {
     MeleeIntent {
         target: Position,
     },
+    PickupIntent,
 
     // Actions (taken)
     MoveAction,
     MeleeAction {
+        target: Entity,
+    },
+    PickupAction {
         target: Entity,
     },
 
@@ -64,6 +68,10 @@ pub enum Label {
     ConfusionOver {
         entity: Entity,
     },
+
+    // Effects - Pickup
+    PickupNothingHere,
+    PickupDone,
 
     // Effects - Hunger
     NoLongerWellFed,

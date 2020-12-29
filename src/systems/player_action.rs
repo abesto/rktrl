@@ -1,7 +1,5 @@
 use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
-use legion::{
-    component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, IntoQuery,
-};
+use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
 
 use crate::{
     cause_and_effect::{CauseAndEffect, Label, Link},
@@ -105,7 +103,7 @@ pub fn player_action(
             }
 
             Some(Action::PickUp) => {
-                try_pickup(world, commands, game_log);
+                cae.add_effect(&input_link, Label::PickupIntent);
                 RunState::PlayerTurn
             }
             Some(Action::ShowInventory) => RunState::ShowInventory,
@@ -318,27 +316,6 @@ fn try_move_player(
             target: new_position,
         },
     );
-}
-
-fn try_pickup(world: &mut SubWorld, commands: &mut CommandBuffer, game_log: &mut GameLog) {
-    let (player_entity, player_pos) = <(Entity, &Position)>::query()
-        .filter(component::<Player>())
-        .iter(world)
-        .next()
-        .unwrap();
-    let target_item: Option<Entity> = <(Entity, &Item, &Position)>::query()
-        .iter(world)
-        .find(|x| x.2 == player_pos)
-        .map(|x| *x.0);
-
-    match target_item {
-        None => game_log
-            .entries
-            .push("There is nothing here to pick up.".to_string()),
-        Some(item) => {
-            commands.add_component(*player_entity, PickupIntent { item });
-        }
-    }
 }
 
 fn choice_to_entity(shown_inventory: &ShownInventory, choice: i32) -> Option<Entity> {

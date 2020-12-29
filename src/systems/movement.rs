@@ -41,7 +41,7 @@ pub fn movement(
         let move_action = cae.add_effect(&move_intent, Label::MoveAction);
 
         let entity = match cae
-            .find_first_ancestor(
+            .find_nearest_ancestor(
                 &move_intent,
                 |ancestor| matches!(ancestor.label, Label::Turn{..}),
             )
