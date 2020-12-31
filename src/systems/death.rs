@@ -6,22 +6,9 @@ use crate::{
     resources::*,
 };
 
-pub struct DeathSystemState {
-    subscription: CAESubscription,
-}
-
-impl DeathSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::Death { .. })
-    }
-
-    pub fn new(resources: &Resources) -> DeathSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        DeathSystemState {
-            subscription: cae.subscribe(DeathSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(DeathSystemState {
+    death(link) { matches!(link.label, Label::Death {..}) }
+});
 
 #[system]
 #[read_component(Name)]
@@ -34,7 +21,7 @@ pub fn death(
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    for death in cae.get_queue(state.subscription) {
+    for death in cae.get_queue(state.death) {
         let entity = match death.label {
             Label::Death { entity } => entity,
             _ => unreachable!(),

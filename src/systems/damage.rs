@@ -6,22 +6,9 @@ use crate::{
     resources::*,
 };
 
-pub struct DamageSystemState {
-    subscription: CAESubscription,
-}
-
-impl DamageSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::Damage { .. })
-    }
-
-    pub fn new(resources: &Resources) -> DamageSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        DamageSystemState {
-            subscription: cae.subscribe(DamageSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(DamageSystemState {
+    damage(link) { matches!(link.label, Label::Damage {..}) }
+});
 
 #[system]
 #[read_component(Position)]
@@ -32,7 +19,7 @@ pub fn damage(
     #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
 ) {
-    for damage in cae.get_queue(state.subscription) {
+    for damage in cae.get_queue(state.damage) {
         let (amount, target, bleeding) = match damage.label {
             Label::Damage {
                 amount,

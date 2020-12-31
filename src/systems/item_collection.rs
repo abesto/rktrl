@@ -7,22 +7,9 @@ use crate::{
     resources::*,
 };
 
-pub struct ItemCollectionSystemState {
-    subscription: CAESubscription,
-}
-
-impl ItemCollectionSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::PickupIntent)
-    }
-
-    pub fn new(resources: &Resources) -> ItemCollectionSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        ItemCollectionSystemState {
-            subscription: cae.subscribe(ItemCollectionSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(ItemCollectionSystemState {
+    pickup_intent(link) { matches!(link.label, Label::PickupIntent {..}) }
+});
 
 #[system]
 #[read_component(Name)]
@@ -35,7 +22,7 @@ pub fn item_collection(
     commands: &mut CommandBuffer,
     world: &SubWorld,
 ) {
-    for cause in cae.get_queue(state.subscription) {
+    for cause in cae.get_queue(state.pickup_intent) {
         let actor = cae
             .extract_nearest_ancestor(&cause, |link| match link.label {
                 Label::Turn { entity } => Some(entity),

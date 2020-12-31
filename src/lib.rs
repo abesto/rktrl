@@ -2,17 +2,19 @@ use core::convert::TryInto;
 use std::collections::HashMap;
 use std::panic;
 
+#[macro_use]
+extern crate paste;
+
 use bracket_lib::prelude::*;
 use crossbeam_queue::SegQueue;
 use legion::{Resources, Schedule, World};
 
 use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect};
-use crate::systems::damage::DamageSystemState;
 use crate::{
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
         ai::ai_system,
-        damage::damage_system,
+        damage::{damage_system, DamageSystemState},
         death::{death_system, DeathSystemState},
         hunger::{hunger_system, HungerSystemState},
         item_collection::{item_collection_system, ItemCollectionSystemState},
@@ -36,6 +38,7 @@ use crate::{
 
 bracket_terminal::add_wasm_support!();
 
+#[macro_use]
 mod cause_and_effect;
 mod components;
 mod resources;

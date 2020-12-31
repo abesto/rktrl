@@ -6,22 +6,9 @@ use crate::{
     resources::*,
 };
 
-pub struct HungerSystemState {
-    subscription: CAESubscription,
-}
-
-impl HungerSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::Turn { .. })
-    }
-
-    pub fn new(resources: &Resources) -> HungerSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        HungerSystemState {
-            subscription: cae.subscribe(HungerSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(HungerSystemState {
+    turn(link) { matches!(link.label, Label::Turn {..}) }
+});
 
 #[system]
 #[read_component(HungerClock)]
@@ -33,7 +20,7 @@ pub fn hunger(
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    for turn in cae.get_queue(state.subscription) {
+    for turn in cae.get_queue(state.turn) {
         let entity = match turn.label {
             Label::Turn { entity } => entity,
             _ => unreachable!(),
