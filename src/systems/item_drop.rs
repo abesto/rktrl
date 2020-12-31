@@ -17,22 +17,22 @@ pub fn item_drop(
     commands: &mut CommandBuffer,
 ) {
     for intent in cae.get_queue(state.drop_intent) {
-        extract_label!(intent @ DropIntent => target);
-        extract_nearest_ancestor!(cae, intent @ Turn => entity);
-        let position = world.get_component::<Position>(entity);
+        extract_label!(intent @ DropIntent => item);
+        extract_nearest_ancestor!(cae, intent @ Turn => actor);
+        let position = world.get_component::<Position>(actor);
 
-        let to_drop = world.entry_ref(target).unwrap();
+        let to_drop = world.entry_ref(item).unwrap();
         assert_eq!(
-            Ok(entity),
+            Ok(actor),
             to_drop.get_component::<InBackpack>().map(|b| b.owner)
         );
-        commands.add_component(target, position);
-        commands.remove_component::<InBackpack>(target);
+        commands.add_component(item, position);
+        commands.remove_component::<InBackpack>(item);
 
         game_log.entries.push(format!(
             "You drop the {}.",
             to_drop.get_component::<Name>().unwrap()
         ));
-        commands.remove_component::<DropIntent>(entity);
+        cae.add_effect(&intent, Label::DropDone);
     }
 }

@@ -15,9 +15,9 @@ pub fn hunger(
     commands: &mut CommandBuffer,
 ) {
     for turn in cae.get_queue(state.turn) {
-        extract_label!(turn @ Turn => entity);
+        extract_label!(turn @ Turn => actor);
 
-        let clock = match <(&HungerClock,)>::query().get(world, entity) {
+        let clock = match <(&HungerClock,)>::query().get(world, actor) {
             Ok((clock,)) => clock,
             _ => continue,
         };
@@ -25,7 +25,7 @@ pub fn hunger(
 
         if new_duration >= 1 {
             commands.add_component(
-                entity,
+                actor,
                 HungerClock {
                     state: clock.state,
                     duration: new_duration,
@@ -36,7 +36,7 @@ pub fn hunger(
                 HungerState::WellFed => {
                     cae.add_effect(&turn, Label::NoLongerWellFed);
                     commands.add_component(
-                        entity,
+                        actor,
                         HungerClock {
                             state: HungerState::Normal,
                             duration: 200,
@@ -49,7 +49,7 @@ pub fn hunger(
                 HungerState::Normal => {
                     cae.add_effect(&turn, Label::Hungry);
                     commands.add_component(
-                        entity,
+                        actor,
                         HungerClock {
                             state: HungerState::Hungry,
                             duration: 200,
@@ -60,7 +60,7 @@ pub fn hunger(
                 HungerState::Hungry => {
                     cae.add_effect(&turn, Label::Starving);
                     commands.add_component(
-                        entity,
+                        actor,
                         HungerClock {
                             state: HungerState::Starving,
                             duration: 200,
@@ -75,7 +75,7 @@ pub fn hunger(
                         &hunger_pang,
                         Label::Damage {
                             amount: 1,
-                            to: entity,
+                            to: actor,
                             bleeding: false,
                         },
                     );

@@ -16,9 +16,9 @@ pub fn item_collection(
     world: &SubWorld,
 ) {
     for cause in cae.get_queue(state.pickup_intent) {
-        extract_nearest_ancestor!(cae, cause @ Turn => entity);
+        extract_nearest_ancestor!(cae, cause @ Turn => actor);
 
-        let pos = world.get_component::<Position>(entity);
+        let pos = world.get_component::<Position>(actor);
         let target_item = map.get_tile_contents(pos).and_then(|contents| {
             contents
                 .iter()
@@ -33,9 +33,9 @@ pub fn item_collection(
                     .push("There is nothing here to pick up.".to_string());
             }
             Some(&item) => {
-                let action = cae.add_effect(&cause, Label::PickupAction { target: item });
+                let action = cae.add_effect(&cause, Label::PickupAction { item: item });
                 commands.remove_component::<Position>(item);
-                commands.add_component(item, InBackpack::new(entity));
+                commands.add_component(item, InBackpack::new(actor));
                 game_log.entries.push(format!(
                     "You pick up the {}.",
                     world.get_component::<Name>(item)

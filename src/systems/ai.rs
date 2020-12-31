@@ -18,24 +18,24 @@ pub fn ai(
     commands: &mut CommandBuffer,
 ) {
     for ref cause in cae.get_queue(state.turn) {
-        extract_label!(cause @ Turn => entity);
+        extract_label!(cause @ Turn => actor);
 
-        if !world.has_component::<Monster>(entity) {
+        if !world.has_component::<Monster>(actor) {
             continue;
         }
 
         let (name, pos, viewshed, maybe_confusion) =
             <(&Name, &Position, &Viewshed, Option<&Confusion>)>::query()
-                .get(world, entity)
+                .get(world, actor)
                 .unwrap();
 
         let can_act = {
             if let Some(confusion) = maybe_confusion {
                 if let Some(new_confusion) = confusion.tick() {
-                    commands.add_component(entity, new_confusion);
+                    commands.add_component(actor, new_confusion);
                 } else {
-                    commands.remove_component::<Confusion>(entity);
-                    cae.add_effect(cause, Label::ConfusionOver { entity });
+                    commands.remove_component::<Confusion>(actor);
+                    cae.add_effect(cause, Label::ConfusionOver { entity: actor });
                     // TODO move game_log into an effect system
                     game_log
                         .entries

@@ -8,7 +8,7 @@ use crate::resources::Input;
 pub enum Label {
     Root,
     Turn {
-        entity: Entity,
+        actor: Entity,
     },
     Input {
         input: Input,
@@ -34,7 +34,10 @@ pub enum Label {
     },
     PickupIntent,
     DropIntent {
-        target: Entity,
+        item: Entity,
+    },
+    RemoveIntent {
+        item: Entity,
     },
 
     // Actions (taken)
@@ -43,7 +46,7 @@ pub enum Label {
         target: Entity,
     },
     PickupAction {
-        target: Entity,
+        item: Entity,
     },
 
     //// Effects
@@ -75,6 +78,10 @@ pub enum Label {
     // Effects - Pickup
     PickupNothingHere,
     PickupDone,
+
+    // Effects - Inventory management
+    DropDone,
+    RemoveDone,
 
     // Effects - Hunger
     NoLongerWellFed,

@@ -48,7 +48,7 @@ pub fn movement(
             .unwrap()
             .label
         {
-            Label::Turn { entity } => entity,
+            Label::Turn { actor: entity } => entity,
             _ => unreachable!(),
         };
         commands.add_component(entity, target);

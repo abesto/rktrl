@@ -1,31 +1,27 @@
-use legion::{
-    Entity,
-    system,
-    systems::CommandBuffer,
-    world::{EntityStore, SubWorld},
-};
+use crate::systems::prelude::*;
 
-use crate::{components::*, resources::*};
+cae_system_state!(ItemRemoveSystemState {
+    remove_intent(link) { matches!(link.label, Label::RemoveIntent {..}) }
+});
 
-#[system(for_each)]
+#[system]
 #[read_component(Name)]
 pub fn item_remove(
-    actor: &Entity,
-    to_remove: &RemoveIntent,
+    #[state] state: &ItemRemoveSystemState,
     #[resource] game_log: &mut GameLog,
+    #[resource] cae: &mut CauseAndEffect,
     commands: &mut CommandBuffer,
     world: &SubWorld,
 ) {
-    commands.remove_component::<Equipped>(to_remove.item);
-    commands.add_component(to_remove.item, InBackpack { owner: *actor });
-    game_log.entries.push(format!(
-        "You unequip {}.",
-        world
-            .entry_ref(to_remove.item)
-            .unwrap()
-            .get_component::<Name>()
-            .unwrap()
-    ));
-
-    commands.remove_component::<RemoveIntent>(*actor);
+    for remove_intent in cae.get_queue(state.remove_intent) {
+        extract_label!(remove_intent @ RemoveIntent => item);
+        extract_nearest_ancestor!(cae, remove_intent @ Turn => actor);
+        commands.remove_component::<Equipped>(item);
+        commands.add_component(item, InBackpack { owner: actor });
+        game_log.entries.push(format!(
+            "You unequip {}.",
+            world.get_component::<Name>(item)
+        ));
+        cae.add_effect(&remove_intent, Label::RemoveDone);
+    }
 }

@@ -62,7 +62,7 @@ pub fn melee_combat(
             .unwrap()
             .label
         {
-            Label::Turn { entity } => entity,
+            Label::Turn { actor: entity } => entity,
             _ => unreachable!(),
         };
 

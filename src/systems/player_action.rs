@@ -57,10 +57,7 @@ enum Action {
 #[write_component(CombatStats)]
 #[write_component(Player)]
 #[write_component(Viewshed)]
-#[write_component(PickupIntent)]
 #[write_component(UseIntent)]
-#[write_component(DropIntent)]
-#[write_component(RemoveIntent)]
 #[allow(clippy::too_many_arguments)]
 pub fn player_action(
     #[resource] run_state: &RunState,
@@ -75,7 +72,7 @@ pub fn player_action(
 ) {
     if let Some(cause) = if let Some(player_entity) = world.maybe_player_entity() {
         cae.find_first_link(|link| match link.label {
-            Label::Turn { entity } => entity == *player_entity,
+            Label::Turn { actor: entity } => entity == *player_entity,
             _ => false,
         })
     } else {
@@ -135,7 +132,7 @@ pub fn player_action(
 
             Some(Action::ShowRemoveItem) => RunState::ShowRemoveItem,
             Some(Action::Remove { choice }) => {
-                if try_remove(world, commands, shown_inventory, choice).is_some() {
+                if try_remove(world, cae, &input_link, shown_inventory, choice).is_some() {
                     RunState::PlayerTurn
                 } else {
                     RunState::ShowRemoveItem
@@ -411,19 +408,19 @@ fn try_drop(
     choice: i32,
 ) -> Option<()> {
     let item = choice_to_entity_from_player_backpack(world, shown_inventory, choice)?;
-    cae.add_effect(cause, Label::DropIntent { target: item });
+    cae.add_effect(cause, Label::DropIntent { item: item });
     Some(())
 }
 
 fn try_remove(
     world: &mut SubWorld,
-    commands: &mut CommandBuffer,
+    cae: &mut CauseAndEffect,
+    cause: &Link,
     shown_inventory: &ShownInventory,
     choice: i32,
 ) -> Option<()> {
-    let player_entity = *world.player_entity();
     let item = choice_to_entity_from_player_equipment(world, shown_inventory, choice)?;
-    commands.add_component(player_entity, RemoveIntent { item });
+    cae.add_effect(cause, Label::RemoveIntent { item });
     Some(())
 }
 

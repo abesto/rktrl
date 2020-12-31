@@ -19,7 +19,7 @@ pub fn turn(
             <(Entity,)>::query()
                 .filter(component::<Monster>())
                 .for_each(world, |(&actor,)| {
-                    cae.add_effect(&cae.get_root(), Label::Turn { entity: actor });
+                    cae.add_effect(&cae.get_root(), Label::Turn { actor });
                 });
         }
         // No taking turns on the main menu
@@ -29,7 +29,7 @@ pub fn turn(
             cae.add_effect(
                 &cae.get_root(),
                 Label::Turn {
-                    entity: *world.player_entity(),
+                    actor: *world.player_entity(),
                 },
             );
         }
