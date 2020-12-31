@@ -1,10 +1,4 @@
-use legion::{system, world::SubWorld, IntoQuery, Resources};
-
-use crate::{
-    cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link},
-    components::*,
-    resources::*,
-};
+use crate::systems::prelude::*;
 
 cae_system_state!(DamageSystemState {
     damage(link) { matches!(link.label, Label::Damage {..}) }
@@ -20,21 +14,14 @@ pub fn damage(
     world: &mut SubWorld,
 ) {
     for damage in cae.get_queue(state.damage) {
-        let (amount, target, bleeding) = match damage.label {
-            Label::Damage {
-                amount,
-                to,
-                bleeding,
-            } => (amount, to, bleeding),
-            _ => unreachable!(),
-        };
+        extract_label!(damage @ Damage => amount, to, bleeding);
 
         if amount <= 0 {
             continue;
         }
 
         let (stats, position) = <(&mut CombatStats, &Position)>::query()
-            .get_mut(world, target)
+            .get_mut(world, to)
             .unwrap();
         stats.hp -= amount;
 
@@ -43,7 +30,7 @@ pub fn damage(
         }
 
         if stats.hp <= 0 {
-            cae.add_effect(&damage, Label::Death { entity: target });
+            cae.add_effect(&damage, Label::Death { entity: to });
         }
     }
 }

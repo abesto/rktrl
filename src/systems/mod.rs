@@ -13,6 +13,7 @@ pub mod movement;
 pub mod next_level;
 pub mod particle;
 pub mod player_action;
+pub mod prelude;
 pub mod render;
 pub mod spawner;
 pub mod turn;

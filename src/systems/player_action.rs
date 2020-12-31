@@ -126,7 +126,7 @@ pub fn player_action(
             Some(Action::CancelTargeting) => RunState::AwaitingInput,
             Some(Action::ShowDropItem) => RunState::ShowDropItem,
             Some(Action::Drop { choice }) => {
-                if try_drop(world, commands, shown_inventory, choice).is_some() {
+                if try_drop(world, cae, &input_link, shown_inventory, choice).is_some() {
                     RunState::PlayerTurn
                 } else {
                     RunState::ShowDropItem
@@ -405,13 +405,13 @@ fn try_use_on_target(
 
 fn try_drop(
     world: &mut SubWorld,
-    commands: &mut CommandBuffer,
+    cae: &mut CauseAndEffect,
+    cause: &Link,
     shown_inventory: &ShownInventory,
     choice: i32,
 ) -> Option<()> {
-    let player_entity = *world.player_entity();
     let item = choice_to_entity_from_player_backpack(world, shown_inventory, choice)?;
-    commands.add_component(player_entity, DropIntent { item });
+    cae.add_effect(cause, Label::DropIntent { target: item });
     Some(())
 }
 

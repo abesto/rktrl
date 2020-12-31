@@ -4,5 +4,6 @@ pub use systems::*;
 
 pub mod labels;
 pub mod lib;
-#[macro_use]
 pub mod systems;
+#[macro_use]
+pub mod macros;

@@ -1,9 +1,8 @@
-use bracket_lib::prelude::*;
-use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery};
+use crate::systems::prelude::*;
 
-use crate::cause_and_effect::{CauseAndEffect, Label};
-use crate::util::world_ext::WorldExt;
-use crate::{components::*, resources::*};
+cae_system_state!(AiSystemState {
+    turn(link) { matches!(link.label, Label::Turn {..}) }
+});
 
 #[system]
 #[read_component(Name)]
@@ -11,18 +10,15 @@ use crate::{components::*, resources::*};
 #[write_component(Position)]
 #[write_component(Confusion)]
 pub fn ai(
+    #[state] state: &AiSystemState,
     #[resource] game_log: &mut GameLog,
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    let mut causes = cae.scan();
-    while let Some(ref cause) = causes.next(cae) {
-        let entity = match cause.label {
-            Label::Turn { entity } => entity,
-            _ => continue,
-        };
+    for ref cause in cae.get_queue(state.turn) {
+        extract_label!(cause @ Turn => entity);
 
         if !world.has_component::<Monster>(entity) {
             continue;

@@ -1,10 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery, Resources};
-
-use crate::{
-    cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link},
-    components::*,
-    resources::*,
-};
+use crate::systems::prelude::*;
 
 cae_system_state!(HungerSystemState {
     turn(link) { matches!(link.label, Label::Turn {..}) }
@@ -21,10 +15,7 @@ pub fn hunger(
     commands: &mut CommandBuffer,
 ) {
     for turn in cae.get_queue(state.turn) {
-        let entity = match turn.label {
-            Label::Turn { entity } => entity,
-            _ => unreachable!(),
-        };
+        extract_label!(turn @ Turn => entity);
 
         let clock = match <(&HungerClock,)>::query().get(world, entity) {
             Ok((clock,)) => clock,

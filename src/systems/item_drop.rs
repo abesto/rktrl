@@ -1,37 +1,38 @@
-use legion::{
-    Entity,
-    system,
-    systems::CommandBuffer,
-    world::{EntityStore, SubWorld},
-};
+use crate::systems::prelude::*;
+use legion::EntityStore;
 
-use crate::{components::*, resources::*};
+cae_system_state!(ItemDropSystemState {
+    drop_intent(link) { matches!(link.label, Label::DropIntent {..}) }
+});
 
-#[system(for_each)]
+#[system]
 #[read_component(Name)]
-#[write_component(InBackpack)]
+#[read_component(InBackpack)]
+#[read_component(Position)]
 pub fn item_drop(
-    actor: &Entity,
-    drop_intent: &DropIntent,
-    position: &Position,
-    player: Option<&Player>,
+    #[state] state: &ItemDropSystemState,
     #[resource] game_log: &mut GameLog,
+    #[resource] cae: &mut CauseAndEffect,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    let to_drop = world.entry_ref(drop_intent.item).unwrap();
-    assert_eq!(
-        Ok(*actor),
-        to_drop.get_component::<InBackpack>().map(|b| b.owner)
-    );
-    commands.add_component(drop_intent.item, *position);
-    commands.remove_component::<InBackpack>(drop_intent.item);
+    for intent in cae.get_queue(state.drop_intent) {
+        extract_label!(intent @ DropIntent => target);
+        extract_nearest_ancestor!(cae, intent @ Turn => entity);
+        let position = world.get_component::<Position>(entity);
 
-    if player.is_some() {
+        let to_drop = world.entry_ref(target).unwrap();
+        assert_eq!(
+            Ok(entity),
+            to_drop.get_component::<InBackpack>().map(|b| b.owner)
+        );
+        commands.add_component(target, position);
+        commands.remove_component::<InBackpack>(target);
+
         game_log.entries.push(format!(
             "You drop the {}.",
             to_drop.get_component::<Name>().unwrap()
         ));
+        commands.remove_component::<DropIntent>(entity);
     }
-    commands.remove_component::<DropIntent>(*actor);
 }

@@ -13,12 +13,12 @@ use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect
 use crate::{
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
-        ai::ai_system,
+        ai::{ai_system, AiSystemState},
         damage::{damage_system, DamageSystemState},
         death::{death_system, DeathSystemState},
         hunger::{hunger_system, HungerSystemState},
         item_collection::{item_collection_system, ItemCollectionSystemState},
-        item_drop::item_drop_system,
+        item_drop::{item_drop_system, ItemDropSystemState},
         item_remove::item_remove_system,
         item_use::item_use_system,
         map_indexing::map_indexing_system,
@@ -187,14 +187,14 @@ pub fn main() -> BError {
         ScheduleType::Main,
         Schedule::builder()
             .add_system(turn_system())
-            .add_system(ai_system())
+            .add_system(ai_system(AiSystemState::new(&resources)))
             .flush()
             .add_system(movement_system(MovementSystemState::new(&resources)))
             .add_system(visibility_system())
             .add_system(item_collection_system(ItemCollectionSystemState::new(
                 &resources,
             )))
-            .add_system(item_drop_system())
+            .add_system(item_drop_system(ItemDropSystemState::new(&resources)))
             .add_system(item_use_system())
             .add_system(item_remove_system())
             .add_system(melee_combat_system(MeleeCombatSystemState::new(&resources)))

@@ -126,6 +126,7 @@ impl CauseAndEffect {
         None
     }
 
+    #[allow(dead_code)]
     pub fn extract_nearest_ancestor<F, T>(&self, effect: &Link, filter: F) -> Option<T>
     where
         F: Fn(Link) -> Option<T>,

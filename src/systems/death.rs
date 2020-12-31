@@ -1,10 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, IntoQuery, Resources};
-
-use crate::{
-    cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link},
-    components::*,
-    resources::*,
-};
+use crate::systems::prelude::*;
 
 cae_system_state!(DeathSystemState {
     death(link) { matches!(link.label, Label::Death {..}) }
@@ -22,10 +16,7 @@ pub fn death(
     commands: &mut CommandBuffer,
 ) {
     for death in cae.get_queue(state.death) {
-        let entity = match death.label {
-            Label::Death { entity } => entity,
-            _ => unreachable!(),
-        };
+        extract_label!(death @ Death => entity);
 
         let (name, player) = <(&Name, Option<&Player>)>::query()
             .get(world, entity)

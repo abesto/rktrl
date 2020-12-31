@@ -33,6 +33,9 @@ pub enum Label {
         target: Position,
     },
     PickupIntent,
+    DropIntent {
+        target: Entity,
+    },
 
     // Actions (taken)
     MoveAction,
