@@ -3,16 +3,17 @@ use crate::systems::prelude::*;
 cae_system_state!(GameLogSystemState {
     subscribe(
         Ate, NoLongerWellFed, Hungry, Starving,
-        Damage, Death,
-        ConfusionOver,
+        Damage, Healing, Death,
+        Confused, ConfusionOver,
         PickupNothingHere, PickupDone, DropDone,
-        RemoveDone
+        EquipDone, RemoveDone, NoValidTargets, TooFarAway
     )
 });
 
 #[system]
 #[read_component(Player)]
 #[read_component(Name)]
+#[read_component(Confusion)]
 pub fn game_log(
     #[state] state: &GameLogSystemState,
     #[resource] game_log: &mut GameLog,
@@ -25,12 +26,17 @@ pub fn game_log(
         hungry,
         starving,
         damage,
+        healing,
         death,
+        confused,
         confusion_over,
         pickup_nothing_here,
         pickup_done,
         drop_done,
         remove_done,
+        equip_done,
+        too_far_away,
+        no_valid_targets,
     ] {
         for msg in f(state, cae, world) {
             game_log.push(msg);
@@ -90,8 +96,9 @@ handle_event!(ate, |state, cae, world, event| {
 
 handle_event!(damage, |state, cae, world, damage| {
     extract_label!(damage @ Damage => to, amount);
-    match cae.get_cause(&damage).map(|link| link.label) {
-        Some(Label::HungerPang) => {
+    extract_nearest_ancestor!(cae, damage @ Turn => actor);
+    match cae.get_cause(&damage).map(|link| link.label).unwrap() {
+        Label::HungerPang => {
             if world.is_player(to) {
                 Some(format!(
                     "Your hunger pangs are getting painful! You suffer {} hp damage.",
@@ -103,6 +110,19 @@ handle_event!(damage, |state, cae, world, damage| {
                     world.get_component::<Name>(to)
                 ))
             }
+        }
+        Label::UseOnTarget {
+            item,
+            target: use_target,
+        } => {
+            assert_eq!(use_target, to);
+            assert!(world.is_player(actor));
+            Some(format!(
+                "You use {} on {}, inflicting {} hp of damage.",
+                world.get_component::<Name>(item),
+                world.get_component::<Name>(to),
+                amount
+            ))
         }
         _ => None,
     }
@@ -127,7 +147,7 @@ handle_event!(pickup_nothing_here, |state, cae, world, event| {
 
 handle_event!(pickup_done, |state, cae, world, event| {
     extract_nearest_ancestor!(cae, event @ Turn => actor);
-    extract_nearest_ancestor!(cae, event @ PickupAction => item);
+    extract_cause!(cae, event @ PickupAction => item);
     let item_name = world.get_component::<Name>(item);
 
     Some(if world.is_player(actor) {
@@ -143,7 +163,7 @@ handle_event!(pickup_done, |state, cae, world, event| {
 
 handle_event!(drop_done, |state, cae, world, event| {
     extract_nearest_ancestor!(cae, event @ Turn => actor);
-    extract_nearest_ancestor!(cae, event @ DropIntent => item);
+    extract_cause!(cae, event @ DropIntent => item);
     let item_name = world.get_component::<Name>(item);
 
     Some(if world.is_player(actor) {
@@ -157,9 +177,26 @@ handle_event!(drop_done, |state, cae, world, event| {
     })
 });
 
+handle_event!(equip_done, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    extract_cause!(cae, event @ UseOnTarget => item, target);
+    assert_eq!(actor, target); // This may be removed to allow advanced reverse pickpocketing I guess
+    let item_name = world.get_component::<Name>(item);
+
+    Some(if world.is_player(actor) {
+        format!("You equip {}.", item_name)
+    } else {
+        format!(
+            "The {} equips {}.",
+            world.get_component::<Name>(actor),
+            item_name
+        )
+    })
+});
+
 handle_event!(remove_done, |state, cae, world, event| {
     extract_nearest_ancestor!(cae, event @ Turn => actor);
-    extract_nearest_ancestor!(cae, event @ RemoveIntent => item);
+    extract_cause!(cae, event @ RemoveIntent => item);
     let item_name = world.get_component::<Name>(item);
 
     Some(if world.is_player(actor) {
@@ -179,4 +216,55 @@ handle_event!(death, |state, cae, world, event| {
         return None;
     }
     Some(format!("{} is dead.", world.get_component::<Name>(entity)))
+});
+
+handle_event!(too_far_away, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    extract_nearest_ancestor!(cae, event @ UseIntent => item);
+    if !world.is_player(actor) {
+        return None;
+    }
+    Some(format!(
+        "That's too far away for {}.",
+        world.get_component::<Name>(item)
+    ))
+});
+
+handle_event!(no_valid_targets, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    extract_nearest_ancestor!(cae, event @ UseIntent => item);
+    if !world.is_player(actor) {
+        return None;
+    }
+    Some(format!(
+        "No valid targets found for {}.",
+        world.get_component::<Name>(item)
+    ))
+});
+
+handle_event!(healing, |state, cae, world, event| {
+    extract_label!(event @ Healing => amount, to);
+    extract_cause!(cae, event @ UseOnTarget => item, target);
+    assert!(world.is_player(to));
+    assert_eq!(to, target);
+    Some(format!(
+        "You use the {}, healing {} hp.",
+        world.get_component::<Name>(item),
+        amount
+    ))
+});
+
+handle_event!(confused, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    extract_cause!(cae, event @ UseOnTarget => item, target);
+    extract_label!(event @ Confused => entity);
+    assert!(world.is_player(actor));
+    assert_eq!(target, entity);
+
+    Some(format!(
+        "You use {} on {}, confusing them for {} turns.",
+        world.get_component::<Name>(item),
+        world.get_component::<Name>(entity),
+        world.get_component::<Confusion>(entity).turns
+    ))
 });

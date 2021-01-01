@@ -1,3 +1,7 @@
+// Allow unused_parens because some of the cause-and-effect macros would need to be
+// twice the size to pass this lint, and I can't seem to disable the lint inside the macros.
+#![allow(unused_parens)]
+
 use core::convert::TryInto;
 use std::collections::HashMap;
 use std::panic;

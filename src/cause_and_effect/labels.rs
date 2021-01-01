@@ -56,6 +56,10 @@ pub enum Label {
     PickupAction {
         item: Entity,
     },
+    UseOnTarget {
+        item: Entity,
+        target: Entity,
+    },
 
     //// Effects
     // Effects - Movement
