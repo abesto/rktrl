@@ -1,25 +1,8 @@
-use bracket_lib::prelude::*;
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery, Resources};
+use crate::systems::prelude::*;
 
-use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
-use crate::{components::*, resources::*};
-
-pub struct ParticleSystemState {
-    subscription: CAESubscription,
-}
-
-impl ParticleSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::ParticleRequest { .. })
-    }
-
-    pub fn new(resources: &Resources) -> ParticleSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        ParticleSystemState {
-            subscription: cae.subscribe(ParticleSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(ParticleSystemState {
+    requests(link) { matches!(link.label, Label::ParticleRequest { .. }) }
+});
 
 #[system]
 #[read_component(Entity)]
@@ -42,28 +25,17 @@ fn process_requests(
     state: &ParticleSystemState,
     cae: &mut CauseAndEffect,
 ) {
-    for link in cae.get_queue(state.subscription) {
-        if let Label::ParticleRequest {
-            x,
-            y,
-            fg,
-            bg,
-            glyph,
-            lifetime,
-        } = link.label
-        {
-            commands.push((
-                Position::new(x, y),
-                Renderable {
-                    glyph,
-                    color: ColorPair::new(fg, bg),
-                    render_order: RenderOrder::Particle,
-                },
-                ParticleLifetime::new(lifetime),
-            ));
-        } else {
-            unreachable!();
-        }
+    for link in cae.get_queue(state.requests) {
+        extract_label!(link @ ParticleRequest => x, y, fg, bg, glyph, lifetime);
+        commands.push((
+            Position::new(x, y),
+            Renderable {
+                glyph,
+                color: ColorPair::new(fg, bg),
+                render_order: RenderOrder::Particle,
+            },
+            ParticleLifetime::new(lifetime),
+        ));
     }
 }
 

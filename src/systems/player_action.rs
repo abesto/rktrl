@@ -291,7 +291,7 @@ fn try_move_player(
                 cae.add_effect(
                     &cause,
                     Label::MeleeIntent {
-                        target: new_position,
+                        target_position: new_position,
                     },
                 );
                 return;
@@ -302,7 +302,7 @@ fn try_move_player(
     cae.add_effect(
         &cause,
         Label::MoveIntent {
-            target: new_position,
+            target_position: new_position,
         },
     );
 }

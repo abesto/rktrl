@@ -29,32 +29,18 @@ pub fn movement(
     commands: &mut CommandBuffer,
 ) {
     for move_intent in cae.get_queue(state.subscription) {
-        let target = match move_intent.label {
-            Label::MoveIntent { target } => target,
-            _ => unreachable!(),
-        };
-
-        if map.is_blocked(target) {
+        extract_label!(move_intent @ MoveIntent => target_position);
+        if map.is_blocked(target_position) {
             cae.add_effect(&move_intent, Label::MovementBlocked);
             continue;
         }
 
-        let entity = match cae
-            .find_nearest_ancestor(
-                &move_intent,
-                |ancestor| matches!(ancestor.label, Label::Turn{..}),
-            )
-            .unwrap()
-            .label
-        {
-            Label::Turn { actor: entity } => entity,
-            _ => unreachable!(),
-        };
-        commands.add_component(entity, target);
+        extract_nearest_ancestor!(cae, move_intent @ Turn => actor);
+        commands.add_component(actor, target_position);
         cae.add_effect(&move_intent, Label::MovementDone);
 
         commands.exec_mut(move |w| {
-            if let Ok(viewshed) = w.entry_mut(entity).unwrap().get_component_mut::<Viewshed>() {
+            if let Ok(viewshed) = w.entry_mut(actor).unwrap().get_component_mut::<Viewshed>() {
                 viewshed.dirty = true;
             }
         });

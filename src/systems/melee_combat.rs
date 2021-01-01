@@ -1,25 +1,8 @@
-use bracket_lib::prelude::*;
-use legion::{system, world::SubWorld, IntoQuery, Resources};
+use crate::systems::prelude::*;
 
-use crate::cause_and_effect::{CAESubscription, CauseAndEffect, Label, Link};
-use crate::{components::*, resources::*, util::world_ext::WorldExt};
-
-pub struct MeleeCombatSystemState {
-    subscription: CAESubscription,
-}
-
-impl MeleeCombatSystemState {
-    fn subscription_filter(link: &Link) -> bool {
-        matches!(link.label, Label::MeleeIntent { .. })
-    }
-
-    pub fn new(resources: &Resources) -> MeleeCombatSystemState {
-        let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
-        MeleeCombatSystemState {
-            subscription: cae.subscribe(MeleeCombatSystemState::subscription_filter),
-        }
-    }
-}
+cae_system_state!(MeleeCombatSystemState {
+    melee_intent(link) { matches!(link.label, Label::MeleeIntent { .. }) }
+});
 
 #[system]
 #[read_component(Name)]
@@ -36,12 +19,9 @@ pub fn melee_combat(
     #[resource] map: &Map,
     world: &SubWorld,
 ) {
-    for ref melee_intent in cae.get_queue(state.subscription) {
+    for ref melee_intent in cae.get_queue(state.melee_intent) {
         // Where are we attacking?
-        let target_position = match melee_intent.label {
-            Label::MeleeIntent { target } => target,
-            _ => unreachable!(),
-        };
+        extract_label!(melee_intent @ MeleeIntent => target_position);
         // What's there (if anything)?
         let maybe_target = map.get_tile_contents(target_position).and_then(|targets| {
             targets
@@ -57,19 +37,12 @@ pub fn melee_combat(
         };
 
         // Who's attacking?
-        let attacker = match cae
-            .find_nearest_ancestor(&melee_intent, |link| matches!(link.label, Label::Turn{..}))
-            .unwrap()
-            .label
-        {
-            Label::Turn { actor: entity } => entity,
-            _ => unreachable!(),
-        };
+        extract_nearest_ancestor!(cae, melee_intent @ Turn => actor);
 
         // Details about the attacker
         let (attacker_name, attacker_stats, maybe_attacker_hunger_clock) =
             <(&Name, &CombatStats, Option<&HungerClock>)>::query()
-                .get(world, attacker)
+                .get(world, actor)
                 .unwrap();
         if attacker_stats.hp <= 0 {
             cae.add_effect(melee_intent, Label::AttackerIsAlreadyDead);
@@ -98,7 +71,7 @@ pub fn melee_combat(
 
         let equipment_attack_power_bonus = <(&Equipped, &MeleePowerBonus)>::query()
             .iter(world)
-            .filter(|(equipped, _)| equipped.owner == attacker)
+            .filter(|(equipped, _)| equipped.owner == actor)
             .map(|(_, bonus)| bonus.power)
             .sum::<i32>();
 

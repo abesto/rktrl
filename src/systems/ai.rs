@@ -66,7 +66,12 @@ pub fn ai(
         let player_pos = world.player_component::<Position>();
         let distance = DistanceAlg::Pythagoras.distance2d(**pos, *player_pos);
         if distance < 1.5 {
-            cae.add_effect(cause, Label::MeleeIntent { target: player_pos });
+            cae.add_effect(
+                cause,
+                Label::MeleeIntent {
+                    target_position: player_pos,
+                },
+            );
         } else if viewshed.visible_tiles.contains(&player_pos) {
             let path = a_star_search(
                 map.pos_idx(*pos) as i32,
@@ -77,7 +82,7 @@ pub fn ai(
                 cae.add_effect(
                     cause,
                     Label::MoveIntent {
-                        target: map.idx_pos(path.steps[1]),
+                        target_position: map.idx_pos(path.steps[1]),
                     },
                 );
             }

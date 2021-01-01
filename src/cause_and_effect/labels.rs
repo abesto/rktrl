@@ -32,10 +32,10 @@ pub enum Label {
     SkipBecauseHidden,
     SkipBecauseConfused,
     MoveIntent {
-        target: Position,
+        target_position: Position,
     },
     MeleeIntent {
-        target: Position,
+        target_position: Position,
     },
     PickupIntent,
     DropIntent {
