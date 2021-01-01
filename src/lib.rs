@@ -105,17 +105,19 @@ impl GameState for State {
         self.resources.insert(Input::from(&*term));
         self.resources.insert(FrameData::from(&*term));
 
-        let maybe_new_runstate = self
-            .resources
-            .get_mut_or_default::<RunStateQueue>()
-            .pop_front();
-        if let Some(new_runstate) = maybe_new_runstate {
-            self.resources.insert(new_runstate);
-            println!("{:?}", new_runstate);
+        {
+            let maybe_new_runstate = self
+                .resources
+                .get_mut_or_default::<RunStateQueue>()
+                .pop_front();
+            if let Some(new_runstate) = maybe_new_runstate {
+                self.resources.insert(new_runstate);
+                println!("{:?}", new_runstate);
+            }
         }
 
         let runstate = *self.resources.get_or_default::<RunState>();
-        let maybe_newrunstate = match runstate {
+        let maybe_new_runstate = match runstate {
             RunState::PreRun => {
                 self.reset();
                 self.resources.insert(GameLog {
@@ -163,10 +165,10 @@ impl GameState for State {
             }
         };
 
-        if let Some(newrunstate) = maybe_newrunstate {
+        if let Some(new_runstate) = maybe_new_runstate {
             self.resources
                 .get_mut_or_default::<RunStateQueue>()
-                .push_back(newrunstate);
+                .push_back(new_runstate);
         }
 
         render_draw_buffer(&mut term).unwrap();
