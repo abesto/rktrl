@@ -23,6 +23,8 @@ pub fn death(
             .unwrap();
 
         if player.is_none() {
+            // TODO watch out, moving game_log into a separate system will crash if the
+            //      entity is direcly removed here
             game_log.entries.push(format!("{} is dead", name));
             commands.remove(entity)
         } else {

@@ -274,7 +274,12 @@ pub fn item_use(
 
         if used_item {
             if world.has_component::<Consumable>(item) {
-                commands.remove(item);
+                // TODO we can't fully remove the entity here because downstream systems then
+                //      couldn't read its components. Might need a deferred cleanup system,
+                //      separate from schedule.flush
+                commands.remove_component::<InBackpack>(item);
+                commands.remove_component::<Position>(item);
+                //commands.remove(item);
             }
         } else {
             cae.add_effect(&use_intent, Label::NoValidTargets);
