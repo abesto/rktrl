@@ -124,6 +124,28 @@ handle_event!(damage, |state, cae, world, damage| {
                 amount
             ))
         }
+        Label::Hit => {
+            let actor_name = world.get_component::<Name>(actor);
+            let target_name = if world.is_player(to) {
+                "you".to_string()
+            } else {
+                world.get_component::<Name>(to).into()
+            };
+            if world.is_player(actor) {
+                if amount <= 0 {
+                    Some(format!("You are unable to hurt {}.", target_name))
+                } else {
+                    Some(format!("You hit {}, for {} hp.", target_name, amount))
+                }
+            } else if amount <= 0 {
+                Some(format!("{} is unable to hurt {}.", actor_name, target_name))
+            } else {
+                Some(format!(
+                    "{} hits {}, for {} hp.",
+                    actor_name, target_name, amount
+                ))
+            }
+        }
         _ => None,
     }
 });
@@ -248,7 +270,7 @@ handle_event!(healing, |state, cae, world, event| {
     assert!(world.is_player(to));
     assert_eq!(to, target);
     Some(format!(
-        "You use the {}, healing {} hp.",
+        "You use {}, healing {} hp.",
         world.get_component::<Name>(item),
         amount
     ))

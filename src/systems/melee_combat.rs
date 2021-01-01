@@ -14,7 +14,6 @@ cae_system_state!(MeleeCombatSystemState {
 #[read_component(Position)]
 pub fn melee_combat(
     #[state] state: &MeleeCombatSystemState,
-    #[resource] game_log: &mut GameLog,
     #[resource] cae: &mut CauseAndEffect,
     #[resource] map: &Map,
     world: &SubWorld,
@@ -40,8 +39,8 @@ pub fn melee_combat(
         extract_nearest_ancestor!(cae, melee_intent @ Turn => actor);
 
         // Details about the attacker
-        let (attacker_name, attacker_stats, maybe_attacker_hunger_clock) =
-            <(&Name, &CombatStats, Option<&HungerClock>)>::query()
+        let (attacker_stats, maybe_attacker_hunger_clock) =
+            <(&CombatStats, Option<&HungerClock>)>::query()
                 .get(world, actor)
                 .unwrap();
         if attacker_stats.hp <= 0 {
@@ -50,8 +49,7 @@ pub fn melee_combat(
         }
 
         // Details about the target
-        let (target_stats, target_name) =
-            <(&CombatStats, &Name)>::query().get(world, target).unwrap();
+        let (target_stats,) = <(&CombatStats,)>::query().get(world, target).unwrap();
         if target_stats.hp <= 0 {
             cae.add_effect(melee_intent, Label::TargetIsAlreadyDead);
             continue;
@@ -98,19 +96,6 @@ pub fn melee_combat(
                 bleeding: true,
             },
         );
-
-        // TODO this whole if-else can go away once GameLog and damage_system are migrated to CAE
-        if damage == 0 {
-            game_log.entries.push(format!(
-                "{} is unable to hurt {}",
-                attacker_name, target_name
-            ));
-        } else {
-            game_log.entries.push(format!(
-                "{} hits {}, for {} hp.",
-                attacker_name, target_name, damage
-            ));
-        }
 
         cae.add_effect(
             &hit,

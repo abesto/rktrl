@@ -27,8 +27,8 @@ macro_rules! cae_system_state {
 
 macro_rules! extract_label {
     ($link:ident @ $variant:ident => $($field:ident),+) => {
-        let ($($field),+) = match $link.label {
-            Label::$variant {$($field),+, ..} => ($($field),+),
+        let ($($field),+,) = match $link.label {
+            Label::$variant {$($field),+, ..} => ($($field),+,),
             _ => unreachable!()
         };
     };
@@ -43,20 +43,20 @@ macro_rules! find_nearest_ancestor {
 
 macro_rules! extract_nearest_ancestor {
     ($cae:ident, $effect:ident @ $variant:ident => $($field:ident),+) => {
-        let ($($field),+) = {
+        let ($($field),+,) = {
             let ancestor = find_nearest_ancestor!($cae, $effect @ $variant);
             extract_label!(ancestor @ $variant => $($field),+);
-            ($($field),+)
+            ($($field),+,)
         };
     }
 }
 
 macro_rules! extract_cause {
     ($cae:ident, $effect:ident @ $variant:ident => $($field:ident),+) => {
-        let ($($field),+) = {
+        let ($($field),+,) = {
             let cause = $cae.get_cause($effect).unwrap();
             extract_label!(cause @ $variant => $($field),+);
-            ($($field),+)
+            ($($field),+,)
         };
     }
 }
