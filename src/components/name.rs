@@ -1,4 +1,3 @@
-use legion_typeuuid::register_serialize;
 use macro_attr::*;
 use newtype_derive::*;
 use serde::{Deserialize, Serialize};
@@ -11,4 +10,3 @@ macro_attr! {
     #[uuid = "6137cc44-1a58-4c61-81e1-ec497bf7baee"]
     pub struct Name(String);
 }
-register_serialize!(Name);

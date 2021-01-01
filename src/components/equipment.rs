@@ -1,5 +1,4 @@
 use legion::Entity;
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
 
@@ -14,7 +13,6 @@ pub enum EquipmentSlot {
 pub struct Equippable {
     pub slot: EquipmentSlot,
 }
-register_serialize!(Equippable);
 
 impl Equippable {
     #[must_use]
@@ -29,4 +27,3 @@ pub struct Equipped {
     pub owner: Entity,
     pub slot: EquipmentSlot,
 }
-register_serialize!(Equipped);

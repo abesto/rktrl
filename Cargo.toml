@@ -18,11 +18,10 @@ bracket-terminal = "0.8.1"
 wasm-bindgen = "0.2.68"
 console_error_panic_hook = "0.1.6"
 flate2 = "1.0.19"
-stdweb = "0.4.20"
 base64 = "0.13.0"
 legion = { version = "0.3.1", default-features = false, features = ["codegen", "serialize", "wasm-bindgen"] }
 # TODO swap to upstream once `wasm` branch is merged
-legion_typeuuid = { git = "https://github.com/abesto/legion_typeuuid", branch = "wasm" }
+legion_typeuuid = { git = "https://github.com/abesto/legion_typeuuid", branch = "wasm", default-features = false, features = ["type-uuid"] }
 type-uuid = "0.1.2"
 inventory = "0.1.9"
 bincode = "1.3.1"
@@ -31,6 +30,7 @@ lazy_static = "1.4.0"
 crossbeam-queue = "0.3.1"
 petgraph = "0.5.1"
 paste = "1.0.4"
+web-sys = { version = "0.3.46", features = ["Storage"] }
 
 [patch.crates-io]
 # Needed until https://github.com/thebracket/bracket-lib/pull/130 (Fix modifier keys) is released

@@ -1,4 +1,3 @@
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
 
@@ -10,7 +9,6 @@ pub struct CombatStats {
     pub defense: i32,
     pub power: i32,
 }
-register_serialize!(CombatStats);
 
 impl CombatStats {
     pub fn with_hp(&self, new_hp: i32) -> CombatStats {
@@ -25,7 +23,6 @@ impl CombatStats {
 pub struct MeleePowerBonus {
     pub power: i32,
 }
-register_serialize!(MeleePowerBonus);
 
 impl MeleePowerBonus {
     #[must_use]
@@ -39,7 +36,6 @@ impl MeleePowerBonus {
 pub struct DefenseBonus {
     pub defense: i32,
 }
-register_serialize!(DefenseBonus);
 
 impl DefenseBonus {
     #[must_use]

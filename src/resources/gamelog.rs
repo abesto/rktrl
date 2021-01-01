@@ -1,4 +1,3 @@
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
 
@@ -7,7 +6,6 @@ use type_uuid::TypeUuid;
 pub struct GameLog {
     pub entries: Vec<String>,
 }
-register_serialize!(GameLog);
 
 impl Default for GameLog {
     fn default() -> Self {

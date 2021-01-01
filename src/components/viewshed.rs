@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
 
@@ -14,7 +13,6 @@ pub struct Viewshed {
     pub range: u16,
     pub dirty: bool,
 }
-register_serialize!(Viewshed);
 
 impl Viewshed {
     #[must_use]

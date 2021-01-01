@@ -1,5 +1,4 @@
 use bracket_lib::prelude::*;
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use type_uuid::TypeUuid;
 
@@ -18,5 +17,3 @@ pub struct Renderable {
     pub glyph: u16,
     pub render_order: RenderOrder,
 }
-
-register_serialize!(Renderable);

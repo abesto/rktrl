@@ -8,7 +8,6 @@ use std::{
 
 use bracket_lib::prelude::*;
 use legion::Entity;
-use legion_typeuuid::register_serialize;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use strum::IntoEnumIterator;
@@ -40,7 +39,6 @@ pub struct Map {
     #[serde(skip_deserializing)]
     tile_content: HashMap<Position, Vec<Entity>>,
 }
-register_serialize!(Map);
 
 impl Map {
     #[must_use]
