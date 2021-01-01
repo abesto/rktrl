@@ -16,6 +16,7 @@ use crate::{
         ai::{ai_system, AiSystemState},
         damage::{damage_system, DamageSystemState},
         death::{death_system, DeathSystemState},
+        game_log::{game_log_system, GameLogSystemState},
         hunger::{hunger_system, HungerSystemState},
         item_collection::{item_collection_system, ItemCollectionSystemState},
         item_drop::{item_drop_system, ItemDropSystemState},
@@ -209,6 +210,7 @@ pub fn main() -> BError {
             .add_system(particle_system(ParticleSystemState::new(&resources)))
             .flush()
             .add_system(render_system())
+            .add_system(game_log_system(GameLogSystemState::new(&resources)))
             .add_system(cae_debug_system())
             .add_system(cae_clear_system())
             .build(),

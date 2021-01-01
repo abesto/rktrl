@@ -95,5 +95,6 @@ pub fn load(world: &mut World, resources: &mut Resources) {
     foreach_resource!(deser.deserialize_resource::<R>(resources));
 
     // We're a roguelike!
+    // TODO make sure to not lose the last save if the game is closed / crashes
     delete_savegame();
 }

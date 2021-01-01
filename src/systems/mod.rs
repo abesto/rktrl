@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod damage;
 pub mod death;
+pub mod game_log;
 pub mod hunger;
 pub mod item_collection;
 pub mod item_drop;

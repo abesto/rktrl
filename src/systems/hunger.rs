@@ -11,19 +11,13 @@ cae_system_state!(HungerSystemState {
 pub fn hunger(
     #[state] state: &HungerSystemState,
     #[resource] cae: &mut CauseAndEffect,
-    // TODO migrate GameLog to CAE
-    #[resource] game_log: &mut GameLog,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
     let mut ate_this_turn = vec![];
     for ate in cae.get_queue(state.ate) {
-        extract_label!(ate @ Ate => who, what);
+        extract_label!(ate @ Ate => who);
         commands.add_component(who, HungerClock::new(HungerState::WellFed, 20));
-        game_log.entries.push(format!(
-            "You eat the {}.",
-            world.get_component::<Name>(what)
-        ));
         ate_this_turn.push(who);
     }
 
@@ -58,9 +52,6 @@ pub fn hunger(
                             duration: 200,
                         },
                     );
-                    game_log
-                        .entries
-                        .push("You are no longer well fed.".to_string());
                 }
                 HungerState::Normal => {
                     cae.add_effect(&turn, Label::Hungry);
@@ -71,7 +62,6 @@ pub fn hunger(
                             duration: 200,
                         },
                     );
-                    game_log.entries.push("You are hungry.".to_string());
                 }
                 HungerState::Hungry => {
                     cae.add_effect(&turn, Label::Starving);
@@ -82,7 +72,6 @@ pub fn hunger(
                             duration: 200,
                         },
                     );
-                    game_log.entries.push("You are starving!".to_string());
                 }
                 HungerState::Starving => {
                     // Inflict damage from hunger
@@ -94,10 +83,6 @@ pub fn hunger(
                             to: actor,
                             bleeding: false,
                         },
-                    );
-                    game_log.entries.push(
-                        "Your hunger pangs are getting painful! You suffer 1 hp damage."
-                            .to_string(),
                     );
                 }
             }

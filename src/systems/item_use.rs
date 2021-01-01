@@ -324,7 +324,7 @@ fn provide_healing(
     commands: &mut CommandBuffer,
     use_intent: &Link,
     item: Entity,
-    actor_position: _,
+    actor_position: &Position,
     item_name: &String,
     targets: &Vec<Entity>,
 ) -> bool {
