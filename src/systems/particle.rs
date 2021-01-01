@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ParticleSystemState {
-    requests: ParticleRequest
+    subscribe(ParticleRequest)
 });
 
 #[system]
@@ -25,7 +25,7 @@ fn process_requests(
     state: &ParticleSystemState,
     cae: &mut CauseAndEffect,
 ) {
-    for link in cae.get_queue(state.requests) {
+    for link in cae.get_queue(state.particle_request) {
         extract_label!(link @ ParticleRequest => x, y, fg, bg, glyph, lifetime);
         commands.push((
             Position::new(x, y),

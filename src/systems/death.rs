@@ -1,32 +1,23 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(DeathSystemState { death: Death });
+cae_system_state!(DeathSystemState { subscribe(Death) });
 
 #[system]
 #[read_component(Name)]
 #[read_component(Player)]
 pub fn death(
     #[state] state: &DeathSystemState,
-    #[resource] game_log: &mut GameLog,
     #[resource] run_state_queue: &mut RunStateQueue,
     #[resource] cae: &mut CauseAndEffect,
+    #[resource] deferred_cleanup: &mut DeferredCleanup,
     world: &SubWorld,
-    commands: &mut CommandBuffer,
 ) {
     for death in cae.get_queue(state.death) {
         extract_label!(death @ Death => entity);
-
-        let (name, player) = <(&Name, Option<&Player>)>::query()
-            .get(world, entity)
-            .unwrap();
-
-        if player.is_none() {
-            // TODO watch out, moving game_log into a separate system will crash if the
-            //      entity is direcly removed here
-            game_log.entries.push(format!("{} is dead", name));
-            commands.remove(entity)
-        } else {
+        if world.is_player(entity) {
             run_state_queue.push_back(RunState::GameOver);
+        } else {
+            deferred_cleanup.entity(entity);
         }
     }
 }

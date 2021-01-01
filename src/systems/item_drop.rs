@@ -2,7 +2,7 @@ use crate::systems::prelude::*;
 use legion::EntityStore;
 
 cae_system_state!(ItemDropSystemState {
-    drop_intent: DropIntent
+    subscribe(DropIntent)
 });
 
 #[system]
@@ -11,7 +11,6 @@ cae_system_state!(ItemDropSystemState {
 #[read_component(Position)]
 pub fn item_drop(
     #[state] state: &ItemDropSystemState,
-    #[resource] game_log: &mut GameLog,
     #[resource] cae: &mut CauseAndEffect,
     world: &SubWorld,
     commands: &mut CommandBuffer,
@@ -28,11 +27,6 @@ pub fn item_drop(
         );
         commands.add_component(item, position);
         commands.remove_component::<InBackpack>(item);
-
-        game_log.entries.push(format!(
-            "You drop the {}.",
-            to_drop.get_component::<Name>().unwrap()
-        ));
         cae.add_effect(&intent, Label::DropDone);
     }
 }

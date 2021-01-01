@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ItemUseSystemState {
-    use_intent: UseIntent
+    subscribe(UseIntent)
 });
 
 #[system]
@@ -29,6 +29,7 @@ pub fn item_use(
     #[resource] game_log: &mut GameLog,
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
+    #[resource] deferred_cleanup: &mut DeferredCleanup,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
@@ -120,12 +121,7 @@ pub fn item_use(
 
         if used_item {
             if world.has_component::<Consumable>(item) {
-                // TODO we can't fully remove the entity here because downstream systems then
-                //      couldn't read its components. Might need a deferred cleanup system,
-                //      separate from schedule.flush
-                commands.remove_component::<InBackpack>(item);
-                commands.remove_component::<Position>(item);
-                //commands.remove(item);
+                deferred_cleanup.entity(item);
             }
         } else {
             cae.add_effect(&use_intent, Label::NoValidTargets);

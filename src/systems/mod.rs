@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod damage;
 pub mod death;
+pub mod entity_cleanup;
 pub mod game_log;
 pub mod hunger;
 pub mod item_collection;

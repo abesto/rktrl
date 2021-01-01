@@ -5,6 +5,7 @@ use crate::components::Player;
 pub trait WorldExt {
     fn has_component<T: Component>(&self, entity: Entity) -> bool;
     fn get_component<T: Component + Clone>(&self, entity: Entity) -> T;
+
     fn is_player(&self, entity: Entity) -> bool;
     fn maybe_player_entity(&self) -> Option<&Entity>;
     fn player_entity(&self) -> &Entity;

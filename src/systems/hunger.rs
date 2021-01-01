@@ -1,8 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(HungerSystemState {
-    turn: Turn,
-    ate: Ate
+    subscribe(Turn, Ate)
 });
 
 #[system]

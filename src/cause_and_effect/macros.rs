@@ -1,14 +1,14 @@
 macro_rules! cae_system_state {
-    ($name:ident { $($field:ident : $($variant:ident)|+),+ }) => {
-        pub struct $name {
-            $($field: CAESubscription),+
-        }
-
+    ($name:ident { subscribe($($variant:ident),+) $($rest:tt)* }) => {
         paste! {
+            pub struct $name {
+                $([<$variant:snake>]: CAESubscription),+
+            }
+
             impl $name {
                 $(
-                    fn [<$field _filter>](link: &Link) -> bool {
-                         $(matches!(link.label, Label::$variant { .. }) )||+
+                    fn [<$variant:snake _filter>](link: &Link) -> bool {
+                         matches!(link.label, Label::$variant { .. })
                     }
                 )+
 
@@ -16,7 +16,7 @@ macro_rules! cae_system_state {
                     let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
                     $name {
                         $(
-                        $field: cae.subscribe($name::[<$field _filter>])
+                        [<$variant:snake>]: cae.subscribe($name::[<$variant:snake _filter>])
                         ),+
                     }
                 }

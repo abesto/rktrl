@@ -1,6 +1,6 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(AiSystemState { turn: Turn });
+cae_system_state!(AiSystemState { subscribe(Turn) });
 
 #[system]
 #[read_component(Name)]
@@ -9,7 +9,6 @@ cae_system_state!(AiSystemState { turn: Turn });
 #[write_component(Confusion)]
 pub fn ai(
     #[state] state: &AiSystemState,
-    #[resource] game_log: &mut GameLog,
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
@@ -22,8 +21,8 @@ pub fn ai(
             continue;
         }
 
-        let (name, pos, viewshed, maybe_confusion) =
-            <(&Name, &Position, &Viewshed, Option<&Confusion>)>::query()
+        let (pos, viewshed, maybe_confusion) =
+            <(&Position, &Viewshed, Option<&Confusion>)>::query()
                 .get(world, actor)
                 .unwrap();
 
@@ -34,10 +33,6 @@ pub fn ai(
                 } else {
                     commands.remove_component::<Confusion>(actor);
                     cae.add_effect(cause, Label::ConfusionOver { entity: actor });
-                    // TODO move game_log into an effect system
-                    game_log
-                        .entries
-                        .push(format!("{} is no longer confused!", name));
                 }
                 cae.add_effect(cause, Label::SkipBecauseConfused);
                 false

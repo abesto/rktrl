@@ -1,6 +1,6 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(DamageSystemState { damage: Damage });
+cae_system_state!(DamageSystemState { subscribe(Damage) });
 
 #[system]
 #[read_component(Position)]

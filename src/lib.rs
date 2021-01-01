@@ -16,6 +16,7 @@ use crate::{
         ai::{ai_system, AiSystemState},
         damage::{damage_system, DamageSystemState},
         death::{death_system, DeathSystemState},
+        entity_cleanup::{entity_cleanup_system, EntityCleanupRequest},
         game_log::{game_log_system, GameLogSystemState},
         hunger::{hunger_system, HungerSystemState},
         item_collection::{item_collection_system, ItemCollectionSystemState},
@@ -83,6 +84,7 @@ impl State {
             GameLog,
             ShownInventory,
             SegQueue<SpawnRequest>,
+            SegQueue<EntityCleanupRequest>,
         ]);
         self.resources
             .get_mut::<CauseAndEffect>()
@@ -213,6 +215,7 @@ pub fn main() -> BError {
             .add_system(game_log_system(GameLogSystemState::new(&resources)))
             .add_system(cae_debug_system())
             .add_system(cae_clear_system())
+            .add_system(entity_cleanup_system())
             .build(),
     );
     schedules.insert(
