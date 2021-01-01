@@ -1,11 +1,11 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(GameLogSystemState {
-    ate(link) { matches!(link.label, Label::Ate { .. }) }
-    no_longer_well_fed(link) { link.label == Label::NoLongerWellFed }
-    hungry(link) { link.label == Label::Hungry }
-    starving(link) { link.label == Label::Starving }
-    damage(link) { matches!(link.label, Label::Damage { .. } )}
+    ate: Ate,
+    no_longer_well_fed: NoLongerWellFed,
+    hungry: Hungry,
+    starving: Starving,
+    damage: Damage
 });
 
 #[system]

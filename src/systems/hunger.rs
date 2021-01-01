@@ -1,8 +1,8 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(HungerSystemState {
-    turn(link) { matches!(link.label, Label::Turn {..}) }
-    ate(link) { matches!(link.label, Label::Ate {..}) }
+    turn: Turn,
+    ate: Ate
 });
 
 #[system]

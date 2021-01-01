@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ItemCollectionSystemState {
-    pickup_intent(link) { matches!(link.label, Label::PickupIntent {..}) }
+    pickup_intent: PickupIntent
 });
 
 #[system]

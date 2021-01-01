@@ -1,8 +1,6 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(DeathSystemState {
-    death(link) { matches!(link.label, Label::Death {..}) }
-});
+cae_system_state!(DeathSystemState { death: Death });
 
 #[system]
 #[read_component(Name)]

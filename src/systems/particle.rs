@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ParticleSystemState {
-    requests(link) { matches!(link.label, Label::ParticleRequest { .. }) }
+    requests: ParticleRequest
 });
 
 #[system]

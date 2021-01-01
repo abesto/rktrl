@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ItemUseSystemState {
-    use_intent(link) { matches!(link.label, Label::UseIntent {..}) }
+    use_intent: UseIntent
 });
 
 #[system]

@@ -1,12 +1,16 @@
 macro_rules! cae_system_state {
-    ($name:ident { $($field:ident($link:ident) $filter_body:block)+ }) => {
+    ($name:ident { $($field:ident : $($variant:ident)|+),+ }) => {
         pub struct $name {
             $($field: CAESubscription),+
         }
 
         paste! {
             impl $name {
-                $(fn [<$field _filter>]($link: &Link) -> bool $filter_body)+
+                $(
+                    fn [<$field _filter>](link: &Link) -> bool {
+                         $(matches!(link.label, Label::$variant { .. }) )||+
+                    }
+                )+
 
                 pub fn new(resources: &Resources) -> $name {
                     let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();

@@ -1,8 +1,6 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(DamageSystemState {
-    damage(link) { matches!(link.label, Label::Damage {..}) }
-});
+cae_system_state!(DamageSystemState { damage: Damage });
 
 #[system]
 #[read_component(Position)]

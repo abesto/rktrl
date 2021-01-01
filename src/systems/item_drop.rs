@@ -2,7 +2,7 @@ use crate::systems::prelude::*;
 use legion::EntityStore;
 
 cae_system_state!(ItemDropSystemState {
-    drop_intent(link) { matches!(link.label, Label::DropIntent {..}) }
+    drop_intent: DropIntent
 });
 
 #[system]

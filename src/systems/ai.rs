@@ -1,8 +1,6 @@
 use crate::systems::prelude::*;
 
-cae_system_state!(AiSystemState {
-    turn(link) { matches!(link.label, Label::Turn {..}) }
-});
+cae_system_state!(AiSystemState { turn: Turn });
 
 #[system]
 #[read_component(Name)]

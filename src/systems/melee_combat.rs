@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(MeleeCombatSystemState {
-    melee_intent(link) { matches!(link.label, Label::MeleeIntent { .. }) }
+    melee_intent: MeleeIntent
 });
 
 #[system]

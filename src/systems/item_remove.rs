@@ -1,7 +1,7 @@
 use crate::systems::prelude::*;
 
 cae_system_state!(ItemRemoveSystemState {
-    remove_intent(link) { matches!(link.label, Label::RemoveIntent {..}) }
+    remove_intent: RemoveIntent
 });
 
 #[system]
