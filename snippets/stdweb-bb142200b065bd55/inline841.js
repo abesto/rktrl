@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_94456aed711074b87a04505b61002771b4fe0339(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).setUTCDate(($1)); }
+export function __cargo_web_snippet_29ef3a8aaefcd4cb1dfc6284d7e36127515d26ae(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof KeyboardEvent && o.type === "keydown"); }

@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_8fa980e2d2c7809b9771c5dd55158f99bca67584(Module, $0) { return (Module.STDWEB_PRIVATE.acquire_js_reference( $0 ) instanceof Float64Array) | 0; }
+export function __cargo_web_snippet_f7ea1e9bc4f0327d260586ea4424d009bf2034c2(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).screenX;})()); }

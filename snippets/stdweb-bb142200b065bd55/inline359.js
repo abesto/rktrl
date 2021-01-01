@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_cbd9ab50e213a9a554b2ca9ed651f4cec9549baa(Module, $0) { var r = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (r instanceof DOMException) && (r.name === "NoModificationAllowedError"); }
+export function __cargo_web_snippet_ecbb5699d896b5d342fad8273d78b3433cd42281(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof MouseEvent && o.type === "mouseup"); }

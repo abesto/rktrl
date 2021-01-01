@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_f765b15a1a1b5cd266e922e6fca98dd570f17edc(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).textContent=($1); }
+export function __cargo_web_snippet_6eb72014aa87bcfc2ba8e739cb164cfa9eb098ac(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof DOMTokenList); }

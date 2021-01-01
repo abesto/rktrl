@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_5f38f2a482577285c0190d5b8e6e8f3a56432586(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Event && o.type === "fullscreenchange"); }
+export function __cargo_web_snippet_ba2fe5587df6cee41ccfc5d5c3a06d0ec3c12d44(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).createDocumentFragment();})()); }

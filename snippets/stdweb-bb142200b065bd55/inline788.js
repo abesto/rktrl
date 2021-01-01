@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_59a5a55df8f03933e9d938f37acdc390e61fa75c(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof CanvasGradient); }
+export function __cargo_web_snippet_33f78e82fd8e12ff4eb8dc53de00b75977c2ed46(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).selectionEnd;})()); }

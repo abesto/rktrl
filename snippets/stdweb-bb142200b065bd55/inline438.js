@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_88f8701506fc94a1c0e38364d1f1e2f988ef999b(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).radiusX;})()); }
+export function __cargo_web_snippet_b3e706a9dc43209502127b6b6dae83603a14fc98(Module, $0, $1, $2, $3) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);$2 = Module.STDWEB_PRIVATE.to_js($2);$3 = Module.STDWEB_PRIVATE.to_js($3);($0).setDragImage(($1),($2),($3)); }

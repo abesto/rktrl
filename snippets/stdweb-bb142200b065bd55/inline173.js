@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_d4266db04502f8bc21d6f54d55809856758cd6fc(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof HashChangeEvent && o.type === "hashchange"); }
+export function __cargo_web_snippet_b06dde4acf09433b5190a4b001259fe5d4abcbc2(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).success;})()); }

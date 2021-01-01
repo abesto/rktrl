@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_70c21f360180536ae64233eec617860a0bec1a72(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).setUTCFullYear(($1)); }
+export function __cargo_web_snippet_3c63e773071319eff09af93ceb0203933dc4f233(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof KeyboardEvent && o.type === "keyup"); }

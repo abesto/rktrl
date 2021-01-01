@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_5c57e16ebd22655f976d87fae8039e282d7bab59(Module, $0) { Module.STDWEB_PRIVATE.from_js($0, (function(){return Array.from(navigator.getGamepads());})()); }
+export function __cargo_web_snippet_d6eeef100246c3aafefbc72f92b5d6a0abc0cbcf(Module, $0, $1) { $1 = Module.STDWEB_PRIVATE.to_js($1);Module.STDWEB_PRIVATE.from_js($0, (function(){return($1).attributeNamespace;})()); }

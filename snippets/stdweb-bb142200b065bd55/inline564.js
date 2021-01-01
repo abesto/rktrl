@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_df4697739f13083d3632acec1e5cd1061696bf89(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof Event && o.type === "readystatechange"); }
+export function __cargo_web_snippet_08a3b15e1358700ac92bc556f9e9b8af660fc2c7(Module, $0, $1) { $0 = Module.STDWEB_PRIVATE.to_js($0);$1 = Module.STDWEB_PRIVATE.to_js($1);($0).nodeValue=($1); }

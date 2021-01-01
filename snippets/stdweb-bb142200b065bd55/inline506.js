@@ -1,1 +1,1 @@
-export function __cargo_web_snippet_9820d5d7b4219474cfa199b89fe13d0734eff96a(Module, $0) { var o = Module.STDWEB_PRIVATE.acquire_js_reference( $0 );return (o instanceof PointerEvent && o.type === "pointerover"); }
+export function __cargo_web_snippet_2e787da4cf65f1a75e61b4ffa128a1209c25378f(Module, $0) { $0 = Module.STDWEB_PRIVATE.to_js($0);($0).send(); }
