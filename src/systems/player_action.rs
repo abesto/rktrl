@@ -1,12 +1,4 @@
-use bracket_lib::prelude::{letter_to_option, VirtualKeyCode};
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
-
-use crate::{
-    cause_and_effect::{CauseAndEffect, Label, Link},
-    components::*,
-    resources::*,
-    util::{vector::*, world_ext::WorldExt},
-};
+use crate::systems::prelude::*;
 
 enum Action {
     Move(Vector),
@@ -57,7 +49,6 @@ enum Action {
 #[write_component(CombatStats)]
 #[write_component(Player)]
 #[write_component(Viewshed)]
-#[write_component(UseIntent)]
 #[allow(clippy::too_many_arguments)]
 pub fn player_action(
     #[resource] run_state: &RunState,
@@ -110,10 +101,11 @@ pub fn player_action(
             }
 
             Some(Action::Use { choice }) => {
-                try_use(world, commands, shown_inventory, choice).unwrap_or(RunState::ShowInventory)
+                try_use(world, cae, &input_link, shown_inventory, choice)
+                    .unwrap_or(RunState::ShowInventory)
             }
             Some(Action::UseOnTarget { item, target }) => {
-                if try_use_on_target(world, commands, item, target).is_some() {
+                if try_use_on_target(world, cae, &input_link, item, target).is_some() {
                     RunState::PlayerTurn
                 } else {
                     RunState::AwaitingInput
@@ -350,11 +342,11 @@ fn choice_to_entity_from_player_equipment(
 
 fn try_use(
     world: &mut SubWorld,
-    commands: &mut CommandBuffer,
+    cae: &mut CauseAndEffect,
+    cause: &Link,
     shown_inventory: &ShownInventory,
     choice: i32,
 ) -> Option<RunState> {
-    let player_entity = *world.player_entity();
     let item = choice_to_entity_from_player_backpack(world, shown_inventory, choice)?;
     if let Ok(ranged) = world.entry_ref(item).unwrap().get_component::<Ranged>() {
         Some(RunState::ShowTargeting {
@@ -362,9 +354,9 @@ fn try_use(
             range: ranged.range,
         })
     } else {
-        commands.add_component(
-            player_entity,
-            UseIntent {
+        cae.add_effect(
+            cause,
+            Label::UseIntent {
                 item,
                 target: UseTarget::SelfCast,
             },
@@ -375,7 +367,8 @@ fn try_use(
 
 fn try_use_on_target(
     world: &mut SubWorld,
-    commands: &mut CommandBuffer,
+    cae: &mut CauseAndEffect,
+    cause: &Link,
     item: Entity,
     target: Position,
 ) -> Option<()> {
@@ -390,9 +383,9 @@ fn try_use_on_target(
             .owner,
         player_entity
     );
-    commands.add_component(
-        player_entity,
-        UseIntent {
+    cae.add_effect(
+        cause,
+        Label::UseIntent {
             item,
             target: UseTarget::Position(target),
         },

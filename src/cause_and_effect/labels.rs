@@ -1,8 +1,13 @@
 use bracket_lib::prelude::{FontCharType, RGB};
 use legion::Entity;
 
-use crate::components::Position;
-use crate::resources::Input;
+use crate::systems::prelude::{Input, Position};
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum UseTarget {
+    SelfCast,
+    Position(Position),
+}
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Label {
@@ -39,9 +44,12 @@ pub enum Label {
     RemoveIntent {
         item: Entity,
     },
+    UseIntent {
+        item: Entity,
+        target: UseTarget,
+    },
 
-    // Actions (taken)
-    MoveAction,
+    // Actions (when some data translation is needed from the intent)
     MeleeAction {
         target: Entity,
     },
@@ -60,7 +68,7 @@ pub enum Label {
     AttackerIsAlreadyDead,
     TargetIsAlreadyDead,
 
-    // Effects - Damage
+    // Effects - Health
     Damage {
         to: Entity,
         amount: i32,
@@ -69,8 +77,15 @@ pub enum Label {
     Death {
         entity: Entity,
     },
+    Healing {
+        to: Entity,
+        amount: i32,
+    },
 
     // Effects - Misc
+    Confused {
+        entity: Entity,
+    },
     ConfusionOver {
         entity: Entity,
     },
@@ -80,12 +95,21 @@ pub enum Label {
     PickupDone,
 
     // Effects - Inventory management
+    EquipDone,
     DropDone,
     RemoveDone,
 
     // Effects - Hunger
+    Ate {
+        who: Entity,
+        what: Entity,
+    },
     NoLongerWellFed,
     Hungry,
     Starving,
     HungerPang,
+
+    // Effects - Item use
+    TooFarAway,
+    NoValidTargets,
 }

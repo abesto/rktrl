@@ -20,7 +20,7 @@ use crate::{
         item_collection::{item_collection_system, ItemCollectionSystemState},
         item_drop::{item_drop_system, ItemDropSystemState},
         item_remove::{item_remove_system, ItemRemoveSystemState},
-        item_use::item_use_system,
+        item_use::{item_use_system, ItemUseSystemState},
         map_indexing::map_indexing_system,
         mapgen::mapgen_system,
         melee_combat::{melee_combat_system, MeleeCombatSystemState},
@@ -195,7 +195,7 @@ pub fn main() -> BError {
                 &resources,
             )))
             .add_system(item_drop_system(ItemDropSystemState::new(&resources)))
-            .add_system(item_use_system())
+            .add_system(item_use_system(ItemUseSystemState::new(&resources)))
             .add_system(item_remove_system(ItemRemoveSystemState::new(&resources)))
             .add_system(melee_combat_system(MeleeCombatSystemState::new(&resources)))
             .flush()

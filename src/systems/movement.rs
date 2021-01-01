@@ -38,7 +38,6 @@ pub fn movement(
             cae.add_effect(&move_intent, Label::MovementBlocked);
             continue;
         }
-        let move_action = cae.add_effect(&move_intent, Label::MoveAction);
 
         let entity = match cae
             .find_nearest_ancestor(
@@ -52,7 +51,7 @@ pub fn movement(
             _ => unreachable!(),
         };
         commands.add_component(entity, target);
-        cae.add_effect(&move_action, Label::MovementDone);
+        cae.add_effect(&move_intent, Label::MovementDone);
 
         commands.exec_mut(move |w| {
             if let Ok(viewshed) = w.entry_mut(entity).unwrap().get_component_mut::<Viewshed>() {

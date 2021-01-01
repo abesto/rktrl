@@ -1,29 +1,13 @@
-use bracket_lib::prelude::*;
-use legion::{
-    system,
-    systems::CommandBuffer,
-    world::{EntityStore, SubWorld},
-    Entity, IntoQuery,
-};
+use crate::systems::prelude::*;
 
-use crate::cause_and_effect::labels::Label::ParticleRequest;
-use crate::{
-    cause_and_effect::{CauseAndEffect, Label},
-    components::*,
-    resources::*,
-    util::world_ext::WorldExt,
-};
+cae_system_state!(ItemUseSystemState {
+    use_intent(link) { matches!(link.label, Label::UseIntent {..}) }
+});
 
-// TODO not a for_each system pending fix of https://github.com/amethyst/legion/issues/199
 #[system]
-// for_each components
-#[read_component(Entity)]
 #[read_component(Position)]
 #[read_component(Player)]
-#[read_component(UseIntent)]
 #[read_component(CombatStats)]
-// eof for_each components
-#[read_component(Entity)]
 #[read_component(Name)]
 #[read_component(Ranged)]
 #[read_component(AreaOfEffect)]
@@ -36,95 +20,96 @@ use crate::{
 #[read_component(Consumable)]
 #[read_component(Equippable)]
 #[read_component(Position)]
-#[write_component(UseIntent)]
 #[write_component(Equipped)]
 #[write_component(HungerClock)]
 #[write_component(InBackpack)]
 #[allow(clippy::too_many_arguments)]
 pub fn item_use(
+    #[state] state: &ItemUseSystemState,
     #[resource] game_log: &mut GameLog,
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
-    // TODO temporary synthetic cause until system is fully migrated to CAE
-    let cause = &cae.get_root();
-    <(
-        Entity,
-        &Position,
-        Option<&Player>,
-        &UseIntent,
-        Option<&CombatStats>,
-    )>::query()
-    .for_each(
-        world,
-        |(actor_entity, actor_position, player, to_use, maybe_stats)| {
-            commands.remove_component::<UseIntent>(*actor_entity);
-            let mut used_item = false;
-            let item_name = world.get_component::<Name>(to_use.item).to_string();
+    for use_intent in cae.get_queue(state.use_intent) {
+        extract_label!(use_intent @ UseIntent => item, target);
+        extract_nearest_ancestor!(cae, use_intent @ Turn => actor);
+        let (actor_position,) = <(&Position,)>::query().get(world, actor).unwrap();
 
-            let targets: Vec<Entity> = match to_use.target {
-                UseTarget::SelfCast => vec![*actor_entity],
-                UseTarget::Position(target_position) => {
-                    let ranged = world.get_component::<Ranged>(to_use.item);
-                    if (*actor_position - target_position).len() > ranged.range as f32 {
-                        game_log.push(format!("That's too far away for {}", item_name));
-                        return;
-                    } else if world.has_component::<AreaOfEffect>(to_use.item) {
-                        let aoe = world.get_component::<AreaOfEffect>(to_use.item);
-                        let positions: Vec<Position> =
-                            field_of_view(*target_position, aoe.radius, map)
-                                .iter()
-                                .map(|p| Position::from(*p))
-                                .filter(|p| map.contains(*p))
-                                .collect();
+        let mut used_item = false;
+        let item_name = world.get_component::<Name>(item).to_string();
 
-                        for position in &positions {
-                            cae.add_effect(
-                                cause,
-                                Label::ParticleRequest {
-                                    x: position.x,
-                                    y: position.y,
-                                    fg: RGB::named(ORANGE),
-                                    bg: RGB::named(BLACK),
-                                    glyph: to_cp437('░'),
-                                    lifetime: 200.0,
-                                },
-                            );
-                        }
+        let ref targets: Vec<Entity> = match target {
+            UseTarget::SelfCast => vec![actor],
+            UseTarget::Position(target_position) => {
+                let ranged = world.get_component::<Ranged>(item);
+                if (*actor_position - target_position).len() > ranged.range as f32 {
+                    cae.add_effect(&use_intent, Label::TooFarAway);
+                    game_log.push(format!("That's too far away for {}", item_name));
+                    continue;
+                } else if world.has_component::<AreaOfEffect>(item) {
+                    let aoe = world.get_component::<AreaOfEffect>(item);
+                    let positions: Vec<Position> = field_of_view(*target_position, aoe.radius, map)
+                        .iter()
+                        .map(|p| Position::from(*p))
+                        .filter(|p| map.contains(*p))
+                        .collect();
 
-                        positions
-                            .iter()
-                            .flat_map(|p| map.get_tile_contents(*p))
-                            .flatten()
-                            .cloned()
-                            .collect()
-                    } else {
-                        map.get_tile_contents(target_position)
-                            .map(|x| x.to_vec())
-                            .unwrap_or_default()
+                    for position in &positions {
+                        cae.add_effect(
+                            &use_intent,
+                            Label::ParticleRequest {
+                                x: position.x,
+                                y: position.y,
+                                fg: RGB::named(ORANGE),
+                                bg: RGB::named(BLACK),
+                                glyph: to_cp437('░'),
+                                lifetime: 200.0,
+                            },
+                        );
                     }
-                }
-            };
 
-            used_item |= if world.has_component::<ProvidesHealing>(to_use.item) {
-                let healing = world.get_component::<ProvidesHealing>(to_use.item);
-                let stats = maybe_stats.expect("Tried to heal an entity without combat stats");
+                    positions
+                        .iter()
+                        .flat_map(|p| map.get_tile_contents(*p))
+                        .flatten()
+                        .cloned()
+                        .collect()
+                } else {
+                    map.get_tile_contents(target_position)
+                        .map(|x| x.to_vec())
+                        .unwrap_or_default()
+                }
+            }
+        };
+
+        used_item |= if world.has_component::<ProvidesHealing>(item) {
+            let healing = world.get_component::<ProvidesHealing>(item);
+            for &target in targets {
+                let stats = world.get_component::<CombatStats>(target);
                 let new_hp = i32::min(stats.max_hp, stats.hp + healing.heal_amount);
                 let heal_amount = new_hp - stats.hp;
-                commands.add_component(*actor_entity, stats.with_hp(new_hp));
 
-                if player.is_some() {
-                    game_log.entries.push(format!(
-                        "You use the {}, healing {} hp.",
-                        item_name, heal_amount
-                    ));
-                }
+                // TODO factor this out to separate `healing` system
+                //      and deal with capping the healing amount in the logged message
+                commands.add_component(target, stats.with_hp(new_hp));
+
+                game_log.entries.push(format!(
+                    "You use the {}, healing {} hp.",
+                    item_name, heal_amount
+                ));
 
                 cae.add_effect(
-                    cause,
-                    ParticleRequest {
+                    &use_intent,
+                    Label::Healing {
+                        to: target,
+                        amount: heal_amount,
+                    },
+                );
+                cae.add_effect(
+                    &use_intent,
+                    Label::ParticleRequest {
                         x: actor_position.x,
                         y: actor_position.y,
                         fg: RGB::named(GREEN),
@@ -133,190 +118,169 @@ pub fn item_use(
                         lifetime: 200.0,
                     },
                 );
+            }
 
+            true
+        } else {
+            false
+        };
+
+        used_item |= if world.has_component::<InflictsDamage>(item) {
+            let damage = world.get_component::<InflictsDamage>(item).damage;
+            let combat_targets: Vec<&Entity> = targets
+                .iter()
+                .filter(|&&entity| world.has_component::<CombatStats>(entity))
+                .collect();
+
+            if combat_targets.is_empty() {
+                false
+            } else {
+                for &target in combat_targets {
+                    cae.add_effect(
+                        &use_intent,
+                        Label::Damage {
+                            amount: damage,
+                            to: target,
+                            bleeding: true,
+                        },
+                    );
+
+                    // TODO move into game_log system
+                    let mob_name = world.get_component::<Name>(target);
+                    game_log.entries.push(format!(
+                        "You use {} on {}, inflicting {} hp.",
+                        item_name, mob_name, damage
+                    ));
+
+                    if world.has_component::<Position>(target) {
+                        let pos = world.get_component::<Position>(target);
+                        cae.add_effect(
+                            &use_intent,
+                            Label::ParticleRequest {
+                                x: pos.x,
+                                y: pos.y,
+                                fg: RGB::named(RED),
+                                bg: RGB::named(BLACK),
+                                glyph: to_cp437('‼'),
+                                lifetime: 200.0,
+                            },
+                        );
+                    }
+                }
+                true
+            }
+        } else {
+            false
+        };
+
+        used_item |= if world.has_component::<Confusion>(item) {
+            let confusion = world.get_component::<Confusion>(item);
+            let valid_targets: Vec<&Entity> = targets
+                .iter()
+                // TODO Allow hitting players, maybe once the AI system is generalized
+                .filter(|&&t| world.has_component::<Monster>(t))
+                .collect();
+
+            if valid_targets.is_empty() {
+                false
+            } else {
+                for target in valid_targets {
+                    let entry = world.entry_ref(*target).unwrap();
+                    let target_name = entry
+                        .get_component::<Name>()
+                        .expect("Tried to confuse something with no name :O");
+                    commands.add_component(*target, confusion);
+                    cae.add_effect(&use_intent, Label::Confused { entity: *target });
+                    game_log.entries.push(format!(
+                        "You use {} on {}, confusing them for {} turns.",
+                        item_name, target_name, confusion.turns
+                    ));
+
+                    if let Ok(pos) = entry.get_component::<Position>() {
+                        cae.add_effect(
+                            &use_intent,
+                            Label::ParticleRequest {
+                                x: pos.x,
+                                y: pos.y,
+                                fg: RGB::named(MAGENTA),
+                                bg: RGB::named(BLACK),
+                                glyph: to_cp437('?'),
+                                lifetime: 200.0,
+                            },
+                        );
+                    }
+                }
+                true
+            }
+        } else {
+            false
+        };
+
+        used_item |= if world.has_component::<Equippable>(item) {
+            let equippable = world.get_component::<Equippable>(item);
+            let target_slot = equippable.slot;
+            let target = &targets[0];
+
+            // Remove any items the target has in the item's slot
+            <(Entity, &Equipped)>::query().for_each(
+                world,
+                |(&already_equipped_item, already_equipped)| {
+                    if already_equipped.owner == *target && already_equipped.slot == target_slot {
+                        cae.add_effect(
+                            &use_intent,
+                            Label::RemoveIntent {
+                                item: already_equipped_item,
+                            },
+                        );
+                    }
+                },
+            );
+
+            // Wield the item
+            commands.add_component(
+                item,
+                Equipped {
+                    owner: *target,
+                    slot: target_slot,
+                },
+            );
+            commands.remove_component::<InBackpack>(item);
+            cae.add_effect(&use_intent, Label::EquipDone);
+            // TODO ensure remove is handled before equip in game_log system
+            game_log.entries.push(format!("You equip {}.", item_name));
+
+            true
+        } else {
+            false
+        };
+
+        used_item |= if world.has_component::<ProvidesFood>(item) {
+            let &target = &targets[0];
+            if world.has_component::<HungerClock>(target) {
+                cae.add_effect(
+                    &use_intent,
+                    Label::Ate {
+                        who: target,
+                        what: item,
+                    },
+                );
                 true
             } else {
                 false
-            };
-
-            used_item |= if world.has_component::<InflictsDamage>(to_use.item) {
-                let damage = world.get_component::<InflictsDamage>(to_use.item).damage;
-                let combat_targets: Vec<&Entity> = targets
-                    .iter()
-                    .filter(|&&entity| world.has_component::<CombatStats>(entity))
-                    .collect();
-
-                if combat_targets.is_empty() {
-                    false
-                } else {
-                    for &target in combat_targets {
-                        // TODO update with correct cause during proper CAE migration of this system
-                        cae.add_effect(
-                            cause,
-                            Label::Damage {
-                                amount: damage,
-                                to: target,
-                                bleeding: true,
-                            },
-                        );
-
-                        if player.is_some() {
-                            let mob_name = world.get_component::<Name>(target);
-                            game_log.entries.push(format!(
-                                "You use {} on {}, inflicting {} hp.",
-                                item_name, mob_name, damage
-                            ));
-                        }
-
-                        if world.has_component::<Position>(target) {
-                            let pos = world.get_component::<Position>(target);
-                            cae.add_effect(
-                                cause,
-                                ParticleRequest {
-                                    x: pos.x,
-                                    y: pos.y,
-                                    fg: RGB::named(RED),
-                                    bg: RGB::named(BLACK),
-                                    glyph: to_cp437('‼'),
-                                    lifetime: 200.0,
-                                },
-                            );
-                        }
-                    }
-                    true
-                }
-            } else {
-                false
-            };
-
-            used_item |= match {
-                world
-                    .entry_ref(to_use.item)
-                    .unwrap()
-                    .get_component::<Confusion>()
-                    .ok()
-                    .cloned()
-            } {
-                None => false,
-                Some(confusion) => {
-                    let valid_targets: Vec<&Entity> = targets
-                        .iter()
-                        // TODO Allow hitting players, maybe once the AI system is generalized
-                        .filter(|&t| {
-                            world
-                                .entry_ref(*t)
-                                .unwrap()
-                                .get_component::<Monster>()
-                                .is_ok()
-                        })
-                        .collect();
-
-                    if valid_targets.is_empty() {
-                        false
-                    } else {
-                        for target in valid_targets {
-                            let entry = world.entry_ref(*target).unwrap();
-                            let target_name = entry
-                                .get_component::<Name>()
-                                .expect("Tried to confuse something with no name :O");
-                            commands.add_component(*target, confusion);
-                            game_log.entries.push(format!(
-                                "You use {} on {}, confusing them for {} turns.",
-                                item_name, target_name, confusion.turns
-                            ));
-
-                            if let Ok(pos) = entry.get_component::<Position>() {
-                                cae.add_effect(
-                                    cause,
-                                    ParticleRequest {
-                                        x: pos.x,
-                                        y: pos.y,
-                                        fg: RGB::named(MAGENTA),
-                                        bg: RGB::named(BLACK),
-                                        glyph: to_cp437('?'),
-                                        lifetime: 200.0,
-                                    },
-                                );
-                            }
-                        }
-                        true
-                    }
-                }
-            };
-
-            used_item |= match {
-                world
-                    .entry_ref(to_use.item)
-                    .unwrap()
-                    .get_component::<Equippable>()
-                    .ok()
-                    .cloned()
-            } {
-                None => false,
-                Some(equippable) => {
-                    let target_slot = equippable.slot;
-                    let target = &targets[0];
-                    let target_entry = world.entry_ref(*target).unwrap();
-
-                    // Remove any items the target has in the item's slot
-                    let mut to_unequip: Vec<Entity> = Vec::new();
-                    <(Entity, &Equipped, &Name)>::query().for_each(
-                        world,
-                        |(item_entity, already_equipped, name)| {
-                            if already_equipped.owner == *target
-                                && already_equipped.slot == target_slot
-                            {
-                                to_unequip.push(*item_entity);
-                                if target_entry.get_component::<Player>().is_ok() {
-                                    game_log.entries.push(format!("You unequip {}.", name));
-                                }
-                            }
-                        },
-                    );
-                    for item in to_unequip.iter() {
-                        commands.remove_component::<Equipped>(*item);
-                        commands.add_component(*item, InBackpack::new(*target));
-                    }
-
-                    // Wield the item
-                    commands.add_component(
-                        to_use.item,
-                        Equipped {
-                            owner: *target,
-                            slot: target_slot,
-                        },
-                    );
-                    commands.remove_component::<InBackpack>(to_use.item);
-                    if target_entry.archetype().layout().has_component::<Player>() {
-                        game_log.entries.push(format!("You equip {}.", item_name));
-                    }
-
-                    true
-                }
-            };
-
-            used_item |= if world.has_component::<ProvidesFood>(to_use.item) {
-                let &target = &targets[0];
-                if world.has_component::<HungerClock>(target) {
-                    commands.add_component(target, HungerClock::new(HungerState::WellFed, 20));
-                    game_log.entries.push(format!("You eat the {}.", item_name));
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-
-            if used_item {
-                if world.has_component::<Consumable>(to_use.item) {
-                    commands.remove(to_use.item);
-                }
-            } else {
-                game_log
-                    .entries
-                    .push(format!("No valid targets found for {}", item_name));
             }
-        },
-    );
+        } else {
+            false
+        };
+
+        if used_item {
+            if world.has_component::<Consumable>(item) {
+                commands.remove(item);
+            }
+        } else {
+            cae.add_effect(&use_intent, Label::NoValidTargets);
+            game_log
+                .entries
+                .push(format!("No valid targets found for {}", item_name));
+        }
+    }
 }

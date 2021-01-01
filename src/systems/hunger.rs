@@ -2,10 +2,12 @@ use crate::systems::prelude::*;
 
 cae_system_state!(HungerSystemState {
     turn(link) { matches!(link.label, Label::Turn {..}) }
+    ate(link) { matches!(link.label, Label::Ate {..}) }
 });
 
 #[system]
 #[read_component(HungerClock)]
+#[read_component(Name)]
 pub fn hunger(
     #[state] state: &HungerSystemState,
     #[resource] cae: &mut CauseAndEffect,
@@ -14,8 +16,22 @@ pub fn hunger(
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
+    let mut ate_this_turn = vec![];
+    for ate in cae.get_queue(state.ate) {
+        extract_label!(ate @ Ate => who, what);
+        commands.add_component(who, HungerClock::new(HungerState::WellFed, 20));
+        game_log.entries.push(format!(
+            "You eat the {}.",
+            world.get_component::<Name>(what)
+        ));
+        ate_this_turn.push(who);
+    }
+
     for turn in cae.get_queue(state.turn) {
         extract_label!(turn @ Turn => actor);
+        if ate_this_turn.contains(&actor) {
+            continue;
+        }
 
         let clock = match <(&HungerClock,)>::query().get(world, actor) {
             Ok((clock,)) => clock,

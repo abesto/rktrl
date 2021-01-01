@@ -21,6 +21,7 @@ impl<'a> WorldExt for SubWorld<'a> {
 
     /// Explodes if the entity doesn't have the component
     fn get_component<T: Component + Clone>(&self, entity: Entity) -> T {
+        // TODO this would be more rustacean (?) if it returned an Option<T>
         self.entry_ref(entity)
             .unwrap()
             .get_component::<T>()

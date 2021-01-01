@@ -12,7 +12,7 @@ macro_rules! cae_system_state {
                     let cae = &mut *resources.get_mut::<CauseAndEffect>().unwrap();
                     $name {
                         $(
-                        $field: cae.subscribe($name::[<$field _filter>]),
+                        $field: cae.subscribe($name::[<$field _filter>])
                         ),+
                     }
                 }

@@ -1,4 +1,4 @@
-pub use labels::Label;
+pub use labels::*;
 pub use lib::*;
 pub use systems::*;
 
