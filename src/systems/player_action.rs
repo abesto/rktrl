@@ -55,7 +55,6 @@ pub fn player_action(
     #[resource] input: &Input,
     #[resource] map: &Map,
     #[resource] shown_inventory: &ShownInventory,
-    #[resource] game_log: &mut GameLog,
     #[resource] run_state_queue: &mut RunStateQueue,
     #[resource] cae: &mut CauseAndEffect,
     world: &mut SubWorld,
@@ -78,11 +77,8 @@ pub fn player_action(
                 RunState::PlayerTurn
             }
             Some(Action::DownStairs) => {
-                if try_next_level(world, map, game_log).is_some() {
-                    RunState::NextLevel
-                } else {
-                    old_runstate
-                }
+                cae.add_effect(&input_link, Label::NextLevelIntent);
+                RunState::PlayerTurn
             }
             Some(Action::SkipTurn) => {
                 cae.add_effect(&input_link, Label::SkipBecauseInput);
@@ -415,18 +411,6 @@ fn try_remove(
     let item = choice_to_entity_from_player_equipment(world, shown_inventory, choice)?;
     cae.add_effect(cause, Label::RemoveIntent { item });
     Some(())
-}
-
-fn try_next_level(world: &mut SubWorld, map: &Map, game_log: &mut GameLog) -> Option<()> {
-    let player_position: Position = world.player_component();
-    if map[&player_position] != TileType::DownStairs {
-        game_log
-            .entries
-            .push("There is no way down from here.".to_string());
-        None
-    } else {
-        Some(())
-    }
 }
 
 fn skip_turn(world: &mut SubWorld, commands: &mut CommandBuffer, map: &Map) {

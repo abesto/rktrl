@@ -1,7 +1,4 @@
-use bracket_lib::prelude::*;
-use legion::system;
-
-use crate::{components::*, resources::*};
+use crate::systems::prelude::*;
 
 #[system(for_each)]
 pub fn visibility(viewshed: &mut Viewshed, pos: &Position, #[resource] map: &Map) {

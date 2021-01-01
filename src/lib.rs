@@ -27,7 +27,7 @@ use crate::{
         mapgen::mapgen_system,
         melee_combat::{melee_combat_system, MeleeCombatSystemState},
         movement::{movement_system, MovementSystemState},
-        next_level::next_level_system,
+        next_level::{next_level_system, NextLevelSystemState},
         particle::{particle_system, ParticleSystemState},
         player_action::player_action_system,
         render::render_system,
@@ -111,6 +111,7 @@ impl GameState for State {
             .pop_front();
         if let Some(new_runstate) = maybe_new_runstate {
             self.resources.insert(new_runstate);
+            println!("{:?}", new_runstate);
         }
 
         let runstate = *self.resources.get_or_default::<RunState>();
@@ -124,6 +125,7 @@ impl GameState for State {
                 Some(RunState::AwaitingInput)
             }
             RunState::NextLevel => {
+                self.resources.get_mut_or_default::<RunStateQueue>().clear();
                 self.execute(ScheduleType::Mapgen);
                 Some(RunState::AwaitingInput)
             }
@@ -162,7 +164,9 @@ impl GameState for State {
         };
 
         if let Some(newrunstate) = maybe_newrunstate {
-            self.resources.insert(newrunstate);
+            self.resources
+                .get_mut_or_default::<RunStateQueue>()
+                .push_back(newrunstate);
         }
 
         render_draw_buffer(&mut term).unwrap();
@@ -193,6 +197,7 @@ pub fn main() -> BError {
             .add_system(ai_system(AiSystemState::new(&resources)))
             .flush()
             .add_system(movement_system(MovementSystemState::new(&resources)))
+            .flush()
             .add_system(visibility_system())
             .add_system(item_collection_system(ItemCollectionSystemState::new(
                 &resources,
@@ -225,6 +230,7 @@ pub fn main() -> BError {
             .add_system(turn_system())
             .add_system(player_action_system())
             .flush()
+            .add_system(next_level_system(NextLevelSystemState::new(&resources)))
             .add_system(particle_system(ParticleSystemState::new(&resources)))
             .flush()
             .add_system(render_system())
@@ -233,13 +239,15 @@ pub fn main() -> BError {
     schedules.insert(
         ScheduleType::Mapgen,
         Schedule::builder()
-            .add_system(next_level_system())
             .add_system(mapgen_system())
             .flush()
             .add_system(spawner_system())
             .flush()
-            .add_system(visibility_system())
             .add_system(map_indexing_system())
+            .add_system(visibility_system())
+            .add_system(game_log_system(GameLogSystemState::new(&resources)))
+            .add_system(cae_debug_system())
+            .add_system(cae_clear_system())
             .build(),
     );
     schedules.insert(

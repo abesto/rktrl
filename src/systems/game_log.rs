@@ -6,7 +6,8 @@ cae_system_state!(GameLogSystemState {
         Damage, Healing, Death,
         Confused, ConfusionOver,
         PickupNothingHere, PickupDone, DropDone,
-        EquipDone, RemoveDone, NoValidTargets, TooFarAway
+        EquipDone, RemoveDone, NoValidTargets, TooFarAway,
+        NoStairsHere, MovedToNextLevel,
     )
 });
 
@@ -37,6 +38,8 @@ pub fn game_log(
         equip_done,
         too_far_away,
         no_valid_targets,
+        no_stairs_here,
+        moved_to_next_level,
     ] {
         for msg in f(state, cae, world) {
             game_log.push(msg);
@@ -289,4 +292,16 @@ handle_event!(confused, |state, cae, world, event| {
         world.get_component::<Name>(entity),
         world.get_component::<Confusion>(entity).turns
     ))
+});
+
+handle_event!(no_stairs_here, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    assert!(world.is_player(actor));
+    Some("There is no way down from here.".to_string())
+});
+
+handle_event!(moved_to_next_level, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    assert!(world.is_player(actor));
+    Some("You descend to the next level, and take a moment to heal.".to_string())
 });

@@ -34,6 +34,7 @@ pub enum Label {
     MoveIntent {
         target_position: Position,
     },
+    NextLevelIntent,
     MeleeIntent {
         target_position: Position,
     },
@@ -65,6 +66,8 @@ pub enum Label {
     // Effects - Movement
     MovementDone,
     MovementBlocked,
+    NoStairsHere,
+    MovedToNextLevel,
 
     // Effects - Combat
     Hit,

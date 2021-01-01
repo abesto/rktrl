@@ -1,13 +1,9 @@
+use crate::systems::prelude::*;
+
+use crossbeam_queue::SegQueue;
 use std::collections::HashSet;
 
-use bracket_lib::prelude::*;
-use crossbeam_queue::SegQueue;
-use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, IntoQuery};
-
-use crate::{
-    components::*,
-    util::{random_table::RandomTable, rect_ext::RectExt},
-};
+use crate::util::{random_table::RandomTable, rect_ext::RectExt};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SpawnRequest {
@@ -55,11 +51,7 @@ pub fn spawner(
 type Spawner = fn(&mut CommandBuffer) -> Entity;
 
 fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
-    if let Some((player_entity,)) = <(Entity,)>::query()
-        .filter(component::<Player>())
-        .iter(world)
-        .next()
-    {
+    if let Some(player_entity) = world.maybe_player_entity() {
         commands.add_component(*player_entity, position);
     } else {
         let player_entity = commands.push((

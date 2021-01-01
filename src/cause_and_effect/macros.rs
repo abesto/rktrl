@@ -1,5 +1,5 @@
 macro_rules! cae_system_state {
-    ($name:ident { subscribe($($variant:ident),+) $($rest:tt)* }) => {
+    ($name:ident { subscribe($($variant:ident),+ $(,)?) $($rest:tt)* }) => {
         paste! {
             pub struct $name {
                 $([<$variant:snake>]: CAESubscription),+
