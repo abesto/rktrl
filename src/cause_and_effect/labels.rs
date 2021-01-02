@@ -119,4 +119,5 @@ pub enum Label {
     // Effects - Item use
     TooFarAway,
     NoValidTargets,
+    MagicMapping,
 }

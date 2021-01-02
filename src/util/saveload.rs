@@ -89,6 +89,7 @@ lazy_static! {
             InBackpack,
             InflictsDamage,
             Item,
+            MagicMapper,
             MeleePowerBonus,
             Monster,
             Name,

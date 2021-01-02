@@ -23,6 +23,7 @@ pub fn item_use(
     #[resource] map: &Map,
     #[resource] cae: &mut CauseAndEffect,
     #[resource] deferred_cleanup: &mut DeferredCleanup,
+    #[resource] run_state_queue: &mut RunStateQueue,
     world: &SubWorld,
     commands: &mut CommandBuffer,
 ) {
@@ -87,6 +88,7 @@ pub fn item_use(
             ] {
                 used_item |= f(cae, world, commands, &use_on_target);
             }
+            used_item |= magic_mapping(cae, &use_on_target, run_state_queue);
         }
 
         if used_item {
@@ -272,5 +274,15 @@ fn provide_healing(
         },
     );
 
+    true
+}
+
+fn magic_mapping(
+    cae: &mut CauseAndEffect,
+    use_on_target: &Link,
+    run_state_queue: &mut RunStateQueue,
+) -> bool {
+    cae.add_effect(&use_on_target, Label::MagicMapping);
+    run_state_queue.push_front(RunState::MagicMapReveal { row: 0 });
     true
 }

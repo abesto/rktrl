@@ -7,10 +7,11 @@ extern crate paste;
 
 use bracket_lib::prelude::*;
 use crossbeam_queue::SegQueue;
-use legion::{Resources, Schedule, World};
+use legion::{query::component, IntoQuery, Resources, Schedule, World};
 
 use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect};
 use crate::{
+    components::{Player, Position, Viewshed},
     resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
     systems::{
         ai::{ai_system, AiSystemState},
@@ -53,6 +54,7 @@ enum ScheduleType {
     PlayerAction,
     Mapgen,
     Load,
+    RenderOnly,
 }
 
 type Schedules = HashMap<ScheduleType, Schedule>;
@@ -100,6 +102,12 @@ impl State {
     }
 }
 
+enum NewRunState {
+    PushFront(RunState),
+    PushBack(RunState),
+    None,
+}
+
 impl GameState for State {
     fn tick(&mut self, mut term: &mut BTerm) {
         self.resources.insert(Input::from(&*term));
@@ -124,12 +132,12 @@ impl GameState for State {
                     entries: vec!["Welcome to Rusty Roguelike".to_string()],
                 });
                 self.execute(ScheduleType::Mapgen);
-                Some(RunState::AwaitingInput)
+                NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::NextLevel => {
                 self.resources.get_mut_or_default::<RunStateQueue>().clear();
                 self.execute(ScheduleType::Mapgen);
-                Some(RunState::AwaitingInput)
+                NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::AwaitingInput
             | RunState::ShowInventory
@@ -138,37 +146,60 @@ impl GameState for State {
             | RunState::MainMenu { .. }
             | RunState::ShowTargeting { .. } => {
                 self.execute(ScheduleType::PlayerAction);
-                None
+                NewRunState::None
             }
             RunState::PlayerTurn => {
                 self.execute(ScheduleType::Main);
-                Some(RunState::MonsterTurn)
+                NewRunState::PushBack(RunState::MonsterTurn)
             }
             RunState::MonsterTurn => {
                 self.execute(ScheduleType::Main);
-                Some(RunState::AwaitingInput)
+                NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::SaveGame => {
                 saveload::save(&mut self.world, &self.resources);
                 self.reset();
-                Some(RunState::default())
+                NewRunState::PushBack(RunState::default())
             }
             RunState::LoadGame => {
                 self.reset();
                 saveload::load(&mut self.world, &mut self.resources);
                 self.execute(ScheduleType::Load);
-                Some(RunState::AwaitingInput)
+                NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::GameOver => {
                 self.execute(ScheduleType::PlayerAction);
-                None
+                NewRunState::None
+            }
+            RunState::MagicMapReveal { row } => {
+                let done = {
+                    let map = self.resources.get_mut::<Map>().unwrap();
+                    let (viewshed,) = <(&mut Viewshed,)>::query()
+                        .filter(component::<Player>())
+                        .iter_mut(&mut self.world)
+                        .next()
+                        .unwrap();
+                    for x in 0..map.width {
+                        viewshed.revealed_tiles.insert(Position::new(x, row));
+                    }
+                    row == map.height - 1
+                };
+                self.execute(ScheduleType::RenderOnly);
+                if done {
+                    NewRunState::PushBack(RunState::MonsterTurn)
+                } else {
+                    NewRunState::PushFront(RunState::MagicMapReveal { row: row + 1 })
+                }
             }
         };
 
-        if let Some(new_runstate) = maybe_new_runstate {
-            self.resources
-                .get_mut_or_default::<RunStateQueue>()
-                .push_back(new_runstate);
+        {
+            let mut queue = self.resources.get_mut_or_default::<RunStateQueue>();
+            match maybe_new_runstate {
+                NewRunState::PushBack(state) => queue.push_back(state),
+                NewRunState::PushFront(state) => queue.push_front(state),
+                _ => {}
+            }
         }
 
         render_draw_buffer(&mut term).unwrap();
@@ -255,10 +286,12 @@ pub fn main() -> BError {
     schedules.insert(
         ScheduleType::Load,
         Schedule::builder()
-            //.add_system(load_system())
-            .flush()
             .add_system(map_indexing_system())
             .build(),
+    );
+    schedules.insert(
+        ScheduleType::RenderOnly,
+        Schedule::builder().add_system(render_system()).build(),
     );
     let mut gs = State {
         world: World::default(),

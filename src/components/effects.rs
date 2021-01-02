@@ -29,6 +29,10 @@ pub struct AreaOfEffect {
     pub radius: i32,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, TypeUuid)]
+#[uuid = "51b076c8-4936-452e-8696-b7d6d15af386"]
+pub struct MagicMapper;
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, TypeUuid)]
 #[uuid = "e8d51bb0-5946-426e-affc-beca5788200f"]
 pub struct Confusion {

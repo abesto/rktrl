@@ -8,6 +8,7 @@ cae_system_state!(GameLogSystemState {
         PickupNothingHere, PickupDone, DropDone,
         EquipDone, RemoveDone, NoValidTargets, TooFarAway,
         NoStairsHere, MovedToNextLevel,
+        MagicMapping,
     )
 });
 
@@ -40,6 +41,7 @@ pub fn game_log(
         no_valid_targets,
         no_stairs_here,
         moved_to_next_level,
+        magic_mapping,
     ] {
         for msg in f(state, cae, world) {
             game_log.push(msg);
@@ -304,4 +306,10 @@ handle_event!(moved_to_next_level, |state, cae, world, event| {
     extract_nearest_ancestor!(cae, event @ Turn => actor);
     assert!(world.is_player(actor));
     Some("You descend to the next level, and take a moment to heal.".to_string())
+});
+
+handle_event!(magic_mapping, |state, cae, world, event| {
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    assert!(world.is_player(actor));
+    Some("The map is revealed to you!".to_string())
 });

@@ -24,13 +24,14 @@ pub enum SpawnRequest {
 #[write_component(InBackpack)]
 #[write_component(InflictsDamage)]
 #[write_component(Item)]
+#[write_component(MagicMapper)]
 #[write_component(MeleePowerBonus)]
 #[write_component(Monster)]
 #[write_component(Name)]
 #[write_component(Player)]
 #[write_component(Position)]
-#[write_component(ProvidesHealing)]
 #[write_component(ProvidesFood)]
+#[write_component(ProvidesHealing)]
 #[write_component(Ranged)]
 #[write_component(Renderable)]
 #[write_component(Viewshed)]
@@ -84,6 +85,7 @@ fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
             dagger(commands),
             shield(commands),
             ration(commands),
+            magic_mapping_scroll(commands),
         ];
         for wizard_item in wizard_items {
             commands.add_component(
@@ -103,12 +105,13 @@ fn room(rng: &mut RandomNumberGenerator, room: &Rect, depth: i32, commands: &mut
         .add(health_potion, 7)
         .add(fireball_scroll, 2 + depth)
         .add(confusion_scroll, 2 + depth)
-        .add(confusion_scroll, 4)
+        .add(magic_missile_scroll, 4)
         .add(dagger, 3)
-        .add(long_sword, depth - 1)
         .add(shield, 3)
+        .add(long_sword, depth - 1)
         .add(tower_shield, depth - 1)
-        .add(ration, 10);
+        .add(ration, 10)
+        .add(magic_mapping_scroll, 2);
     let spawnable_count = rng.range(-2, 4 + depth);
     for position in random_positions_in_room(rng, room, spawnable_count) {
         if let Some(spawner) = room_table.roll(rng) {
@@ -231,6 +234,21 @@ fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
         Consumable,
         Ranged { range: 6 },
         Confusion { turns: 4 },
+        SerializeMe,
+    ))
+}
+
+fn magic_mapping_scroll(commands: &mut CommandBuffer) -> Entity {
+    commands.push((
+        Renderable {
+            glyph: to_cp437(')'),
+            color: ColorPair::new(RGB::named(CYAN3), RGB::named(BLACK)),
+            render_order: RenderOrder::Items,
+        },
+        Name::from("Scroll of Magic Mapping".to_string()),
+        Item,
+        Consumable,
+        MagicMapper,
         SerializeMe,
     ))
 }
