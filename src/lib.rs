@@ -12,7 +12,9 @@ use legion::{query::component, IntoQuery, Resources, Schedule, World};
 use crate::cause_and_effect::{cae_clear_system, cae_debug_system, CauseAndEffect};
 use crate::{
     components::{Player, Position, Viewshed},
-    resources::{FrameData, GameLog, Input, Layout, Map, RunState, RunStateQueue, ShownInventory},
+    resources::{
+        FrameData, GameLog, Input, Layout, Map, RexAssets, RunState, RunStateQueue, ShownInventory,
+    },
     systems::{
         ai::{ai_system, AiSystemState},
         damage::{damage_system, DamageSystemState},
@@ -87,6 +89,7 @@ impl State {
             ShownInventory,
             SegQueue<SpawnRequest>,
             SegQueue<EntityCleanupRequest>,
+            RexAssets
         ]);
         self.resources
             .get_mut::<CauseAndEffect>()
@@ -213,6 +216,8 @@ pub fn main() -> BError {
     let term = {
         let mut term = BTermBuilder::simple80x50()
             .with_title("Roguelike Tutorial")
+            .with_fps_cap(30.0)
+            .with_vsync(false)
             .build()?;
         term.with_post_scanlines(true);
         term

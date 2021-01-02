@@ -25,6 +25,7 @@ use crate::{
 #[read_component(Renderable)]
 #[read_component(Viewshed)]
 #[read_component(HungerClock)]
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     world: &SubWorld,
     #[resource] game_log: &GameLog,
@@ -33,11 +34,12 @@ pub fn render(
     #[resource] map: &Map,
     #[resource] input: &Input,
     #[resource] shown_inventory: &mut ShownInventory,
+    #[resource] rex_assets: &RexAssets,
 ) {
     let draw_batch = &mut DrawBatch::new();
     draw_batch.cls();
     match *run_state {
-        RunState::MainMenu { .. } => render_main_menu(run_state, draw_batch),
+        RunState::MainMenu { .. } => render_main_menu(run_state, draw_batch, rex_assets),
         RunState::GameOver => render_game_over(draw_batch),
         _ => {
             render_map(world, map, draw_batch);
@@ -428,12 +430,13 @@ fn targeting_overlay(
     };
 }
 
-fn render_main_menu(run_state: &RunState, draw_batch: &mut DrawBatch) {
+fn render_main_menu(run_state: &RunState, draw_batch: &mut DrawBatch, rex_assets: &RexAssets) {
     if let RunState::MainMenu {
         selection,
         load_enabled,
     } = *run_state
     {
+        crate::util::bracket_lib_ext::xp_to_draw_batch(&rex_assets.menu, draw_batch, 0, 0);
         draw_batch.print_color_centered(
             15,
             "Rust Roguelike Tutorial",
