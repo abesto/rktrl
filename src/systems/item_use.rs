@@ -88,7 +88,7 @@ pub fn item_use(
             ] {
                 used_item |= f(cae, world, commands, &use_on_target);
             }
-            used_item |= magic_mapping(cae, &use_on_target, run_state_queue);
+            used_item |= magic_mapping(cae, world, &use_on_target, run_state_queue);
         }
 
         if used_item {
@@ -279,9 +279,14 @@ fn provide_healing(
 
 fn magic_mapping(
     cae: &mut CauseAndEffect,
+    world: &SubWorld,
     use_on_target: &Link,
     run_state_queue: &mut RunStateQueue,
 ) -> bool {
+    extract_label!(use_on_target @ UseOnTarget => item);
+    if !world.has_component::<MagicMapper>(item) {
+        return false;
+    }
     cae.add_effect(&use_on_target, Label::MagicMapping);
     run_state_queue.push_front(RunState::MagicMapReveal { row: 0 });
     true
