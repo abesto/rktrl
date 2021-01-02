@@ -19,10 +19,11 @@ pub fn mapgen(
     crate::mapgen::spawner::player(world, builder.get_starting_position(), commands);
     *map = builder.get_map();
 
-    #[cfg(feature = "visualize-mapgen")]
-    run_state_queue.push_front(RunState::MapGeneration {
-        snapshots: Box::new(builder.get_snapshots()),
-        final_map: builder.get_map(),
-        timer: 9000.0,
-    });
+    if cfg!(feature = "visualize-mapgen") {
+        run_state_queue.push_front(RunState::MapGeneration {
+            snapshots: Box::new(builder.get_snapshots()),
+            final_map: builder.get_map(),
+            timer: 9000.0,
+        });
+    }
 }

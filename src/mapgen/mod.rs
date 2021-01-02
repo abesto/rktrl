@@ -23,8 +23,9 @@ impl SnapshotManager {
     }
 
     fn record_snapshot(&mut self, map: Map) {
-        #[cfg(feature = "visualize-mapgen")]
-        self.snapshots.push_back(map);
+        if cfg!(feature = "visualize-mapgen") {
+            self.snapshots.push_back(map);
+        }
     }
 
     fn get_snapshots(&self) -> VecDeque<Map> {
