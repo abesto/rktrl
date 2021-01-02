@@ -17,7 +17,6 @@ pub mod particle;
 pub mod player_action;
 pub mod prelude;
 pub mod render;
-pub mod spawner;
 pub mod trigger;
 pub mod turn;
 pub mod visibility;

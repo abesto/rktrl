@@ -1,57 +1,12 @@
 use crate::systems::prelude::*;
 
-use crossbeam_queue::SegQueue;
 use std::collections::HashSet;
 
 use crate::util::{random_table::RandomTable, rect_ext::RectExt};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum SpawnRequest {
-    Player(Position),
-    Room { rect: Rect, depth: i32 },
-}
-
-#[system]
-#[read_component(Entity)]
-#[write_component(AreaOfEffect)]
-#[write_component(BlocksTile)]
-#[write_component(CombatStats)]
-#[write_component(Confusion)]
-#[write_component(Consumable)]
-#[write_component(DefenseBonus)]
-#[write_component(Equippable)]
-#[write_component(HungerClock)]
-#[write_component(InBackpack)]
-#[write_component(InflictsDamage)]
-#[write_component(Item)]
-#[write_component(MagicMapper)]
-#[write_component(MeleePowerBonus)]
-#[write_component(Monster)]
-#[write_component(Name)]
-#[write_component(Player)]
-#[write_component(Position)]
-#[write_component(ProvidesFood)]
-#[write_component(ProvidesHealing)]
-#[write_component(Ranged)]
-#[write_component(Renderable)]
-#[write_component(Viewshed)]
-pub fn spawner(
-    world: &mut SubWorld,
-    #[resource] rng: &mut RandomNumberGenerator,
-    #[resource] spawn_requests: &mut SegQueue<SpawnRequest>,
-    commands: &mut CommandBuffer,
-) {
-    while let Some(request) = spawn_requests.pop() {
-        match request {
-            SpawnRequest::Player(position) => player(world, position, commands),
-            SpawnRequest::Room { rect, depth } => room(rng, &rect, depth, commands),
-        }
-    }
-}
-
 type Spawner = fn(&mut CommandBuffer) -> Entity;
 
-fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
+pub fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
     if let Some(player_entity) = world.maybe_player_entity() {
         commands.add_component(*player_entity, position);
     } else {
@@ -98,7 +53,12 @@ fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
     }
 }
 
-fn room(rng: &mut RandomNumberGenerator, room: &Rect, depth: i32, commands: &mut CommandBuffer) {
+pub fn room(
+    rng: &mut RandomNumberGenerator,
+    room: &Rect,
+    depth: i32,
+    commands: &mut CommandBuffer,
+) {
     let room_table = RandomTable::<Spawner>::new()
         .add(goblin, 10)
         .add(orc, 1 + depth)
@@ -122,7 +82,7 @@ fn room(rng: &mut RandomNumberGenerator, room: &Rect, depth: i32, commands: &mut
     }
 }
 
-fn monster<S: ToString>(commands: &mut CommandBuffer, letter: char, name: S) -> Entity {
+pub fn monster<S: ToString>(commands: &mut CommandBuffer, letter: char, name: S) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(letter),
@@ -143,15 +103,15 @@ fn monster<S: ToString>(commands: &mut CommandBuffer, letter: char, name: S) -> 
     ))
 }
 
-fn orc(commands: &mut CommandBuffer) -> Entity {
+pub fn orc(commands: &mut CommandBuffer) -> Entity {
     monster(commands, 'o', "Orc")
 }
 
-fn goblin(commands: &mut CommandBuffer) -> Entity {
+pub fn goblin(commands: &mut CommandBuffer) -> Entity {
     monster(commands, 'g', "Goblin")
 }
 
-fn random_positions_in_room(
+pub fn random_positions_in_room(
     rng: &mut RandomNumberGenerator,
     room: &Rect,
     n: i32,
@@ -175,7 +135,7 @@ fn random_positions_in_room(
     positions
 }
 
-fn health_potion(commands: &mut CommandBuffer) -> Entity {
+pub fn health_potion(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('¡'),
@@ -190,7 +150,7 @@ fn health_potion(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn magic_missile_scroll(commands: &mut CommandBuffer) -> Entity {
+pub fn magic_missile_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
@@ -206,7 +166,7 @@ fn magic_missile_scroll(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn fireball_scroll(commands: &mut CommandBuffer) -> Entity {
+pub fn fireball_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
@@ -223,7 +183,7 @@ fn fireball_scroll(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
+pub fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
@@ -239,7 +199,7 @@ fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn magic_mapping_scroll(commands: &mut CommandBuffer) -> Entity {
+pub fn magic_mapping_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
@@ -254,7 +214,7 @@ fn magic_mapping_scroll(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn dagger(commands: &mut CommandBuffer) -> Entity {
+pub fn dagger(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('/'),
@@ -269,7 +229,7 @@ fn dagger(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn long_sword(commands: &mut CommandBuffer) -> Entity {
+pub fn long_sword(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('/'),
@@ -284,7 +244,7 @@ fn long_sword(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn shield(commands: &mut CommandBuffer) -> Entity {
+pub fn shield(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('('),
@@ -299,7 +259,7 @@ fn shield(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn tower_shield(commands: &mut CommandBuffer) -> Entity {
+pub fn tower_shield(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('('),
@@ -314,7 +274,7 @@ fn tower_shield(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn ration(commands: &mut CommandBuffer) -> Entity {
+pub fn ration(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('%'),
@@ -329,7 +289,7 @@ fn ration(commands: &mut CommandBuffer) -> Entity {
     ))
 }
 
-fn bear_trap(commands: &mut CommandBuffer) -> Entity {
+pub fn bear_trap(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('^'),

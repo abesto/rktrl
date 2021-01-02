@@ -2,9 +2,6 @@ use core::convert::TryInto;
 use std::collections::HashMap;
 use std::panic;
 
-#[macro_use]
-extern crate paste;
-
 use bracket_lib::prelude::*;
 use crossbeam_queue::SegQueue;
 use legion::{query::component, IntoQuery, Resources, Schedule, World};
@@ -34,7 +31,6 @@ use crate::{
         particle::{particle_system, ParticleSystemState},
         player_action::player_action_system,
         render::render_system,
-        spawner::{spawner_system, SpawnRequest},
         trigger::{trigger_system, TriggerSystemState},
         turn::turn_system,
         visibility::visibility_system,
@@ -42,11 +38,15 @@ use crate::{
     util::saveload,
 };
 
+#[macro_use]
+extern crate paste;
+
 bracket_terminal::add_wasm_support!();
 
 #[macro_use]
 mod cause_and_effect;
 mod components;
+mod mapgen;
 mod resources;
 mod systems;
 mod util;
@@ -88,7 +88,6 @@ impl State {
         insert_default_resources!(self.resources, [
             GameLog,
             ShownInventory,
-            SegQueue<SpawnRequest>,
             SegQueue<EntityCleanupRequest>,
             RexAssets
         ]);
@@ -278,8 +277,6 @@ pub fn main() -> BError {
         ScheduleType::Mapgen,
         Schedule::builder()
             .add_system(mapgen_system())
-            .flush()
-            .add_system(spawner_system())
             .flush()
             .add_system(map_indexing_system())
             .add_system(visibility_system())

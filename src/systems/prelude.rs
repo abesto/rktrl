@@ -8,9 +8,6 @@ pub use crate::{
     cause_and_effect::*,
     components::*,
     resources::{Input, *},
-    systems::{
-        entity_cleanup::{DeferredCleanup, DeferredCleanupHelper},
-        spawner::SpawnRequest,
-    },
+    systems::entity_cleanup::{DeferredCleanup, DeferredCleanupHelper},
     util::{vector::*, world_ext::WorldExt},
 };
