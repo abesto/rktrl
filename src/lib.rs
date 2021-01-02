@@ -123,11 +123,10 @@ impl GameState for State {
                 .pop_front();
             if let Some(new_runstate) = maybe_new_runstate {
                 self.resources.insert(new_runstate);
-                println!("{:?}", new_runstate);
             }
         }
 
-        let runstate = *self.resources.get_or_default::<RunState>();
+        let runstate = self.resources.get_or_default::<RunState>().clone();
         let maybe_new_runstate = match runstate {
             RunState::PreRun => {
                 self.reset();
@@ -193,6 +192,33 @@ impl GameState for State {
                 } else {
                     NewRunState::PushFront(RunState::MagicMapReveal { row: row + 1 })
                 }
+            }
+            RunState::MapGeneration {
+                mut snapshots,
+                final_map,
+                timer,
+            } => {
+                let retval = if timer > 300.0 {
+                    if let Some(snapshot) = snapshots.pop_front() {
+                        self.resources.insert(snapshot);
+                        NewRunState::PushFront(RunState::MapGeneration {
+                            snapshots,
+                            final_map,
+                            timer: 0.0,
+                        })
+                    } else {
+                        self.resources.insert(final_map);
+                        NewRunState::None
+                    }
+                } else {
+                    NewRunState::PushFront(RunState::MapGeneration {
+                        snapshots,
+                        final_map,
+                        timer: timer + term.frame_time_ms,
+                    })
+                };
+                self.execute(ScheduleType::RenderOnly);
+                retval
             }
         };
 
@@ -293,7 +319,10 @@ pub fn main() -> BError {
     );
     schedules.insert(
         ScheduleType::RenderOnly,
-        Schedule::builder().add_system(render_system()).build(),
+        Schedule::builder()
+            .add_system(visibility_system())
+            .add_system(render_system())
+            .build(),
     );
     let mut gs = State {
         world: World::default(),

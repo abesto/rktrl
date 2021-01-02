@@ -25,7 +25,7 @@ pub enum TileType {
     DownStairs,
 }
 
-#[derive(Clone, Serialize, Deserialize, TypeUuid)]
+#[derive(Clone, Serialize, Deserialize, TypeUuid, PartialEq, Debug)]
 #[uuid = "a8e9e9cf-6c68-4d18-a3a6-5ce925baa0fb"]
 pub struct Map {
     pub width: i32,

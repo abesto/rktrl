@@ -38,16 +38,19 @@ pub fn render(
 ) {
     let draw_batch = &mut DrawBatch::new();
     draw_batch.cls();
+    let is_mapgen_visualization = matches!(run_state, RunState::MapGeneration {..});
     match *run_state {
         RunState::MainMenu { .. } => render_main_menu(run_state, draw_batch, rex_assets),
         RunState::GameOver => render_game_over(draw_batch),
         _ => {
-            render_map(world, map, draw_batch);
-            render_entities(world, draw_batch);
-            render_gui(world, map, layout, game_log, input, draw_batch);
-            targeting_overlay(world, run_state, map, input, draw_batch);
-            draw_tooltips(world, map, layout, input, draw_batch);
-            show_inventory(world, run_state, layout, shown_inventory, draw_batch);
+            render_map(world, map, draw_batch, is_mapgen_visualization);
+            if !is_mapgen_visualization {
+                render_entities(world, draw_batch);
+                render_gui(world, map, layout, game_log, input, draw_batch);
+                targeting_overlay(world, run_state, map, input, draw_batch);
+                draw_tooltips(world, map, layout, input, draw_batch);
+                show_inventory(world, run_state, layout, shown_inventory, draw_batch);
+            }
         }
     };
     draw_batch.submit(0).unwrap();
@@ -84,9 +87,23 @@ fn render_entities(world: &SubWorld, draw_batch: &mut DrawBatch) {
     }
 }
 
-fn render_map(world: &SubWorld, map: &Map, draw_batch: &mut DrawBatch) {
-    let visible = player_visible_tiles(world);
-    let revealed = player_revealed_tiles(world);
+fn render_map(
+    world: &SubWorld,
+    map: &Map,
+    draw_batch: &mut DrawBatch,
+    is_mapgen_visualization: bool,
+) {
+    let visible = if is_mapgen_visualization {
+        HashSet::new()
+    } else {
+        player_visible_tiles(world)
+    };
+
+    let revealed = if is_mapgen_visualization {
+        map.into_iter().map(|x| x.0).collect()
+    } else {
+        player_revealed_tiles(world)
+    };
 
     for position in &revealed {
         let tile = map[&position];

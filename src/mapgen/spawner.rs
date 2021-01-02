@@ -31,25 +31,31 @@ pub fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer
         ));
         commands.add_component(player_entity, SerializeMe);
 
-        // Wizard mode!
-        let wizard_items = vec![
-            health_potion(commands),
-            magic_missile_scroll(commands),
-            fireball_scroll(commands),
-            confusion_scroll(commands),
-            dagger(commands),
-            shield(commands),
-            ration(commands),
-            magic_mapping_scroll(commands),
-        ];
-        for wizard_item in wizard_items {
-            commands.add_component(
-                wizard_item,
-                InBackpack {
-                    owner: player_entity,
-                },
-            );
-        }
+        #[cfg(feature = "wizard-mode")]
+        add_wizard_items(commands, player_entity)
+    }
+}
+
+#[cfg(feature = "wizard-mode")]
+fn add_wizard_items(commands: &mut CommandBuffer, player_entity: Entity) {
+    // Wizard mode!
+    let wizard_items = vec![
+        health_potion(commands),
+        magic_missile_scroll(commands),
+        fireball_scroll(commands),
+        confusion_scroll(commands),
+        dagger(commands),
+        shield(commands),
+        ration(commands),
+        magic_mapping_scroll(commands),
+    ];
+    for wizard_item in wizard_items {
+        commands.add_component(
+            wizard_item,
+            InBackpack {
+                owner: player_entity,
+            },
+        );
     }
 }
 

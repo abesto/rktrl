@@ -7,6 +7,7 @@ use newtype_derive::*;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+use crate::resources::Map;
 use crate::util::saveload;
 
 #[derive(PartialEq, Copy, Clone, Debug, EnumIter)]
@@ -56,7 +57,7 @@ impl fmt::Display for MainMenuSelection {
     }
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum RunState {
     AwaitingInput,
     PreRun,
@@ -80,14 +81,20 @@ pub enum RunState {
     MagicMapReveal {
         row: i32,
     },
+    MapGeneration {
+        // Boxed because clippy::large_enum_variant
+        snapshots: Box<VecDeque<Map>>,
+        final_map: Map,
+        timer: f32,
+    },
 }
 
 impl RunState {
     #[must_use]
-    pub fn show_inventory(self) -> bool {
-        self == RunState::ShowDropItem
-            || self == RunState::ShowInventory
-            || self == RunState::ShowRemoveItem
+    pub fn show_inventory(&self) -> bool {
+        *self == RunState::ShowDropItem
+            || *self == RunState::ShowInventory
+            || *self == RunState::ShowRemoveItem
     }
 
     pub fn main_menu_item_enabled(&self, item: MainMenuSelection) -> bool {

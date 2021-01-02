@@ -70,8 +70,8 @@ pub fn player_action(
     } {
         let input_link = cae.add_effect(&cause, Label::Input { input: *input });
 
-        let old_runstate = *run_state;
-        let new_runstate = match resolve_action(old_runstate, input) {
+        let old_runstate = run_state.clone();
+        let new_runstate = match resolve_action(&old_runstate, input) {
             Some(Action::Move(vector)) => {
                 try_move_player(world, cae, &input_link, map, vector);
                 RunState::PlayerTurn
@@ -140,7 +140,7 @@ pub fn player_action(
 
             Some(Action::Restart) => RunState::default(),
 
-            None => old_runstate,
+            None => old_runstate.clone(),
         };
 
         if new_runstate != old_runstate {
@@ -148,7 +148,7 @@ pub fn player_action(
         }
     }
 
-    fn resolve_action(runstate: RunState, input: &Input) -> Option<Action> {
+    fn resolve_action(runstate: &RunState, input: &Input) -> Option<Action> {
         // TODO deduplicate patterns like Down|J|Numpad2
         // (maybe only when we do a proper keymap)
         match runstate {
@@ -207,7 +207,7 @@ pub fn player_action(
                     Some(Action::CancelTargeting)
                 } else if input.left_click {
                     Some(Action::UseOnTarget {
-                        item,
+                        item: *item,
                         target: input.mouse_pos.into(),
                     })
                 } else {
