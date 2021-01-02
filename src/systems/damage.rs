@@ -21,6 +21,11 @@ pub fn damage(
         let (stats, position) = <(&mut CombatStats, &Position)>::query()
             .get_mut(world, to)
             .unwrap();
+
+        if stats.hp <= 0 {
+            cae.add_effect(&damage, Label::TargetIsAlreadyDead);
+            continue;
+        }
         stats.hp -= amount;
 
         if bleeding {

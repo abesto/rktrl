@@ -8,7 +8,8 @@ cae_system_state!(GameLogSystemState {
         PickupNothingHere, PickupDone, DropDone,
         EquipDone, RemoveDone, NoValidTargets, TooFarAway,
         NoStairsHere, MovedToNextLevel,
-        MagicMapping,
+        MagicMapping, Spotted,
+        EntryTriggered,
     )
 });
 
@@ -42,6 +43,8 @@ pub fn game_log(
         no_stairs_here,
         moved_to_next_level,
         magic_mapping,
+        entry_triggered,
+        spotted,
     ] {
         for msg in f(state, cae, world) {
             game_log.push(msg);
@@ -150,6 +153,23 @@ handle_event!(damage, |state, cae, world, damage| {
                     actor_name, target_name, amount
                 ))
             }
+        }
+        Label::EntryTriggered { trigger } => {
+            let (actor_name, trigger_verb) = if world.is_player(actor) {
+                ("You".to_string(), "trigger".to_string())
+            } else {
+                (
+                    world.get_component::<Name>(actor).into(),
+                    "triggers".to_string(),
+                )
+            };
+            Some(format!(
+                "{} {} {}, suffering {} hp damage.",
+                actor_name,
+                trigger_verb,
+                world.get_component::<Name>(trigger),
+                amount
+            ))
         }
         _ => None,
     }
@@ -312,4 +332,28 @@ handle_event!(magic_mapping, |state, cae, world, event| {
     extract_nearest_ancestor!(cae, event @ Turn => actor);
     assert!(world.is_player(actor));
     Some("The map is revealed to you!".to_string())
+});
+
+handle_event!(spotted, |state, cae, world, event| {
+    extract_label!(event @ Spotted => hidden);
+    Some(format!(
+        "You spotted a {}.",
+        world.get_component::<Name>(hidden)
+    ))
+});
+
+handle_event!(entry_triggered, |state, cae, world, event| {
+    // If the trigger causes damage, it'll be handled as part of the damage event.
+    // TODO if this becomes a repeating pattern, it may be better to create machinery
+    //      to handle each node only once
+    if cae.has_effect(event, |link| matches!(link.label, Label::Damage {..})) {
+        return None;
+    }
+    extract_nearest_ancestor!(cae, event @ Turn => actor);
+    extract_label!(event @ EntryTriggered => trigger);
+    Some(format!(
+        "{} triggers {}!",
+        world.get_component::<Name>(actor),
+        world.get_component::<Name>(trigger)
+    ))
 });

@@ -72,6 +72,7 @@ fn player_revealed_tiles(world: &SubWorld) -> HashSet<Position> {
 fn render_entities(world: &SubWorld, draw_batch: &mut DrawBatch) {
     let visible = player_visible_tiles(world);
     let mut data = <(&Position, &Renderable)>::query()
+        .filter(!component::<Hidden>())
         .iter(world)
         .collect::<Vec<_>>();
     data.sort_unstable_by_key(|r| &r.1.render_order);
@@ -236,6 +237,7 @@ fn draw_tooltips(
             world
                 .entry_ref(entity)
                 .ok()
+                .filter(|entry| !entry.archetype().layout().has_component::<Hidden>())
                 .and_then(|entry| entry.get_component().ok().map(Name::to_string))
         })
         .collect();

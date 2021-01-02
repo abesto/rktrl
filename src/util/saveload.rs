@@ -83,8 +83,10 @@ lazy_static! {
             Confusion,
             Consumable,
             DefenseBonus,
+            EntryTrigger,
             Equippable,
             Equipped,
+            Hidden,
             HungerClock,
             InBackpack,
             InflictsDamage,
@@ -100,6 +102,7 @@ lazy_static! {
             Ranged,
             Renderable,
             SerializeMe,
+            SingleActivation,
             Viewshed
         );
         registry

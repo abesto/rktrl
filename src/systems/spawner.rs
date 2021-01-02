@@ -59,7 +59,7 @@ fn player(world: &SubWorld, position: Position, commands: &mut CommandBuffer) {
             position,
             Renderable {
                 glyph: to_cp437('@'),
-                color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+                color: ColorPair::new(YELLOW, BLACK),
                 render_order: RenderOrder::Player,
             },
             Player,
@@ -111,7 +111,8 @@ fn room(rng: &mut RandomNumberGenerator, room: &Rect, depth: i32, commands: &mut
         .add(long_sword, depth - 1)
         .add(tower_shield, depth - 1)
         .add(ration, 10)
-        .add(magic_mapping_scroll, 2);
+        .add(magic_mapping_scroll, 2)
+        .add(bear_trap, 2);
     let spawnable_count = rng.range(-2, 4 + depth);
     for position in random_positions_in_room(rng, room, spawnable_count) {
         if let Some(spawner) = room_table.roll(rng) {
@@ -125,7 +126,7 @@ fn monster<S: ToString>(commands: &mut CommandBuffer, letter: char, name: S) -> 
     commands.push((
         Renderable {
             glyph: to_cp437(letter),
-            color: ColorPair::new(RGB::named(RED), RGB::named(BLACK)),
+            color: ColorPair::new(RED, BLACK),
             render_order: RenderOrder::Monsters,
         },
         Viewshed::new(8),
@@ -178,7 +179,7 @@ fn health_potion(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('¡'),
-            color: ColorPair::new(RGB::named(MAGENTA), RGB::named(BLACK)),
+            color: ColorPair::new(MAGENTA, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Health Potion".to_string()),
@@ -193,7 +194,7 @@ fn magic_missile_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
-            color: ColorPair::new(RGB::named(CYAN), RGB::named(BLACK)),
+            color: ColorPair::new(CYAN, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Magic Missile Scroll".to_string()),
@@ -209,7 +210,7 @@ fn fireball_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
-            color: ColorPair::new(RGB::named(ORANGE), RGB::named(BLACK)),
+            color: ColorPair::new(ORANGE, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Fireball Scroll".to_string()),
@@ -226,7 +227,7 @@ fn confusion_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
-            color: ColorPair::new(RGB::named(PINK), RGB::named(BLACK)),
+            color: ColorPair::new(PINK, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Confusion Scroll".to_string()),
@@ -242,7 +243,7 @@ fn magic_mapping_scroll(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437(')'),
-            color: ColorPair::new(RGB::named(CYAN3), RGB::named(BLACK)),
+            color: ColorPair::new(RGB::named(CYAN3), BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Scroll of Magic Mapping".to_string()),
@@ -257,7 +258,7 @@ fn dagger(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('/'),
-            color: ColorPair::new(RGB::named(CYAN), RGB::named(BLACK)),
+            color: ColorPair::new(CYAN, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Dagger".to_string()),
@@ -272,7 +273,7 @@ fn long_sword(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('/'),
-            color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+            color: ColorPair::new(YELLOW, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Long Sword".to_string()),
@@ -287,7 +288,7 @@ fn shield(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('('),
-            color: ColorPair::new(RGB::named(CYAN), RGB::named(BLACK)),
+            color: ColorPair::new(CYAN, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Shield".to_string()),
@@ -302,7 +303,7 @@ fn tower_shield(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('('),
-            color: ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+            color: ColorPair::new(YELLOW, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Tower Shield".to_string()),
@@ -317,13 +318,29 @@ fn ration(commands: &mut CommandBuffer) -> Entity {
     commands.push((
         Renderable {
             glyph: to_cp437('%'),
-            color: ColorPair::new(RGB::named(GREEN), RGB::named(BLACK)),
+            color: ColorPair::new(GREEN, BLACK),
             render_order: RenderOrder::Items,
         },
         Name::from("Rations".to_string()),
         Item,
         ProvidesFood,
         Consumable,
+        SerializeMe,
+    ))
+}
+
+fn bear_trap(commands: &mut CommandBuffer) -> Entity {
+    commands.push((
+        Renderable {
+            glyph: to_cp437('^'),
+            color: ColorPair::new(RED, BLACK),
+            render_order: RenderOrder::Items,
+        },
+        Name::from("Bear Trap".to_string()),
+        Hidden,
+        EntryTrigger,
+        InflictsDamage { damage: 6 },
+        SingleActivation,
         SerializeMe,
     ))
 }

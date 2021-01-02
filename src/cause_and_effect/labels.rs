@@ -96,6 +96,12 @@ pub enum Label {
     ConfusionOver {
         entity: Entity,
     },
+    EntryTriggered {
+        trigger: Entity,
+    },
+    Spotted {
+        hidden: Entity,
+    },
 
     // Effects - Pickup
     PickupNothingHere,

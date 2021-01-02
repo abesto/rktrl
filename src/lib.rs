@@ -35,6 +35,7 @@ use crate::{
         player_action::player_action_system,
         render::render_system,
         spawner::{spawner_system, SpawnRequest},
+        trigger::{trigger_system, TriggerSystemState},
         turn::turn_system,
         visibility::visibility_system,
     },
@@ -216,8 +217,6 @@ pub fn main() -> BError {
     let term = {
         let mut term = BTermBuilder::simple80x50()
             .with_title("Roguelike Tutorial")
-            .with_fps_cap(30.0)
-            .with_vsync(false)
             .build()?;
         term.with_post_scanlines(true);
         term
@@ -235,6 +234,7 @@ pub fn main() -> BError {
             .add_system(ai_system(AiSystemState::new(&resources)))
             .flush()
             .add_system(movement_system(MovementSystemState::new(&resources)))
+            .add_system(trigger_system(TriggerSystemState::new(&resources)))
             .flush()
             .add_system(visibility_system())
             .add_system(item_collection_system(ItemCollectionSystemState::new(

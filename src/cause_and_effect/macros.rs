@@ -54,7 +54,7 @@ macro_rules! extract_nearest_ancestor {
 macro_rules! extract_cause {
     ($cae:ident, $effect:ident @ $variant:ident => $($field:ident),+) => {
         let ($($field),+,) = {
-            let cause = $cae.get_cause($effect).unwrap();
+            let cause = $cae.get_cause(&$effect).unwrap();
             extract_label!(cause @ $variant => $($field),+);
             ($($field),+,)
         };

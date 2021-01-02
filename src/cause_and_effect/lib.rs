@@ -83,6 +83,13 @@ impl CauseAndEffect {
             .next()
     }
 
+    pub fn get_effects(&self, cause: &Link) -> Vec<Link> {
+        self.graph
+            .neighbors(cause.index)
+            .map(|index| self.get(index))
+            .collect()
+    }
+
     pub fn scan(&self) -> CauseVisitor {
         CauseVisitor::new(Dfs::new(&self.graph, self.root))
     }
@@ -124,6 +131,18 @@ impl CauseAndEffect {
             }
         }
         None
+    }
+
+    pub fn has_effect<F>(&self, cause: &Link, filter: F) -> bool
+    where
+        F: Fn(Link) -> bool,
+    {
+        for effect in self.get_effects(cause) {
+            if filter(effect) {
+                return true;
+            }
+        }
+        false
     }
 
     #[allow(dead_code)]
