@@ -437,15 +437,26 @@ fn render_main_menu(run_state: &RunState, draw_batch: &mut DrawBatch, rex_assets
     } = *run_state
     {
         crate::util::bracket_lib_ext::xp_to_draw_batch(&rex_assets.menu, draw_batch, 0, 0);
+        draw_batch.draw_double_box(
+            Rect::with_size(24, 18, 31, 11),
+            ColorPair::new(WHEAT, BLACK),
+        );
         draw_batch.print_color_centered(
-            15,
+            20,
             "Rust Roguelike Tutorial",
-            ColorPair::new(RGB::named(YELLOW), RGB::named(BLACK)),
+            ColorPair::new(YELLOW, BLACK),
+        );
+        draw_batch.print_color_centered(21, "by Herbert Wolverson", ColorPair::new(CYAN, BLACK));
+        draw_batch.print_color_centered(22, "mucking about: @abesto", ColorPair::new(CYAN, BLACK));
+        draw_batch.print_color_centered(
+            23,
+            "Use Up/Down Arrows and Enter",
+            ColorPair::new(GRAY, BLACK),
         );
 
         for (i, item) in MainMenuSelection::iter().enumerate() {
             draw_batch.print_color_centered(
-                24 + i,
+                25 + i,
                 item,
                 ColorPair::new(
                     if selection == item {
