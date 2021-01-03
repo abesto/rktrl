@@ -2,7 +2,7 @@ use bracket_lib::prelude::RandomNumberGenerator;
 use std::collections::VecDeque;
 
 use crate::components::Position;
-use crate::mapgen::bsp_dungeon::BspDungeonMapBuilder;
+use crate::mapgen::bsp_dungeon::{BspConfig, BspDungeonMapBuilder};
 use crate::mapgen::simple::SimpleMapBuilder;
 use crate::resources::Map;
 use crate::systems::prelude::CommandBuffer;
@@ -49,8 +49,19 @@ pub fn random_builder(
     height: i32,
     new_depth: i32,
 ) -> Box<dyn MapBuilder> {
-    match rng.roll_dice(1, 2) {
-        1 => Box::new(BspDungeonMapBuilder::new(width, height, new_depth)),
+    match rng.roll_dice(1, 3) {
+        1 => Box::new(BspDungeonMapBuilder::new(
+            width,
+            height,
+            new_depth,
+            BspConfig::dungeon(),
+        )),
+        2 => Box::new(BspDungeonMapBuilder::new(
+            width,
+            height,
+            new_depth,
+            BspConfig::interior(),
+        )),
         _ => Box::new(SimpleMapBuilder::new(width, height, new_depth)),
     }
 }

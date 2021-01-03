@@ -14,7 +14,7 @@ bracket-lib = { version = "0.8.1", features = ["serde"] }
 auto_ops = "0.1.0"
 newtype_derive = "0.1.6"
 macro-attr = "0.2.0"
-smallvec = "1.4.2"
+smallvec = "~1.6.0"
 strum = "0.20.0"
 strum_macros = "0.20.1"
 bracket-terminal = "0.8.1"
@@ -41,8 +41,10 @@ wasm-bindgen = "0.2.68"
 legion = { version = "0.3.1", default-features = false, features = ["codegen", "serialize", "wasm-bindgen"] }
 
 [patch.crates-io]
-# Needed until https://github.com/thebracket/bracket-lib/pull/130 (Fix modifier keys) is released
-bracket-terminal = { git = "https://github.com/abesto/bracket-lib/", rev = "abad58f65127bd735573323cd96139ebdb479863" }
+# https://github.com/thebracket/bracket-lib/pull/130
+# Also for various unreleased off-by-one fixes around coordinate handling
+bracket-lib = { git = "https://github.com/abesto/bracket-lib", branch = "master" }
+#bracket-lib = { path = "C:\\Users\\abesto\\Documents\\GitHub\\bracket-lib" }
 
 [[bin]]
 name = "rktrl"
