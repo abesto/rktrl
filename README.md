@@ -8,3 +8,4 @@ A toy roguelike built by following https://bfnightly.bracketproductions.com/rust
 * [Cause-and-effect pattern](https://www.reddit.com/r/roguelikedev/comments/kl8xop/introducing_the_causeandeffect_pattern/) instead of `...Intent` components
 * `RunState` is managed through a Deque
 * Development features controlled with Cargo features
+* Rendering is done in an ECS system, using `DrawBatch`es instead of directly writing to the console

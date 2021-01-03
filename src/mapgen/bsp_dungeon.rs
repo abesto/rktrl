@@ -31,9 +31,9 @@ impl BspConfig {
             subdivision_variance: 0.2,
             depth: 6,
             min_room_width: 6,
-            max_room_width: 10,
+            max_room_width: 12,
             min_room_height: 6,
-            max_room_height: 10,
+            max_room_height: 12,
             max_padding: 9000, // Arbitrarily large number. Not maxint because that leads to overflow.
             min_padding: 2,
         }
