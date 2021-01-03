@@ -7,6 +7,7 @@ use crate::{components::*, resources::*};
 #[system]
 #[read_component(Monster)]
 #[read_component(Player)]
+#[read_component(CombatStats)]
 pub fn turn(
     #[resource] run_state: &RunState,
     #[resource] cae: &mut CauseAndEffect,
@@ -24,7 +25,7 @@ pub fn turn(
         }
         // No taking turns on the main menu
         // Also, on PlayerTurn, we already have a Label::Turn left over from RunState::AwaitingInput.
-        RunState::MainMenu { .. } | RunState::PlayerTurn => (),
+        RunState::MainMenu { .. } | RunState::GameOver | RunState::PlayerTurn => (),
         _ => {
             cae.add_effect(
                 &cae.get_root(),

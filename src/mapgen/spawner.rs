@@ -1,5 +1,6 @@
 use crate::systems::prelude::*;
 
+use std::cmp::min;
 use std::collections::HashSet;
 
 use crate::util::{random_table::RandomTable, rect_ext::RectExt};
@@ -124,11 +125,11 @@ pub fn random_positions_in_room(
 ) -> HashSet<Position> {
     let (p1, p2) = {
         let interior = room.interior();
-        (interior.p1(), interior.p2())
+        (interior.p1(), room.p2())
     };
     let mut positions: HashSet<Position> = HashSet::new();
 
-    for _ in 0..n {
+    for _ in 0..min(n, room.width() * room.height()) {
         loop {
             let position = rng.range(p1, p2);
             if !positions.contains(&position) {

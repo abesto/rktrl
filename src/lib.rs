@@ -89,7 +89,8 @@ impl State {
             GameLog,
             ShownInventory,
             SegQueue<EntityCleanupRequest>,
-            RexAssets
+            RexAssets,
+            RunStateQueue
         ]);
         self.resources
             .get_mut::<CauseAndEffect>()
@@ -170,6 +171,7 @@ impl GameState for State {
                 NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::GameOver => {
+                self.reset();
                 self.execute(ScheduleType::PlayerAction);
                 NewRunState::None
             }

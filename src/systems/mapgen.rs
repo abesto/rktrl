@@ -11,12 +11,13 @@ pub fn mapgen(
     commands: &mut CommandBuffer,
 ) {
     let mut builder =
-        crate::mapgen::random_builder(layout.map().width(), layout.map().height(), map.depth);
+        crate::mapgen::random_builder(rng, layout.map().width(), layout.map().height(), map.depth);
 
     builder.build_map(rng);
     builder.spawn_entities(commands, rng);
 
     crate::mapgen::spawner::player(world, builder.get_starting_position(), commands);
+
     *map = builder.get_map();
 
     if cfg!(feature = "visualize-mapgen") {

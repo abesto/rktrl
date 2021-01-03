@@ -2,10 +2,12 @@ use bracket_lib::prelude::RandomNumberGenerator;
 use std::collections::VecDeque;
 
 use crate::components::Position;
+use crate::mapgen::bsp_dungeon::BspDungeonMapBuilder;
 use crate::mapgen::simple::SimpleMapBuilder;
 use crate::resources::Map;
 use crate::systems::prelude::CommandBuffer;
 
+mod bsp_dungeon;
 mod common;
 mod simple;
 pub mod spawner;
@@ -41,6 +43,14 @@ pub trait MapBuilder {
     fn get_snapshots(&self) -> VecDeque<Map>;
 }
 
-pub fn random_builder(width: i32, height: i32, new_depth: i32) -> Box<dyn MapBuilder> {
-    Box::new(SimpleMapBuilder::new(width, height, new_depth))
+pub fn random_builder(
+    rng: &mut RandomNumberGenerator,
+    width: i32,
+    height: i32,
+    new_depth: i32,
+) -> Box<dyn MapBuilder> {
+    match rng.roll_dice(1, 2) {
+        1 => Box::new(BspDungeonMapBuilder::new(width, height, new_depth)),
+        _ => Box::new(SimpleMapBuilder::new(width, height, new_depth)),
+    }
 }
