@@ -115,6 +115,10 @@ impl MapBuilder for BspDungeonMapBuilder {
                 }
             }
         }
+
+        // Place stairs down in "last" room
+        let last_room = self.rooms.last().unwrap();
+        self.map[&last_room.center().into()] = TileType::DownStairs;
     }
 
     fn spawn_entities(&self, commands: &mut CommandBuffer, rng: &mut RandomNumberGenerator) {
