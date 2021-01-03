@@ -1,5 +1,7 @@
 # `rktrl`
 
+Play in your browser: https://abesto.github.io/rktrl/
+
 A toy roguelike built by following https://bfnightly.bracketproductions.com/rustbook/, with a few twists. Major ones:
 
 * Using the [`legion`](https://github.com/amethyst/legion) ECS system instead of Specs
