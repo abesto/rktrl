@@ -20,6 +20,26 @@ macro_attr! {
     pub struct Vector(Point);
 }
 
+impl Heading {
+    pub fn rotate_cw(&self) -> Self {
+        match self {
+            Self::North => Self::East,
+            Self::East => Self::South,
+            Self::South => Self::West,
+            Self::West => Self::North,
+        }
+    }
+
+    pub fn rotate_ccw(&self) -> Self {
+        match self {
+            Self::North => Self::West,
+            Self::East => Self::North,
+            Self::South => Self::East,
+            Self::West => Self::South,
+        }
+    }
+}
+
 impl Vector {
     #[inline]
     #[must_use]

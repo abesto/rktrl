@@ -14,7 +14,7 @@ use crate::util::vector::Vector;
 macro_attr! {
     #[derive(Clone, Copy, PartialEq, Eq, Hash,
              Serialize, Deserialize, TypeUuid,
-             NewtypeDebug!, NewtypeDeref!, NewtypeFrom!)]
+             NewtypeDebug!, NewtypeDeref!, NewtypeDerefMut!, NewtypeFrom!)]
     #[uuid = "230413cb-9c33-4922-8559-c4aa4c144916"]
     pub struct Position(Point);
 }
@@ -41,6 +41,7 @@ impl From<(i32, i32)> for Position {
 
 impl_op_ex!(-|lhs: Position, rhs: Position| -> Vector { (*lhs - *rhs).into() });
 impl_op_ex_commutative!(+ |a: Position, b: Vector| -> Position { (*a + *b).into() });
+impl_op_ex!(+= |lhs: &mut Position, rhs: &Vector| { lhs.x += rhs.x; lhs.y += rhs.y; });
 
 // Pick a random point from a rect
 

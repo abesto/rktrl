@@ -147,13 +147,13 @@ impl Map {
     ) -> FontCharType {
         let x = position.x;
         let y = position.y;
-        if x < 1 || x > self.width - 2 || y < 1 || y > self.height - 2 as i32 {
-            return 35;
-        }
         let mut mask: u8 = 0;
 
         let is_revealed_and_wall = |x, y| {
             let position = Position::new(x, y);
+            if !self.contains(position) {
+                return false;
+            }
             self[&position] == TileType::Wall && revealed_tiles.contains(&position)
         };
 

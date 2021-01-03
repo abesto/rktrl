@@ -160,7 +160,7 @@ impl GameState for State {
                 NewRunState::PushBack(RunState::AwaitingInput)
             }
             RunState::SaveGame => {
-                saveload::save(&mut self.world, &self.resources);
+                saveload::save(&self.world, &self.resources);
                 self.reset();
                 NewRunState::PushBack(RunState::default())
             }
@@ -200,7 +200,7 @@ impl GameState for State {
                 final_map,
                 timer,
             } => {
-                let retval = if timer > 300.0 {
+                let retval = if timer > 500.0 {
                     if let Some(snapshot) = snapshots.pop_front() {
                         self.resources.insert(snapshot);
                         NewRunState::PushFront(RunState::MapGeneration {

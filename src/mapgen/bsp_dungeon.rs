@@ -1,5 +1,6 @@
 use crate::systems::prelude::*;
 use petgraph::Graph;
+use std::cmp::max;
 use std::collections::VecDeque;
 
 use super::{common::*, MapBuilder, SnapshotManager};
@@ -13,15 +14,17 @@ pub struct BspDungeonMapBuilder {
 impl MapBuilder for BspDungeonMapBuilder {
     fn build_map(&mut self, rng: &mut RandomNumberGenerator) {
         let mut graph = Graph::<Rect, ()>::new();
-        let mut leaves = vec![graph.add_node(Rect::with_exact(
-            0,
-            0,
-            self.map.width - 1,
-            self.map.height - 1,
-        ))];
+        let root = graph.add_node(Rect::with_size(
+            1,
+            1,
+            self.map.width - 3,
+            self.map.height - 3,
+        ));
+        let mut leaves = vec![root];
 
         // Generate space partition
-        for _depth in 0..5 {
+        let mut max_depth = 0;
+        for depth in 1..6 {
             leaves = leaves
                 .iter()
                 .flat_map(|&leaf| {
@@ -51,6 +54,7 @@ impl MapBuilder for BspDungeonMapBuilder {
                         let b = graph.add_node(b_rect);
                         graph.add_edge(leaf, a, ());
                         graph.add_edge(leaf, b, ());
+                        max_depth = max(max_depth, depth);
                         vec![a, b]
                     }
                 })
@@ -83,10 +87,33 @@ impl MapBuilder for BspDungeonMapBuilder {
         self.take_snapshot();
 
         // Add corridors
-        // TODO make this smarter: use the tree structure, and allow connecting to corridors
-        for i in 0..self.rooms.len() - 1 {
-            connect_rooms(&self.rooms[i], &self.rooms[i + 1], &mut self.map, rng);
-            self.take_snapshot();
+        for depth in (0..max_depth).rev() {
+            let mut parents = vec![root];
+
+            // Find nodes at `depth`
+            for _ in 0..depth {
+                parents = parents
+                    .iter()
+                    .flat_map(|&index| graph.neighbors(index))
+                    .collect();
+            }
+
+            // Connect the children of each node at `depth`
+            for parent in parents {
+                let children = graph.neighbors(parent).collect::<Vec<_>>();
+                if children.len() < 2 {
+                    continue;
+                }
+                for i in 0..children.len() - 1 {
+                    connect_regions(
+                        *graph.node_weight(children[i]).unwrap(),
+                        *graph.node_weight(children[i + 1]).unwrap(),
+                        &mut self.map,
+                        rng,
+                    );
+                    self.take_snapshot();
+                }
+            }
         }
     }
 

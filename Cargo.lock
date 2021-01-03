@@ -697,6 +697,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37d572918e350e82412fe766d24b15e6682fb2ed2bbe018280caa810397cb319"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "jni-sys"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -758,7 +767,7 @@ dependencies = [
  "derivative",
  "downcast-rs",
  "erased-serde",
- "itertools",
+ "itertools 0.9.0",
  "legion_codegen",
  "parking_lot 0.11.1",
  "paste",
@@ -1350,6 +1359,7 @@ dependencies = [
  "console_error_panic_hook",
  "crossbeam-queue",
  "flate2",
+ "itertools 0.10.0",
  "lazy_static",
  "legion",
  "legion_typeuuid",

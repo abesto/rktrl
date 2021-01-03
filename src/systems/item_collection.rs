@@ -29,7 +29,7 @@ pub fn item_collection(
                 cae.add_effect(&cause, Label::PickupNothingHere);
             }
             Some(&item) => {
-                let action = cae.add_effect(&cause, Label::PickupAction { item: item });
+                let action = cae.add_effect(&cause, Label::PickupAction { item });
                 commands.remove_component::<Position>(item);
                 commands.add_component(item, InBackpack::new(actor));
                 cae.add_effect(&action, Label::PickupDone);

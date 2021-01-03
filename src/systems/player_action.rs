@@ -397,7 +397,7 @@ fn try_drop(
     choice: i32,
 ) -> Option<()> {
     let item = choice_to_entity_from_player_backpack(world, shown_inventory, choice)?;
-    cae.add_effect(cause, Label::DropIntent { item: item });
+    cae.add_effect(cause, Label::DropIntent { item });
     Some(())
 }
 
