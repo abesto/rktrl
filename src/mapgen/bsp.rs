@@ -69,14 +69,14 @@ impl BspConfig {
     }
 }
 
-pub struct BspDungeonMapBuilder {
+pub struct BspMapBuilder {
     config: BspConfig,
     rooms: Vec<Rect>,
     map: Map,
     snapshot_manager: SnapshotManager,
 }
 
-impl MapBuilder for BspDungeonMapBuilder {
+impl MapBuilder for BspMapBuilder {
     fn build_map(&mut self, rng: &mut RandomNumberGenerator) {
         let mut graph = Graph::<Rect, ()>::new();
         let root = graph.add_node(Rect::with_size(
@@ -190,7 +190,7 @@ impl MapBuilder for BspDungeonMapBuilder {
 
             let room = Rect::with_size(x1, y1, width, height);
             apply_room_to_map(&room, &mut self.map);
-            self.add_walls(&room);
+            walls_around(&room, &mut self.map);
             self.rooms.push(room);
         }
         self.take_snapshot();
@@ -252,10 +252,10 @@ impl MapBuilder for BspDungeonMapBuilder {
     }
 }
 
-impl BspDungeonMapBuilder {
+impl BspMapBuilder {
     #[must_use]
     pub fn new(width: i32, height: i32, depth: i32, config: BspConfig) -> Self {
-        BspDungeonMapBuilder {
+        BspMapBuilder {
             rooms: vec![],
             map: Map::new(width, height, depth),
             snapshot_manager: SnapshotManager::new(),
@@ -271,21 +271,10 @@ impl BspDungeonMapBuilder {
         }
     }
 
-    fn add_walls(&mut self, rect: &Rect) {
-        for x in rect.x1..=rect.x2 {
-            self.map[&Position::new(x, rect.y1)] = TileType::Wall;
-            self.map[&Position::new(x, rect.y2)] = TileType::Wall;
-        }
-        for y in rect.y1..=rect.y2 {
-            self.map[&Position::new(rect.x1, y)] = TileType::Wall;
-            self.map[&Position::new(rect.x2, y)] = TileType::Wall;
-        }
-    }
-
     fn take_subdivision_snapshot(&mut self, rects: Vec<Rect>) {
         self.clear(TileType::Floor);
         for rect in rects {
-            self.add_walls(&rect);
+            walls_around(&rect, &mut self.map);
         }
         self.take_snapshot();
         self.clear(TileType::Wall);

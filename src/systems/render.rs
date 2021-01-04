@@ -106,7 +106,7 @@ fn render_map(
     };
 
     for position in &revealed {
-        let tile = map[&position];
+        let tile = map[position];
         let (fg_candidate, glyph) = match tile {
             TileType::Floor => (RGB::named(GRAY50), to_cp437('.')),
             TileType::Wall => (RGB::named(GREEN), map.wall_glyph(*position, &revealed)),

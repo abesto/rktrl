@@ -6,6 +6,8 @@ use std::convert::TryInto;
 
 use crate::util::rect_ext::RectExt;
 use itertools::Itertools;
+use rand::distributions::uniform::UniformSampler;
+use smallvec::alloc::collections::VecDeque;
 
 pub fn apply_room_to_map(room: &Rect, map: &mut Map) {
     fill(room, TileType::Floor, map);
@@ -76,7 +78,7 @@ pub fn raycast(
 ) -> Option<Position> {
     walk(from, direction, map)
         .iter()
-        .find(|pos| map[pos] == look_for)
+        .find(|&pos| map[pos] == look_for)
         .cloned()
 }
 
@@ -236,6 +238,59 @@ pub fn connect_regions(a: Rect, b: Rect, map: &mut Map, rng: &mut RandomNumberGe
     }
 }
 
+pub fn walls_around(rect: &Rect, map: &mut Map) {
+    for x in rect.x1..=rect.x2 {
+        map[(x, rect.y1)] = TileType::Wall;
+        map[(x, rect.y2)] = TileType::Wall;
+    }
+    for y in rect.y1..=rect.y2 {
+        map[(rect.x1, y)] = TileType::Wall;
+        map[(rect.x2, y)] = TileType::Wall;
+    }
+}
+
+pub fn connected_region(seed: Position, map: &Map) -> Vec<Position> {
+    let target = map[&seed];
+    let mut retval = vec![seed];
+
+    let mut queue = VecDeque::new();
+    queue.push_back(seed);
+
+    while !queue.is_empty() {
+        let p = queue.pop_front().unwrap();
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+                let p_next = p + Vector::new(dx, dy);
+                if map.get(p_next) == Some(target) && !retval.contains(&p_next) {
+                    retval.push(p_next);
+                    queue.push_back(p_next);
+                }
+            }
+        }
+    }
+
+    retval
+}
+
+pub fn random_position_with_tile(
+    target: TileType,
+    map: &Map,
+    rng: &mut RandomNumberGenerator,
+) -> Position {
+    let position_sampler =
+        PositionSampler::new(Position::new(0, 0), Position::from(map.dimensions()));
+    loop {
+        let p = position_sampler.sample(rng.get_rng());
+        println!("{:?} -> {:?}", p, map[&p]);
+        if map[&p] == target {
+            break p;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::mapgen::common::*;
@@ -379,5 +434,11 @@ mod tests {
             .iter()
             .filter(|p| p.y >= 11 && p.y <= 14)
             .all(|p| p.x >= 5 && p.x <= 17));
+    }
+
+    #[test]
+    fn test_connected_regions() {
+        let map = make_map();
+        assert_eq!(connected_region(Position::new(7, 7), &map).len(), 18);
     }
 }

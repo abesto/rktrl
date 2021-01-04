@@ -2,12 +2,14 @@ use bracket_lib::prelude::RandomNumberGenerator;
 use std::collections::VecDeque;
 
 use crate::components::Position;
-use crate::mapgen::bsp_dungeon::{BspConfig, BspDungeonMapBuilder};
+use crate::mapgen::bsp::{BspConfig, BspMapBuilder};
+use crate::mapgen::cellular_automata::{CellularAutomataMapBuilder, DefaultCellularAutomataConfig};
 use crate::mapgen::simple::SimpleMapBuilder;
 use crate::resources::Map;
 use crate::systems::prelude::CommandBuffer;
 
-mod bsp_dungeon;
+mod bsp;
+mod cellular_automata;
 mod common;
 mod simple;
 pub mod spawner;
@@ -49,14 +51,20 @@ pub fn random_builder(
     height: i32,
     new_depth: i32,
 ) -> Box<dyn MapBuilder> {
+    return Box::new(CellularAutomataMapBuilder::new(
+        width,
+        height,
+        new_depth,
+        Box::new(DefaultCellularAutomataConfig),
+    ));
     match rng.roll_dice(1, 3) {
-        1 => Box::new(BspDungeonMapBuilder::new(
+        1 => Box::new(BspMapBuilder::new(
             width,
             height,
             new_depth,
             BspConfig::dungeon(),
         )),
-        2 => Box::new(BspDungeonMapBuilder::new(
+        2 => Box::new(BspMapBuilder::new(
             width,
             height,
             new_depth,

@@ -106,7 +106,7 @@ impl Map {
     }
 
     fn is_exit_valid(&self, position: Position) -> bool {
-        !self.is_blocked(position)
+        self.contains(position) && !self.is_blocked(position)
     }
 
     pub fn populate_blocked(&mut self) {
@@ -198,6 +198,26 @@ impl Map {
     pub fn has_bloodstain(&self, position: Position) -> bool {
         self.bloodstains.contains(&position)
     }
+
+    pub fn get(&self, position: Position) -> Option<TileType> {
+        if !self.contains(position) {
+            None
+        } else {
+            Some(self[&position])
+        }
+    }
+
+    pub fn rect(&self) -> Rect {
+        Rect::with_size(0, 0, self.width, self.height)
+    }
+
+    pub fn position_set(&self) -> HashSet<Position> {
+        self.rect()
+            .point_set()
+            .iter()
+            .map(|p| Position::from(*p))
+            .collect()
+    }
 }
 
 impl Index<&Position> for Map {
@@ -211,6 +231,20 @@ impl Index<&Position> for Map {
 impl IndexMut<&Position> for Map {
     fn index_mut(&mut self, pos: &Position) -> &mut TileType {
         &mut self.tiles[Map::static_pos_idx(self.width, *pos)]
+    }
+}
+
+impl Index<(i32, i32)> for Map {
+    type Output = TileType;
+
+    fn index(&self, index: (i32, i32)) -> &Self::Output {
+        &self.tiles[Map::static_xy_idx(self.width, index.0, index.1)]
+    }
+}
+
+impl IndexMut<(i32, i32)> for Map {
+    fn index_mut(&mut self, index: (i32, i32)) -> &mut TileType {
+        &mut self.tiles[Map::static_xy_idx(self.width, index.0, index.1)]
     }
 }
 
