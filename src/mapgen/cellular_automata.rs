@@ -1,11 +1,12 @@
 use crate::systems::prelude::*;
 
 use std::cmp::{max, min, Ordering};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use itertools::Itertools;
 
 use super::{common::*, MapBuilder, SnapshotManager};
+use crate::mapgen::spawner::spawn_area;
 
 pub trait CellularAutomataConfig {
     /// For each position: is the starting tile a wall?
@@ -154,7 +155,39 @@ impl MapBuilder for CellularAutomataMapBuilder {
         self.take_snapshot();
     }
 
-    fn spawn_entities(&self, commands: &mut CommandBuffer, rng: &mut RandomNumberGenerator) {}
+    fn spawn_entities(&self, commands: &mut CommandBuffer, rng: &mut RandomNumberGenerator) {
+        // Generate spawning areas
+        let mut areas = {
+            let mut areas: HashMap<i32, Vec<Position>> = HashMap::new();
+            let mut noise = bracket_lib::noise::FastNoise::seeded(rng.rand());
+            noise.set_noise_type(bracket_lib::noise::NoiseType::Cellular);
+            noise.set_frequency(0.08);
+            noise.set_cellular_distance_function(
+                bracket_lib::noise::CellularDistanceFunction::Manhattan,
+            );
+
+            for position in self.map.position_set() {
+                if self.map[&position] == TileType::Floor {
+                    let cell_value_f =
+                        noise.get_noise(position.x as f32, position.y as f32) * 10240.0;
+                    let cell_value = cell_value_f as i32;
+
+                    if areas.contains_key(&cell_value) {
+                        areas.get_mut(&cell_value).unwrap().push(position);
+                    } else {
+                        areas.insert(cell_value, vec![position]);
+                    }
+                }
+            }
+
+            areas
+        };
+
+        // Generate entities in each area
+        for area in areas.values_mut() {
+            spawn_area(rng, area, self.map.depth, commands);
+        }
+    }
 
     fn get_map(&self) -> Map {
         self.map.clone()

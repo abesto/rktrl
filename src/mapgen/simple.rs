@@ -16,7 +16,7 @@ impl MapBuilder for SimpleMapBuilder {
 
     fn spawn_entities(&self, commands: &mut CommandBuffer, rng: &mut RandomNumberGenerator) {
         for room in self.rooms.iter().skip(1) {
-            super::spawner::room(rng, room, self.map.depth, commands);
+            super::spawner::spawn_room(rng, room, self.map.depth, commands);
         }
     }
 

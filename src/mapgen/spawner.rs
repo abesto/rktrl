@@ -1,6 +1,7 @@
 use crate::systems::prelude::*;
 
-use std::cmp::min;
+use rand::prelude::SliceRandom;
+use std::cmp::max;
 use std::collections::HashSet;
 
 use crate::util::{random_table::RandomTable, rect_ext::RectExt};
@@ -60,9 +61,27 @@ fn add_wizard_items(commands: &mut CommandBuffer, player_entity: Entity) {
     }
 }
 
-pub fn room(
+pub fn spawn_room(
     rng: &mut RandomNumberGenerator,
     room: &Rect,
+    depth: i32,
+    commands: &mut CommandBuffer,
+) {
+    spawn_area(
+        rng,
+        &mut room
+            .point_set()
+            .iter()
+            .map(|&p| Position::from(p))
+            .collect(),
+        depth,
+        commands,
+    );
+}
+
+pub fn spawn_area(
+    rng: &mut RandomNumberGenerator,
+    area: &mut Vec<Position>,
     depth: i32,
     commands: &mut CommandBuffer,
 ) {
@@ -80,11 +99,11 @@ pub fn room(
         .add(ration, 10)
         .add(magic_mapping_scroll, 2)
         .add(bear_trap, 2);
-    let spawnable_count = rng.range(-2, 4 + depth);
-    for position in random_positions_in_room(rng, room, spawnable_count) {
+    let spawnable_count = max(0, rng.range(-2, 4 + depth)) as usize;
+    for position in area.partial_shuffle(rng.get_rng(), spawnable_count).0 {
         if let Some(spawner) = room_table.roll(rng) {
             let new_entity = spawner(commands);
-            commands.add_component(new_entity, position);
+            commands.add_component(new_entity, *position);
         }
     }
 }
@@ -116,30 +135,6 @@ pub fn orc(commands: &mut CommandBuffer) -> Entity {
 
 pub fn goblin(commands: &mut CommandBuffer) -> Entity {
     monster(commands, 'g', "Goblin")
-}
-
-pub fn random_positions_in_room(
-    rng: &mut RandomNumberGenerator,
-    room: &Rect,
-    n: i32,
-) -> HashSet<Position> {
-    let (p1, p2) = {
-        let interior = room.interior();
-        (interior.p1(), room.p2())
-    };
-    let mut positions: HashSet<Position> = HashSet::new();
-
-    for _ in 0..min(n, room.width() * room.height()) {
-        loop {
-            let position = rng.range(p1, p2);
-            if !positions.contains(&position) {
-                positions.insert(position);
-                break;
-            }
-        }
-    }
-
-    positions
 }
 
 pub fn health_potion(commands: &mut CommandBuffer) -> Entity {

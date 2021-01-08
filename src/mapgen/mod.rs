@@ -51,13 +51,7 @@ pub fn random_builder(
     height: i32,
     new_depth: i32,
 ) -> Box<dyn MapBuilder> {
-    return Box::new(CellularAutomataMapBuilder::new(
-        width,
-        height,
-        new_depth,
-        Box::new(DefaultCellularAutomataConfig),
-    ));
-    match rng.roll_dice(1, 3) {
+    match rng.roll_dice(1, 4) {
         1 => Box::new(BspMapBuilder::new(
             width,
             height,
@@ -69,6 +63,12 @@ pub fn random_builder(
             height,
             new_depth,
             BspConfig::interior(),
+        )),
+        3 => Box::new(CellularAutomataMapBuilder::new(
+            width,
+            height,
+            new_depth,
+            Box::new(DefaultCellularAutomataConfig),
         )),
         _ => Box::new(SimpleMapBuilder::new(width, height, new_depth)),
     }
