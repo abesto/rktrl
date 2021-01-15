@@ -2,9 +2,8 @@ use crate::systems::prelude::*;
 
 use rand::prelude::SliceRandom;
 use std::cmp::max;
-use std::collections::HashSet;
 
-use crate::util::{random_table::RandomTable, rect_ext::RectExt};
+use crate::util::random_table::RandomTable;
 
 type Spawner = fn(&mut CommandBuffer) -> Entity;
 

@@ -1,6 +1,6 @@
 use crate::systems::prelude::*;
 
-use std::cmp::{max, min};
+use std::cmp::{max, min, Ordering};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 
@@ -249,12 +249,13 @@ pub fn walls_around(rect: &Rect, map: &mut Map) {
     }
 }
 
-pub fn connected_region(seed: Position, map: &Map) -> Vec<Position> {
-    let target = map[&seed];
-    let mut retval = vec![seed];
+pub fn connected_region(seed: &Position, map: &Map) -> HashSet<Position> {
+    let target = map[seed];
+    let mut retval = HashSet::new();
+    retval.insert(*seed);
 
     let mut queue = VecDeque::new();
-    queue.push_back(seed);
+    queue.push_back(*seed);
 
     while !queue.is_empty() {
         let p = queue.pop_front().unwrap();
@@ -265,7 +266,7 @@ pub fn connected_region(seed: Position, map: &Map) -> Vec<Position> {
                 }
                 let p_next = p + Vector::new(dx, dy);
                 if map.get(p_next) == Some(target) && !retval.contains(&p_next) {
-                    retval.push(p_next);
+                    retval.insert(p_next);
                     queue.push_back(p_next);
                 }
             }
@@ -284,11 +285,60 @@ pub fn random_position_with_tile(
         PositionSampler::new(Position::new(0, 0), Position::from(map.dimensions()));
     loop {
         let p = position_sampler.sample(rng.get_rng());
-        println!("{:?} -> {:?}", p, map[&p]);
+        //println!("{:?} -> {:?}", p, map[&p]);
         if map[&p] == target {
             break p;
         }
     }
+}
+
+pub fn remove_unreachable_areas(start: &Position, map: &mut Map) -> HashSet<Position> {
+    let connected_region = connected_region(start, map);
+    for position in map.position_set() {
+        if map[&position] != TileType::Wall && !connected_region.contains(&position) {
+            map[&position] = TileType::Wall;
+        }
+    }
+    connected_region
+}
+
+pub fn generate_voronoi_spawn_regions(
+    map: &Map,
+    rng: &mut RandomNumberGenerator,
+) -> HashMap<i32, Vec<Position>> {
+    let mut areas: HashMap<i32, Vec<Position>> = HashMap::new();
+    let mut noise = bracket_lib::noise::FastNoise::seeded(rng.rand());
+    noise.set_noise_type(bracket_lib::noise::NoiseType::Cellular);
+    noise.set_frequency(0.08);
+    noise.set_cellular_distance_function(bracket_lib::noise::CellularDistanceFunction::Manhattan);
+
+    for position in map.position_set() {
+        if map[&position] == TileType::Floor {
+            let cell_value_f = noise.get_noise(position.x as f32, position.y as f32) * 10240.0;
+            let cell_value = cell_value_f as i32;
+            areas
+                .entry(cell_value)
+                .and_modify(|ps| ps.push(position))
+                .or_insert_with(|| vec![position]);
+        }
+    }
+
+    areas
+}
+
+pub fn find_furthest_reachable_tiles(
+    map: &Map,
+    dijsktra_map: &DijkstraMap,
+    count: usize,
+) -> Vec<Position> {
+    dijsktra_map
+        .map
+        .iter()
+        .enumerate()
+        .sorted_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(Ordering::Equal))
+        .map(|(idx, _distance)| map.idx_pos(idx))
+        .take(count)
+        .collect()
 }
 
 #[cfg(test)]
@@ -439,6 +489,6 @@ mod tests {
     #[test]
     fn test_connected_regions() {
         let map = make_map();
-        assert_eq!(connected_region(Position::new(7, 7), &map).len(), 18);
+        assert_eq!(connected_region(&Position::new(7, 7), &map).len(), 64);
     }
 }

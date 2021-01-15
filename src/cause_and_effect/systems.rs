@@ -4,7 +4,7 @@ use crate::cause_and_effect::CauseAndEffect;
 
 #[system]
 pub fn cae_debug(#[resource] cae: &CauseAndEffect) {
-    println!("{:?}", &cae.dot());
+    dbg!(cae.dot());
 }
 
 #[system]

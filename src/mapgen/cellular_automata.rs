@@ -1,9 +1,6 @@
 use crate::systems::prelude::*;
 
-use std::cmp::{max, min, Ordering};
-use std::collections::{HashMap, VecDeque};
-
-use itertools::Itertools;
+use std::collections::VecDeque;
 
 use super::{common::*, MapBuilder, SnapshotManager};
 use crate::mapgen::spawner::spawn_area;
@@ -75,22 +72,11 @@ impl CellularAutomataConfig for DefaultCellularAutomataConfig {
         // Find a random empty spot
         let random_floor = random_position_with_tile(TileType::Floor, map, rng);
 
-        // Flood fill to find the connected open area including the random empty spot picked above.
-        // If it's less than 45% of the size of the map, then reject the map; otherwise accept.
-        let connected_region = connected_region(random_floor, map);
+        // Find the area connected with the spot picked. Fill in the rest.
+        // If it's less than $threshold of the size of the map, then reject the map; otherwise accept.
+        let connected_region = remove_unreachable_areas(&random_floor, map);
         let threshold = ((map.width * map.height) as f32 * 0.30).round() as usize;
-        let accept = connected_region.len() >= threshold;
-
-        if accept {
-            // Mark everything else as a wall, to fill up any disconnected empty regions
-            for position in map.position_set() {
-                if !connected_region.contains(&position) {
-                    map[&position] = TileType::Wall;
-                }
-            }
-        }
-
-        accept
+        connected_region.len() >= threshold
     }
 }
 
@@ -142,14 +128,7 @@ impl MapBuilder for CellularAutomataMapBuilder {
             &self.map,
             200.0,
         );
-        let furthest_reachable_tiles: Vec<Position> = dijsktra_map
-            .map
-            .iter()
-            .enumerate()
-            .sorted_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(Ordering::Equal))
-            .map(|(idx, _distance)| self.map.idx_pos(idx))
-            .take(20)
-            .collect();
+        let furthest_reachable_tiles = find_furthest_reachable_tiles(&self.map, &dijsktra_map, 20);
         let stairs_down_pos = rng.random_slice_entry(&furthest_reachable_tiles).unwrap();
         self.map[stairs_down_pos] = TileType::DownStairs;
         self.take_snapshot();
@@ -157,31 +136,7 @@ impl MapBuilder for CellularAutomataMapBuilder {
 
     fn spawn_entities(&self, commands: &mut CommandBuffer, rng: &mut RandomNumberGenerator) {
         // Generate spawning areas
-        let mut areas = {
-            let mut areas: HashMap<i32, Vec<Position>> = HashMap::new();
-            let mut noise = bracket_lib::noise::FastNoise::seeded(rng.rand());
-            noise.set_noise_type(bracket_lib::noise::NoiseType::Cellular);
-            noise.set_frequency(0.08);
-            noise.set_cellular_distance_function(
-                bracket_lib::noise::CellularDistanceFunction::Manhattan,
-            );
-
-            for position in self.map.position_set() {
-                if self.map[&position] == TileType::Floor {
-                    let cell_value_f =
-                        noise.get_noise(position.x as f32, position.y as f32) * 10240.0;
-                    let cell_value = cell_value_f as i32;
-
-                    if areas.contains_key(&cell_value) {
-                        areas.get_mut(&cell_value).unwrap().push(position);
-                    } else {
-                        areas.insert(cell_value, vec![position]);
-                    }
-                }
-            }
-
-            areas
-        };
+        let mut areas = generate_voronoi_spawn_regions(&self.map, rng);
 
         // Generate entities in each area
         for area in areas.values_mut() {
@@ -194,8 +149,7 @@ impl MapBuilder for CellularAutomataMapBuilder {
     }
 
     fn get_starting_position(&self) -> Position {
-        // TODO
-        Position::new(20, 20)
+        self.cached_starting_position.unwrap()
     }
 
     fn get_snapshots(&self) -> VecDeque<Map> {

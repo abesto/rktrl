@@ -58,19 +58,18 @@ impl Vector {
         DistanceAlg::Pythagoras.distance2d(Point::constant(0, 0), **self)
     }
 
-    // This can be a const fn once RFC 2342 is merged
-    pub fn unit(heading: Heading) -> Vector {
+    pub const fn unit(heading: Heading) -> Vector {
         match heading {
-            Heading::North => Vector::new(0, -1),
-            Heading::East => Vector::new(1, 0),
-            Heading::South => Vector::new(0, 1),
-            Heading::West => Vector::new(-1, 0),
+            Heading::North => Vector::constant(0, -1),
+            Heading::East => Vector::constant(1, 0),
+            Heading::South => Vector::constant(0, 1),
+            Heading::West => Vector::constant(-1, 0),
         }
     }
 
     pub fn rotated(&self) -> Vector {
         /* Rotate by 90 degrees clockwise */
-        Vector::new(self.y, -self.x)
+        Vector::constant(self.y, -self.x)
     }
 }
 
