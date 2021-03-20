@@ -5,6 +5,7 @@ use crate::components::Position;
 use crate::mapgen::bsp::{BspConfig, BspMapBuilder};
 use crate::mapgen::cellular_automata::{CellularAutomataMapBuilder, DefaultCellularAutomataConfig};
 use crate::mapgen::drunkards_walk::DrunkardsWalkMapBuilder;
+use crate::mapgen::maze::MazeMapBuilder;
 use crate::mapgen::simple::SimpleMapBuilder;
 use crate::resources::Map;
 use crate::systems::prelude::CommandBuffer;
@@ -13,6 +14,7 @@ mod bsp;
 mod cellular_automata;
 mod common;
 mod drunkards_walk;
+mod maze;
 mod simple;
 pub mod spawner;
 
@@ -53,7 +55,7 @@ pub fn random_builder(
     height: i32,
     new_depth: i32,
 ) -> Box<dyn MapBuilder> {
-    match rng.roll_dice(1, 5) {
+    match rng.roll_dice(1, 6) {
         1 => Box::new(BspMapBuilder::new(
             width,
             height,
@@ -73,6 +75,7 @@ pub fn random_builder(
             Box::new(DefaultCellularAutomataConfig),
         )),
         4 => Box::new(DrunkardsWalkMapBuilder::new(width, height, new_depth)),
+        5 => Box::new(MazeMapBuilder::new(width, height, new_depth)),
         _ => Box::new(SimpleMapBuilder::new(width, height, new_depth)),
     }
 }

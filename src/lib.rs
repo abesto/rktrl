@@ -202,6 +202,7 @@ impl GameState for State {
             } => {
                 let retval = if timer > 500.0 {
                     if let Some(snapshot) = snapshots.pop_front() {
+                        println!("Displaying snapshot, {} more left", snapshots.len());
                         self.resources.insert(snapshot);
                         NewRunState::PushFront(RunState::MapGeneration {
                             snapshots,
